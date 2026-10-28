@@ -66,5 +66,4 @@ dependencies {
     // 🚀 7. 图标库 (extended 版才包含 TwoTone 等图标)
     implementation("androidx.compose.material:material-icons-extended")
     // 🚀 注入 Haze 毛玻璃引擎
-    implementation("dev.chrisbanes.haze:haze:0.7.3")
 }

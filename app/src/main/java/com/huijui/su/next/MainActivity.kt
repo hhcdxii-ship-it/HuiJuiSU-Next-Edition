@@ -27,11 +27,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.huijui.su.next.feature.toolbox.ToolboxScreen
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
 
 data class NavItem(val route: String, val title: String, val icon: ImageVector)
 
@@ -52,9 +47,6 @@ fun MainApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 🚀 初始化 Haze 状态，用于捕获底层壁纸
-    val hazeState = remember { HazeState() }
-
     val navItems = listOf(
         NavItem("home", "主页", Icons.Default.Home),
         NavItem("superuser", "超级用户", Icons.Default.Security),
@@ -63,25 +55,18 @@ fun MainApp() {
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 🚀 将 Haze 挂载到整个底层内容区
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .haze(state = hazeState)
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier.fillMaxSize()
         ) {
-            NavHost(
-                navController = navController,
-                startDestination = "home",
-                modifier = Modifier.fillMaxSize()
-            ) {
-                composable("home") { ToolboxScreen() }
-                composable("superuser") { PlaceholderScreen("超级用户页面开发中") }
-                composable("module") { PlaceholderScreen("模块管理开发中") }
-                composable("settings") { PlaceholderScreen("设置页面开发中") }
-            }
+            composable("home") { ToolboxScreen() }
+            composable("superuser") { PlaceholderScreen("超级用户页面开发中") }
+            composable("module") { PlaceholderScreen("模块管理开发中") }
+            composable("settings") { PlaceholderScreen("设置页面开发中") }
         }
 
-        // 🚀 纯血液态玻璃悬浮底栏 (挂载 hazeChild 实现毛玻璃透视)
+        // 🚀 纯原生手搓！带高光渐变边缘的悬浮底栏
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -89,12 +74,9 @@ fun MainApp() {
                 .fillMaxWidth()
                 .height(68.dp)
                 .clip(RoundedCornerShape(34.dp))
-                // 核心：利用 hazeChild 产生真实的背景模糊透光效果
-                .hazeChild(
-                    state = hazeState,
-                    style = HazeStyle(backgroundColor = Color.Transparent, tint = HazeTint(Color.White.copy(alpha = 0.1f)), blurRadius = 20.dp, noiseFactor = 0.1f)
-                )
-                // 叠加一层微弱的白色高光边框，增加玻璃质感
+                // 半透明背景
+                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.05f))))
+                // 边缘高光描边
                 .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.1f))), RoundedCornerShape(34.dp))
                 .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceAround,
