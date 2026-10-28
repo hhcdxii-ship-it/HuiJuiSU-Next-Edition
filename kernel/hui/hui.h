@@ -16,7 +16,7 @@
 
 #define HUI_VERSION_CODE "1.0.0"
 #define HUI_MAX_PACKAGE_LEN 256
-#define HIJ_HASH_BITS 8
+#define HUI_HASH_BITS 8
 
 struct hui_app_info {
     uid_t uid;
@@ -36,7 +36,7 @@ struct hui_core_state {
 
 // 全局变量声明
 extern struct hui_core_state hui_state;
-extern struct hlist_head hui_allowlist[HIJ_HASH_BITS];
+extern struct hlist_head hui_allowlist[HUI_HASH_BITS];
 extern spinlock_t hui_allowlist_lock;
 extern uid_t blocked_net_uids[16];
 
