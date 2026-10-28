@@ -87,7 +87,7 @@ fun ModuleScreen() {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).scale(enterAlpha)) {
             Spacer(modifier = Modifier.height(60.dp))
             Text("模块", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("本地模块管理与扩展", color = Color.White.copy(0.6f), fontSize = 14.sp)
+            Text("本地模块管理与扩展", color = Color.White.copy(0.85f), fontSize = 14.sp)
             
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -124,7 +124,7 @@ fun ModuleScreen() {
             } else if (errorMsg != null) {
                 Text(errorMsg!!, color = Color.Red, fontSize = 14.sp)
             } else if (modules.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("暂无已装载模块", color = Color.White.copy(0.5f), fontSize = 16.sp) }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("暂无已装载模块", color = Color.White.copy(0.75f), fontSize = 16.sp) }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 120.dp)) {
                     items(modules) { module ->
@@ -137,7 +137,7 @@ fun ModuleScreen() {
                                 Spacer(Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(module.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text("版本: ${module.version} | 作者: ${module.author}", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                                    Text("版本: ${module.version} | 作者: ${module.author}", color = Color.White.copy(0.85f), fontSize = 12.sp)
                                 }
                                 Text("已启用", color = AppSettings.accentColor.color.copy(alpha = breathAlpha), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }

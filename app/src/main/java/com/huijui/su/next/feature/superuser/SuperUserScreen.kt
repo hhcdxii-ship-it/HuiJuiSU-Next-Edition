@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.superuser
+import androidx.compose.foundation.layout.statusBarsPadding
 import com.huijui.su.next.core.utils.AppSettings
 
 import android.content.pm.ApplicationInfo
@@ -71,18 +72,18 @@ fun SuperUserScreen() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         SmartBackground()
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(0.3f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
+        Box(modifier = Modifier.fillMaxSize().statusBarsPadding().background(Brush.verticalGradient(listOf(Color.Black.copy(0.3f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
 
-        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {
             Spacer(modifier = Modifier.height(60.dp))
             Text("超级用户", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("应用 Root 权限管理", color = Color.White.copy(0.6f), fontSize = 14.sp)
+            Text("应用 Root 权限管理", color = Color.White.copy(0.85f), fontSize = 14.sp)
             Spacer(modifier = Modifier.height(24.dp))
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize().statusBarsPadding(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AppSettings.accentColor.color)
                 }
             } else {
@@ -119,7 +120,7 @@ fun SuperUserScreen() {
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(app.appName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text(app.packageName, color = Color.White.copy(0.5f), fontSize = 12.sp, maxLines = 1)
+                                    Text(app.packageName, color = Color.White.copy(0.75f), fontSize = 12.sp, maxLines = 1)
                                 }
                                 
                                 // 🚀 纯原生手搓液态开关

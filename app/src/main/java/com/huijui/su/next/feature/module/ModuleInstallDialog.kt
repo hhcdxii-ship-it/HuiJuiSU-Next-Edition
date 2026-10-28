@@ -134,7 +134,7 @@ fun ModuleInstallDialog(
                     exit = fadeOut()
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text("请选择操作：", color = Color.White.copy(0.6f), fontSize = 13.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                        Text("请选择操作：", color = Color.White.copy(0.85f), fontSize = 13.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
                         Spacer(modifier = Modifier.height(12.dp))
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

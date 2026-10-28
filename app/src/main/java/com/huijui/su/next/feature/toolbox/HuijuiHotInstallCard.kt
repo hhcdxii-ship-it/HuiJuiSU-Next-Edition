@@ -24,7 +24,7 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
 
     GlassCard(
         // 换成最小高度，让它自适应
-        modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+        modifier = Modifier.fillMaxWidth().fillMaxWidth(),
         onClick = {
             if (isRunning) return@GlassCard
             isRunning = true

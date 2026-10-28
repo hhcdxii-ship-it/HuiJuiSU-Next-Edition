@@ -37,17 +37,31 @@ fun GlassCard(
         label = "card_scale"
     )
 
-    // 🚀 动态圆角
     val cornerRadius = RoundedCornerShape(AppSettings.cardCornerRadius.dp)
 
     Box(
         modifier = modifier
             .scale(scale)
+            // 1. 外阴影，增加悬浮立体感
             .shadow(elevation = 12.dp, shape = cornerRadius, ambientColor = Color.Black.copy(0.4f), spotColor = Color.Black.copy(0.4f))
-            .shadow(elevation = 2.dp, shape = cornerRadius, ambientColor = Color.White.copy(0.1f), spotColor = Color.White.copy(0.1f))
             .clip(cornerRadius)
-            .background(Brush.verticalGradient(listOf(Color.White.copy(0.18f), Color.White.copy(0.04f))))
-            .border(0.5.dp, Brush.verticalGradient(listOf(Color.White.copy(0.4f), Color.White.copy(0.05f))), cornerRadius)
+            // 2. 🚀 核心修复：加一层深灰黑色底裤（alpha 0.5f），既保留透明感，又保证文字对比度
+            .background(Color(0xFF1A1A1A).copy(alpha = 0.5f))
+            // 3. 🚀 再叠一层微弱的白色渐变，模拟玻璃的高光反射
+            .background(Brush.verticalGradient(listOf(Color.White.copy(0.1f), Color.Transparent)))
+            // 4. 高光描边（左上方亮，右下方暗，体现玻璃厚度）
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(0.75f),
+                        Color.White.copy(0.1f),
+                        Color.Transparent,
+                        Color.White.copy(0.05f)
+                    )
+                ),
+                shape = cornerRadius
+            )
             .then(
                 if (onClick != null && onClick != {}) {
                     Modifier.clickable(interactionSource = interactionSource, indication = null, onClick = onClick)

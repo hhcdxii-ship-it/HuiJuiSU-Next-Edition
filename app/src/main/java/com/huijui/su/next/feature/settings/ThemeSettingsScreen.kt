@@ -91,7 +91,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
             
             Spacer(modifier = Modifier.height(16.dp))
             Text("主题设置", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("自定义你的纯血管理器外观", color = Color.White.copy(0.6f), fontSize = 14.sp)
+            Text("自定义你的纯血管理器外观", color = Color.White.copy(0.85f), fontSize = 14.sp)
             
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -155,7 +155,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                     SettingsGroup(title = "壁纸暗化程度", enabled = isDimEnabled) {
                         Text(
                             text = if (isDimEnabled) "当前: ${(AppSettings.wallpaperDimAlpha * 100).toInt()}%" else "无壁纸模式下不可用",
-                            color = Color.White.copy(0.6f), fontSize = 12.sp
+                            color = Color.White.copy(0.85f), fontSize = 12.sp
                         )
                         Slider(
                             value = AppSettings.wallpaperDimAlpha,
@@ -180,7 +180,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                 // ================= 卡片圆角 =================
                 item {
                     SettingsGroup(title = "卡片圆角") {
-                        Text("当前: ${AppSettings.cardCornerRadius.toInt()} dp", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                        Text("当前: ${AppSettings.cardCornerRadius.toInt()} dp", color = Color.White.copy(0.85f), fontSize = 12.sp)
                         Slider(
                             value = AppSettings.cardCornerRadius,
                             onValueChange = { AppSettings.cardCornerRadius = it },
@@ -218,7 +218,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                 // ================= 全局动画速度 =================
                 item {
                     SettingsGroup(title = "全局动画速度") {
-                        Text("当前: ${AppSettings.animationSpeedScale}x", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                        Text("当前: ${AppSettings.animationSpeedScale}x", color = Color.White.copy(0.85f), fontSize = 12.sp)
                         Slider(
                             value = AppSettings.animationSpeedScale,
                             onValueChange = { AppSettings.animationSpeedScale = it },
@@ -241,12 +241,12 @@ fun ThemeOptionRow(title: String, desc: String, isSelected: Boolean, enabled: Bo
     ) {
         Icon(
             imageVector = if (isSelected) Icons.TwoTone.RadioButtonChecked else Icons.TwoTone.RadioButtonUnchecked,
-            contentDescription = null, tint = if (isSelected) AppSettings.accentColor.color else Color.White.copy(0.5f), modifier = Modifier.size(24.dp)
+            contentDescription = null, tint = if (isSelected) AppSettings.accentColor.color else Color.White.copy(0.75f), modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
             Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = Color.White.copy(0.5f), fontSize = 12.sp)
+            Text(desc, color = Color.White.copy(0.75f), fontSize = 12.sp)
         }
     }
 }
@@ -254,7 +254,7 @@ fun ThemeOptionRow(title: String, desc: String, isSelected: Boolean, enabled: Bo
 @Composable
 fun SettingsGroup(title: String, enabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(title, color = if (enabled) Color.White.copy(0.6f) else Color.White.copy(0.3f), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+        Text(title, color = if (enabled) Color.White.copy(0.85f) else Color.White.copy(0.3f), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
         GlassCard(modifier = Modifier.fillMaxWidth()) { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { content() } }
     }
 }

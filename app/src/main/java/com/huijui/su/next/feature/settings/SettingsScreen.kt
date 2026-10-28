@@ -60,7 +60,7 @@ fun SettingsScreen(onNavigateToTheme: () -> Unit) {
             Spacer(modifier = Modifier.height(60.dp))
             Text("设置", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
             // 🚀 动态显示 ROM 标识
-            Text("Next Edition · ${AppSettings.osMajorVersion} 适配", color = Color.White.copy(0.6f), fontSize = 14.sp)
+            Text("Next Edition · ${AppSettings.osMajorVersion} 适配", color = Color.White.copy(0.85f), fontSize = 14.sp)
             
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -150,7 +150,7 @@ fun SettingsScreen(onNavigateToTheme: () -> Unit) {
                         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("HuiJuiSU", fontSize = 28.sp, fontWeight = FontWeight.Black, style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(listOf(AppSettings.accentColor.color, Color(0xFF4CAF50)))))
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Next Edition · 纯血架构", color = Color.White.copy(0.5f), fontSize = 12.sp, letterSpacing = 2.sp)
+                            Text("Next Edition · 纯血架构", color = Color.White.copy(0.75f), fontSize = 12.sp, letterSpacing = 2.sp)
                         }
                         HorizontalDivider(color = Color.White.copy(0.1f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
                         SettingActionRow(Icons.TwoTone.Info, "版本信息", "v1.0.0-release (Build 1)") { }
@@ -165,7 +165,7 @@ fun SettingsScreen(onNavigateToTheme: () -> Unit) {
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(title, color = Color.White.copy(0.6f), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+        Text(title, color = Color.White.copy(0.85f), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
         GlassCard(modifier = Modifier.fillMaxWidth()) { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { content() } }
     }
 }
@@ -177,7 +177,7 @@ fun SettingSwitchRow(icon: ImageVector, title: String, desc: String, checked: Bo
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = Color.White.copy(0.5f), fontSize = 12.sp)
+            Text(desc, color = Color.White.copy(0.75f), fontSize = 12.sp)
         }
         LiquidSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
@@ -190,9 +190,9 @@ fun SettingActionRow(icon: ImageVector, title: String, desc: String, onClick: ()
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = Color.White.copy(0.5f), fontSize = 12.sp)
+            Text(desc, color = Color.White.copy(0.75f), fontSize = 12.sp)
         }
-        Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(0.5f), modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(0.75f), modifier = Modifier.size(20.dp))
     }
 }
 

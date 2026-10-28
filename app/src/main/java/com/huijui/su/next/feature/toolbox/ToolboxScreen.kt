@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.toolbox
+import androidx.compose.foundation.layout.heightIn
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -154,14 +155,14 @@ fun ToolboxScreen() {
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
         } else {
-            Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(60.dp))
                 
                 // 顶部状态卡片
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("HuiJuiSU", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black)
-                        Text("Next Edition · 控制台", color = Color.White.copy(0.6f), fontSize = 14.sp)
+                        Text("Next Edition · 控制台", color = Color.White.copy(0.85f), fontSize = 14.sp)
                     }
                     Row(
                         modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(managerState.color.copy(alpha = 0.15f)).clickable { showStatusDialog = true }.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -176,13 +177,13 @@ fun ToolboxScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // 快捷操作区（略，保持原有 UI 风格即可）
-                GlassCard(modifier = Modifier.fillMaxWidth().height(100.dp), onClick = { if (!isPatching) bootPicker.launch("application/octet-stream") }) {
-                    Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { if (!isPatching) bootPicker.launch("application/octet-stream") }) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.TwoTone.Build, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text("纯血镜像修补", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("生成可电脑刷入的 init_boot/boot 镜像", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                            Text("生成可电脑刷入的 init_boot/boot 镜像", color = Color.White.copy(0.85f), fontSize = 12.sp)
                         }
                     }
                 }
@@ -230,7 +231,7 @@ fun ToolboxScreen() {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("底层状态监控", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                         Text("当前状态: ${managerState.title}", color = managerState.color, fontWeight = FontWeight.Bold)
-                        Text("检测机制: 守护进程 + 属性校验", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                        Text("检测机制: 守护进程 + 属性校验", color = Color.White.copy(0.85f), fontSize = 12.sp)
                         
                         if (managerState == ManagerState.PENDING_VERIFY) {
                             Text("系统检测到您刚刚生成了修补镜像。请务必使用 Fastboot 刷入并重启，App 将在重启后自动验证。", color = Color(0xFFFFC107), fontSize = 13.sp)
