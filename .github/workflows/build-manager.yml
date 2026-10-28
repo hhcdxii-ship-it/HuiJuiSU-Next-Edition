@@ -273,7 +273,7 @@ jobs:
 
       # 13. Telegram 推送通知（需要你在 GitHub Secrets 里配置 TELEGRAM_TOKEN 和 TELEGRAM_TO）
       - name: Send Telegram Notification
-        if: ${{ secrets.TELEGRAM_TOKEN != '' && always() }}
+        if: always()
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_TO }}
