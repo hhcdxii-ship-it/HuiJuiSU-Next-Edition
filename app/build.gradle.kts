@@ -37,6 +37,14 @@ android {
 }
 
 dependencies {
+    // 🚀 新增：导航与页面动画
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("com.canopas.compose-animated-navigationbar:bottombar:1.0.1")
+    implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
+    // 🚀 新增：液态/毛玻璃效果 (Haze 稳定版)
+    implementation("dev.chrisbanes.haze:haze:0.6.0")
+    implementation("dev.chrisbanes.haze:haze-blur:0.6.0")
+
     // 1. 核心 Compose 基础 (纯血，无 Material3 界面依赖，但保留底层)
     implementation("androidx.compose.foundation:foundation:1.6.3")
     implementation("androidx.compose.ui:ui:1.6.3")
