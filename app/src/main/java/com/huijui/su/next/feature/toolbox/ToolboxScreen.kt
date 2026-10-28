@@ -143,7 +143,7 @@ fun ToolboxScreen() {
                                 Text(managerState.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFF81C784).copy(0.3f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                    Text("LKM", color = Color(0xFF81C784), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text("HUI", color = Color(0xFF81C784), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))

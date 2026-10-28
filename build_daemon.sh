@@ -24,13 +24,13 @@ if [ ! -f "$CC" ]; then
 fi
 
 # 编译 C 源码，输出为静态链接的可执行文件
-echo ">>> 正在编译 huijui_ksud.c ..."
-$CC -O2 -static -s -o app/src/main/assets/huijui_ksud huijui_ksud.c
+echo ">>> 正在编译 Hsud.c ..."
+$CC -O2 -static -s -o app/src/main/assets/Hsud Hsud.c
 
 if [ $? -eq 0 ]; then
-    echo "✅ 编译成功！已生成 ARM64 静态二进制: app/src/main/assets/huijui_ksud"
-    chmod +x app/src/main/assets/huijui_ksud
-    file app/src/main/assets/huijui_ksud
+    echo "✅ 编译成功！已生成 ARM64 静态二进制: app/src/main/assets/Hsud"
+    chmod +x app/src/main/assets/Hsud
+    file app/src/main/assets/Hsud
 else
     echo "❌ 编译失败！"
     exit 1

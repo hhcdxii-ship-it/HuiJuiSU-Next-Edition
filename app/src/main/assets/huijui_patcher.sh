@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # 🚀 HuiJuiSU 完整纯血修补引擎 v4.0
-# 铁律：huijui_ksud / huijui_boot 任一缺失，立即退出，绝不生成半成品镜像。
+# 铁律：Hsud / huijui_boot 任一缺失，立即退出，绝不生成半成品镜像。
 
 INPUT_IMG="$1"
 OUTPUT_IMG="$2"
@@ -11,8 +11,8 @@ export PATH="$BIN_DIR:$PATH"
 log() { echo "$1"; }
 
 # ---------- 前置硬检查：没有 daemon 和 boot 工具，直接死 ----------
-if [ ! -f "$BIN_DIR/huijui_ksud" ]; then
-    log "❌ 致命错误：$BIN_DIR/huijui_ksud 不存在，拒绝生成无 daemon 的镜像"
+if [ ! -f "$BIN_DIR/Hsud" ]; then
+    log "❌ 致命错误：$BIN_DIR/Hsud 不存在，拒绝生成无 daemon 的镜像"
     exit 2
 fi
 if ! command -v huijui_boot >/dev/null 2>&1 && [ ! -x "$BIN_DIR/huijui_boot" ]; then
@@ -51,8 +51,8 @@ if [ -f "ramdisk.cpio" ]; then
 
     # 注入 daemon 二进制到 ramdisk 的 /system/bin
     mkdir -p system/bin
-    cp "$BIN_DIR/huijui_ksud" system/bin/huijui_ksud
-    chmod 755 system/bin/huijui_ksud
+    cp "$BIN_DIR/Hsud" system/bin/Hsud
+    chmod 755 system/bin/Hsud
 
     # 注入 init rc（放 ramdisk 根目录，init 自动扫描）
     log " 💉 注入 huijui.rc..."
@@ -61,14 +61,14 @@ on post-fs-data
     mkdir /data/adb/huijuisu 0770 root root
     chmod 755 /data/adb/huijuisu
 
-service huijui_daemon /system/bin/huijui_ksud daemon
+service Hsud /system/bin/Hsud daemon
     class late_start
     user root
     group root
     seclabel u:r:su:s0
 
 on property:sys.boot_completed=1
-    start huijui_daemon
+    start Hsud
 HIJRC
     chmod 644 huijui.rc
 

@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.su.next.core.root.HuijuiScriptRunner
+import com.huijui.su.next.core.root.RootEngineVerifier
 import com.huijui.su.next.core.ui.component.GlassCard
 import com.huijui.su.next.core.utils.AppSettings
 import kotlinx.coroutines.launch
@@ -23,19 +24,25 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
     var lastResult by remember { mutableStateOf<String?>(null) }
 
     GlassCard(
-        // 换成最小高度，让它自适应
-        modifier = Modifier.fillMaxWidth().fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         onClick = {
             if (isRunning) return@GlassCard
             isRunning = true
             lastResult = null
             scope.launch {
                 val result = HuijuiScriptRunner.runHotInstall(context)
-                val summary = if (result.isSuccess) {
-                    "✅ 热接管成功：" + result.out.takeLast(2).joinToString(" ")
+                
+                // 🚀 真实联动：不管成功还是失败，立刻重新查验内核状态
+                val verifyReport = RootEngineVerifier.verifyDetailed()
+                
+                val summary = if (result.isSuccess && verifyReport.isActive) {
+                    AppSettings.hasRoot = true
+                    "✅ 热接管成功：HUI 内核已激活！"
                 } else {
-                    "❌ 接管失败：" + (result.err.firstOrNull() ?: result.out.lastOrNull() ?: "未知错误")
+                    AppSettings.hasRoot = false
+                    "❌ 接管失败：${verifyReport.detail}"
                 }
+                
                 lastResult = summary
                 isRunning = false
                 onFinished()
@@ -55,7 +62,7 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    lastResult ?: if (isRunning) "接管中，请稍候…" else "点击拉起 HuiJuiSU 守护进程，无需重启",
+                    lastResult ?: if (isRunning) "正在注入 HUI 内核，请稍候…" else "点击拉起 HUI 内核接管底层",
                     color = if (lastResult?.startsWith("❌") == true) Color(0xFFEF5350) else Color.White.copy(0.8f),
                     fontSize = 12.sp,
                     lineHeight = 16.sp

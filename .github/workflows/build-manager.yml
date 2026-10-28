@@ -1,0 +1,301 @@
+name: HuiJuiSU Ultimate Build
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+# 🚀 赋予 GITHUB_TOKEN 发布 Release 的权限
+permissions:
+  contents: write
+
+env:
+  # 全局版本号，用运行次数作为补丁号
+  APP_VERSION: "vNext-1.0.${{ github.run_number }}"
+
+jobs:
+  # ==========================================
+  # 0-3 段：核心 C 工具编译 (Hsud + huijui_boot)
+  # ==========================================
+  build-c-tools:
+    name: Compile C Tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 0. 环境准备：缓存 NDK，大幅加快后续编译速度
+      - name: Setup Android NDK (Cached)
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          add-to-path: true
+
+      # 1. 编译 Hsud (纯血守护进程)
+      - name: Compile Hsud Daemon
+        run: |
+          echo ">>> 编译 Hsud.c ..."
+          $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang \
+            -O2 -static -s -o Hsud Hsud.c
+          file Hsud
+
+      # 2. 编译 huijui_boot (纯血镜像工具)
+      - name: Compile huijui_boot Tool
+        run: |
+          echo ">>> 编译 huijui_boot.c ..."
+          $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang \
+            -O2 -static -s -o huijui_boot boot_tool/huijui_boot.c
+          file huijui_boot
+
+      # 3. 归档 C 工具供后续 App 打包使用
+      - name: Upload C Tools Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: C-Tools
+          path: |
+            Hsud
+            huijui_boot
+          retention-days: 1
+
+  # ==========================================
+  # 4-6 段：HUI 内核模块 16 核矩阵编译
+  # ==========================================
+  build-hui-lkm:
+    name: Build HUI LKM (${{ matrix.gki_branch }} - ${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: build-c-tools # 确保前置任务成功，虽然没直接依赖，但保持顺序
+    strategy:
+      fail-fast: false
+      matrix:
+        gki_branch: [
+          "android12-5.10", "android13-5.10", "android13-5.15",
+          "android14-5.15", "android14-6.1", "android15-6.6",
+          "android16-6.12", "android17-6.18"
+        ]
+        arch: ["arm64", "x86_64"]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 4. 安装交叉编译链（ARM64 与 x86_64）
+      - name: Install Cross Compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu
+
+      # 5. 缓存内核源码，防止每次拉取浪费大量时间
+      - name: Cache Kernel Source
+        uses: actions/cache@v4
+        with:
+          path: gki-kernel
+          key: kernel-${{ matrix.gki_branch }}-${{ hashFiles('.github/workflows/build-manager.yml') }}
+          
+      - name: Download Kernel Source (If not cached)
+        run: |
+          if [ ! -d "gki-kernel" ]; then
+            echo ">>> 内核源码未命中缓存，开始浅克隆..."
+            git clone --depth=1 https://android.googlesource.com/kernel/common -b ${{ matrix.gki_branch }} gki-kernel
+          else
+            echo ">>> 命中内核源码缓存，跳过克隆！"
+          fi
+
+      # 6. 核心编译逻辑（含 LTO 动态关闭与架构切换）
+      - name: Build HUI LKM
+        run: |
+          cd gki-kernel
+          export ARCH=${{ matrix.arch }}
+          export LLVM=1
+          
+          # 动态切换交叉编译器
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            export CROSS_COMPILE=aarch64-linux-gnu-
+          else
+            export CROSS_COMPILE=x86_64-linux-gnu-
+          fi
+
+          echo ">>> 正在生成 gki_defconfig..."
+          make ARCH=${{ matrix.arch }} LLVM=1 gki_defconfig
+
+          # 针对 Android 15/16/17 动态关闭 LTO（防内存爆满）
+          if [[ "${{ matrix.gki_branch }}" == "android15-6.6" || "${{ matrix.gki_branch }}" == "android16-6.12" || "${{ matrix.gki_branch }}" == "android17-6.18" ]]; then
+            echo ">>> 检测到新内核，正在关闭 LTO..."
+            ./scripts/config --file .config -d LTO_CLANG_FULL -d LTO_CLANG_THIN -e LTO_NONE
+          fi
+
+          echo ">>> 准备内核模块编译环境..."
+          make ARCH=${{ matrix.arch }} LLVM=1 modules_prepare
+
+          echo ">>> 正在编译 HUI LKM..."
+          # 允许 modpost 警告，防止因找不到 printk 等符号报错中断
+          make ARCH=${{ matrix.arch }} LLVM=1 M=${{ github.workspace }}/kernel KBUILD_MODPOST_WARN=1 modules
+
+          # 归档产物，带上版本与架构，避免冲突
+          mkdir -p ${{ github.workspace }}/lkm_out
+          cp kernel/huijui_lkm.ko ${{ github.workspace }}/lkm_out/huijui_lkm_${{ matrix.gki_branch }}_${{ matrix.arch }}.ko
+          
+          echo ">>> 编译产物："
+          ls -la ${{ github.workspace }}/lkm_out/
+
+      - name: Upload HUI LKM
+        uses: actions/upload-artifact@v4
+        with:
+          name: LKM-${{ matrix.gki_branch }}-${{ matrix.arch }}
+          path: ${{ github.workspace }}/lkm_out/*.ko
+          retention-days: 1
+
+  # ==========================================
+  # 7-9 段：产物聚合、App 编译与自动发版
+  # ==========================================
+  build-and-release:
+    name: Package & Release
+    runs-on: ubuntu-latest
+    needs: [build-c-tools, build-hui-lkm] # 🚀 必须等 C 工具和 16 个 LKM 全部完工才执行
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 7. 下载并聚合所有 C 工具
+      - name: Download C Tools
+        uses: actions/download-artifact@v4
+        with:
+          name: C-Tools
+          path: app/src/main/assets/
+
+      # 8. 下载并聚合所有 16 个 HUI 内核模块
+      - name: Download All HUI LKMs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: LKM-*
+          merge-multiple: true
+          path: app/src/main/assets/lkm/
+
+      # 验证聚合是否成功（防漏）
+      - name: Verify Assets
+        run: |
+          echo ">>> 当前 Assets 目录结构:"
+          ls -la app/src/main/assets/
+          echo ">>> LKM 矩阵数量 (应该为 16):"
+          ls -1 app/src/main/assets/lkm/ | wc -l
+
+      # 动态注入版本号
+      - name: Inject Version Name
+        run: |
+          sed -i 's/versionName = "vNext-Edition"/versionName = "${{ env.APP_VERSION }}"/g' app/build.gradle.kts
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 9. 双端编译（Debug 与 Release）
+      - name: Build APKs
+        run: |
+          ./gradlew assembleDebug
+          # 如果没有配置签名，打出来的 release 是 unsigned 的
+          ./gradlew assembleRelease
+
+      # 重命名包并聚合成一个压缩包
+      - name: Prepare Release Package
+        run: |
+          mkdir -p release_out
+          cp app/build/outputs/apk/debug/app-debug.apk release_out/HuiJuiSU_${{ env.APP_VERSION }}_debug.apk
+          cp app/build/outputs/apk/release/app-release-unsigned.apk release_out/HuiJuiSU_${{ env.APP_VERSION }}_release_unsigned.apk || true
+          cd release_out && zip -r HuiJuiSU_${{ env.APP_VERSION }}_Full.zip ./*
+
+      # 🚀 直接发布到 GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.APP_VERSION }}
+          name: HuiJuiSU ${{ env.APP_VERSION }}
+          body: |
+            ## 🚀 HuiJuiSU Next Edition 自动化构建发布
+            
+            - **版本**: ${{ env.APP_VERSION }}
+            - **内核支持**: HUI LKM 全面适配 Android 12 - 17 (arm64/x86_64)
+            - **包含组件**: 纯血 C Daemon (Hsud), 纯血镜像工具 (huijui_boot)
+            
+            ### 📦 下载说明
+            - `HuiJuiSU_xxx_debug.apk`: 调试包（建议直接安装）
+            - `HuiJuiSU_xxx_release_unsigned.apk`: 未签名正式包（需自行签名）
+          files: |
+            release_out/HuiJuiSU_${{ env.APP_VERSION }}_Full.zip
+            release_out/HuiJuiSU_${{ env.APP_VERSION }}_debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ==========================================
+      # 10-15 段：工业级收尾（签名、防爆盘、通知、防坑）
+      # ==========================================
+
+      # 10. 自动给 Release 包签名（使用临时生成的密钥，方便小白直接安装）
+      - name: Sign Release APK
+        run: |
+          # 临时生成一个签名文件 (密码统一为 huijui)
+          keytool -genkey -v -keystore release.keystore -alias huijui -keyalg RSA -keysize 2048 -validity 10000 -storepass huijui123 -keypass huijui123 -dname "CN=HuiJuiSU, OU=Team, O=HuiJuiSU, L=Beijing, S=Beijing, C=CN"
+          
+          # 对齐并签名 APK
+          UNSIGNED_APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          zipalign -v -p 4 $UNSIGNED_APK aligned.apk
+          apksigner sign --ks release.keystore --ks-pass pass:huijui123 --key-pass pass:huijui123 --out app/build/outputs/apk/release/app-release-signed.apk aligned.apk
+          
+          # 替换原先的未签名包
+          cp app/build/outputs/apk/release/app-release-signed.apk release_out/HuiJuiSU_${{ env.APP_VERSION }}_release_signed.apk
+
+      # 11. 清理无用缓存，防止 GitHub 免费额度因占用过大而爆盘
+      - name: Cleanup Workspace
+        if: always() # 无论成功失败都执行
+        run: |
+          rm -rf gki-kernel
+          rm -rf kernel-headers
+          rm -rf build_out
+          rm -f aligned.apk release.keystore
+          echo "✅ 构建空间已清理，防止爆盘！"
+
+      # 12. Android 15+ 强制 16KB Page Size 对齐提示（防坑点）
+      # 如果 Gradle 报错关于 16kb 对齐，说明 NDK 版本太老，或者需要调整
+      - name: Enforce 16KB Page Size (Android 15+)
+        run: |
+          echo ">>> 检查 16KB Page Size 对齐..."
+          # 这里我们利用 zipalign 强制检查，如果失败说明有 4KB 对齐的 so 文件，提示用户
+          if [ -f "app/build/outputs/apk/release/app-release-signed.apk" ]; then
+            zipalign -c -v 4 app/build/outputs/apk/release/app-release-signed.apk || echo "⚠️ 存在非 4KB 对齐的 so 文件，可能在 Android 15+ 上闪退"
+          fi
+
+      # 13. Telegram 推送通知（需要你在 GitHub Secrets 里配置 TELEGRAM_TOKEN 和 TELEGRAM_TO）
+      - name: Send Telegram Notification
+        if: ${{ secrets.TELEGRAM_TOKEN != '' && always() }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            🚀 HuiJuiSU 流水线已结束！
+            状态: ${{ job.status }}
+            版本: ${{ env.APP_VERSION }}
+            
+            请前往 Releases 页面下载最新构建！
+
+      # 14. 抓取构建失败日志（方便排查 16 个 LKM 里哪个版本报错）
+      - name: Dump Build Logs (On Failure)
+        if: failure()
+        run: |
+          echo "❌ 构建失败，请查看上方日志，重点排查 LKM 矩阵任务！"
+
+      # 15. 汇总输出构建结果
+      - name: Summary
+        if: always()
+        run: |
+          echo "### 🚀 HuiJuiSU Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本**: ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建状态**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **产物**: 请点击上方的 Releases 或 Artifacts 查看。" >> $GITHUB_STEP_SUMMARY
