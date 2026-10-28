@@ -15,7 +15,8 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.huijui.su.next.R
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
 /**
  * 🚀 智能壁纸引擎
@@ -24,7 +25,7 @@ import com.huijui.su.next.R
 @Composable
 fun SmartBackground() {
     val context = LocalContext.current
-    
+
     // 动态获取资源 ID (防止由于文件不存在导致编译报错)
     val videoResId = getResId(context, "dynamic_bg", "raw")
     val imageResId = getResId(context, "bg_static", "drawable")
@@ -75,12 +76,12 @@ private fun VideoBackground(videoResId: Int) {
             prepare()
         }
     }
-    
+
     // 离开页面时安全释放，防止内存泄漏和后台耗电
     DisposableEffect(Unit) {
         onDispose { exoPlayer.release() }
     }
-    
+
     AndroidView(
         factory = { ctx ->
             PlayerView(ctx).apply {
