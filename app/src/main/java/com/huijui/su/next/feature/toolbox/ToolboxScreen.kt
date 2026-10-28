@@ -76,6 +76,7 @@ fun ToolboxScreen() {
     var managerState by remember { mutableStateOf(ManagerState.NOT_WORKING) }
     var deviceInfo by remember { mutableStateOf(DeviceInfo()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRootAvailable by remember { mutableStateOf(false) }
     
     var showStatusDialog by remember { mutableStateOf(false) }
     var showBootGuideDialog by remember { mutableStateOf(false) }

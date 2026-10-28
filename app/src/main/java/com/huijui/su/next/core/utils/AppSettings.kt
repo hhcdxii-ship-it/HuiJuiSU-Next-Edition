@@ -11,7 +11,7 @@ import java.io.File
 enum class MaterialStyle { GLASS, SOLID, NONE }
 enum class AnimationStyle { SPRING, SMOOTH, NONE }
 enum class WallpaperType { VIDEO, IMAGE, NONE }
-enum class AccentColor(val color: Color, val name: String) {
+enum class AccentColor(val color: Color, val displayName: String) {
     GREEN(Color(0xFF81C784), "极客绿"),
     CYBER_BLUE(Color(0xFF4FC3F7), "赛博蓝"),
     FLAME_RED(Color(0xFFE57373), "烈焰红"),
@@ -77,7 +77,7 @@ object AppSettings {
         wallpaperType = WallpaperType.valueOf(prefs.getString("wallpaper_type", WallpaperType.VIDEO.name) ?: WallpaperType.VIDEO.name)
         
         cardCornerRadius = prefs.getFloat("card_corner_radius", 24f)
-        accentColor = AccentColor.valueOf(prefs.getString("accent_color", AccentColor.GREEN.name) ?: AccentColor.GREEN.name)
+        accentColor = AccentColor.valueOf(prefs.getString("accent_color", AccentColor.GREEN.name) ?: AccentColor.GREEN.displayName)
         wallpaperDimAlpha = prefs.getFloat("wallpaper_dim_alpha", 0.6f)
         animationSpeedScale = prefs.getFloat("animation_speed", 1.0f)
 

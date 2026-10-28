@@ -34,7 +34,7 @@ object HuijuiScriptRunner {
             val script = File(assetDir, ASSET_HOT_INSTALL)
             val daemon = File(assetDir, ASSET_DAEMON)
 
-            HuijuiShell.exec("chmod 755 '${script.absolutePath}' '${daemon.absolutePath}'", 10_000)
+            HuijuiShell.exec("chmod 755 '${script.absolutePath}' '${daemon.absolutePath}'")
 
             HuijuiShell.exec(
                 "sh '${script.absolutePath}' '${workDir.absolutePath}' '${assetDir.absolutePath}'",

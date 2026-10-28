@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.su.next.core.root.HuijuiScriptRunner
 import com.huijui.su.next.core.ui.component.GlassCard
-import com.huijui.su.next.utils.AppSettings
+import com.huijui.su.next.core.utils.AppSettings
 import kotlinx.coroutines.launch
 
 /**

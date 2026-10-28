@@ -12,7 +12,7 @@ enum class RootEnvironment(val displayName: String) {
 }
 
 object RootEnvironmentDetector {
-    fun detect(): RootEnvironment {
+    suspend fun detect(): RootEnvironment {
         if (HuijuiShell.exec("ls /data/adb/apd").isSuccess) {
             return RootEnvironment.APATCH
         }
@@ -34,7 +34,7 @@ object RootEnvironmentDetector {
     /**
      * 🚀 检测是否为 Built-in 模式
      */
-    fun isBuiltInMode(): Boolean {
+    suspend fun isBuiltInMode(): Boolean {
         val kernelInfo = HuijuiShell.exec("cat /proc/version").out.joinToString(" ")
         val isLkmRunning = HuijuiShell.exec("lsmod | grep kernelsu").isSuccess
         return kernelInfo.contains("KernelSU", ignoreCase = true) && !isLkmRunning
@@ -43,12 +43,12 @@ object RootEnvironmentDetector {
     /**
      * 🚀 检测是否为越狱模式 (SELinux Permissive)
      */
-    fun isJailbreakMode(): Boolean {
+    suspend fun isJailbreakMode(): Boolean {
         val selinux = HuijuiShell.exec("getenforce").out.firstOrNull()?.trim()
         return selinux == "Permissive"
     }
 
-    fun switchToHuijuiSU(context: Context, currentEnv: RootEnvironment): Boolean {
+    suspend fun switchToHuijuiSU(context: Context, currentEnv: RootEnvironment): Boolean {
         val packageName = context.packageName
         return when (currentEnv) {
             RootEnvironment.MAGISK -> {

@@ -1,3 +1,6 @@
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.animation.core.AnimationSpec
 package com.huijui.su.next
 
 import android.os.Bundle
@@ -143,12 +146,13 @@ fun DraggableGlassBottomBar(
     val selectedIndex = navItems.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
     var barWidth by remember { mutableStateOf(0f) }
     var itemWidth by remember { mutableStateOf(0f) }
+    val scope = rememberCoroutineScope()
     val animatedOffset = remember { Animatable(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var dragOffset by remember { mutableStateOf(0f) }
 
     // 动画参数：使用极低阻尼的弹簧参数，让滑动有“德芙”般的惯性感
-    val animSpec = when (AppSettings.animationStyle) {
+    val animSpec: androidx.compose.animation.core.AnimationSpec<Float> = when (AppSettings.animationStyle) {
         AnimationStyle.SPRING -> spring(dampingRatio = 0.75f, stiffness = 250f * (1f / AppSettings.animationSpeedScale)) // 降低刚度，提升阻尼，极其丝滑
         AnimationStyle.SMOOTH -> tween((400 * AppSettings.animationSpeedScale).toInt(), easing = FastOutSlowInEasing)
         AnimationStyle.NONE -> tween(0)
@@ -182,7 +186,7 @@ fun DraggableGlassBottomBar(
                 barWidth = coordinates.size.width.toFloat()
                 itemWidth = barWidth / navItems.size
                 if (animatedOffset.value == 0f && selectedIndex > 0) {
-                    animatedOffset.snapTo(selectedIndex * itemWidth)
+                    scope.launch { scope.launch { animatedOffset.snapTo(selectedIndex * itemWidth) } }
                 }
             }
             .pointerInput(barWidth, itemWidth) {
@@ -193,18 +197,18 @@ fun DraggableGlassBottomBar(
                         val newOffset = (dragOffset + dragAmount).coerceIn(0f, barWidth - itemWidth)
                         dragOffset = newOffset
                         if (animatedOffset.value != newOffset) {
-                            LaunchedEffect(newOffset) { animatedOffset.snapTo(newOffset) }
+                            scope.launch { animatedOffset.snapTo(newOffset) }
                         }
                     },
                     onDragEnd = {
                         isDragging = false
                         val nearestIndex = (animatedOffset.value / itemWidth).roundToInt().coerceIn(0, navItems.size - 1)
                         onTabSelected(navItems[nearestIndex].route)
-                        LaunchedEffect(nearestIndex) { animatedOffset.animateTo(nearestIndex * itemWidth, animSpec) }
+                        scope.launch { animatedOffset.animateTo(nearestIndex * itemWidth, animSpec) }
                     },
                     onDragCancel = {
                         isDragging = false
-                        LaunchedEffect(selectedIndex) { animatedOffset.animateTo(selectedIndex * itemWidth, animSpec) }
+                        scope.launch { animatedOffset.animateTo(selectedIndex * itemWidth, animSpec) }
                     }
                 )
             },
