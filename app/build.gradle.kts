@@ -40,22 +40,26 @@ kotlin {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
+    // 🚀 降级到稳定兼容 compileSdk 36 的 BOM
+    val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
     implementation(composeBom)
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.11.0")
-    implementation("androidx.navigation:navigation-compose:2.8.0")
-    // 🚀 注入 Haze 2.0 液态玻璃模块
-    implementation("dev.chrisbanes.haze:haze:2.0.0-beta02")
-    implementation("dev.chrisbanes.haze:haze-glass:2.0.0-beta02")
+    
+    // 降级 activity 到稳定版
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.navigation:navigation-compose:2.8.4")
+    
+    // 🚀 降级 Haze 到 1.x 稳定版（1.2.2 兼容 compileSdk 36）
+    implementation("dev.chrisbanes.haze:haze:1.2.2")
+    implementation("dev.chrisbanes.haze:haze-materials:1.2.2")
+    
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
 
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
-
 }
