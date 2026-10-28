@@ -229,7 +229,7 @@ fun ToolboxScreen() {
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 AnimatedCard(index = 9, trigger = animationTrigger) {
-                    HuijuiHotInstallCard(onFinished = { refreshTrigger++; AppSettings.hasRoot = HuijuiShell.isRooted() })
+                    HuijuiHotInstallCard(onFinished = { refreshTrigger++ })
                 }
 
                 Spacer(modifier = Modifier.height(120.dp))

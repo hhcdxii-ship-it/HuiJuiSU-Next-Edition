@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.superuser
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.statusBarsPadding
 import com.huijui.su.next.core.utils.AppSettings
 
@@ -119,7 +120,7 @@ fun SuperUserScreen() {
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(app.appName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text(app.packageName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White.copy(0.75f), fontSize = 12.sp, maxLines = 1)
+                                    Text(app.packageName, color = Color.White.copy(0.75f), fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                 }
                                 
                                 // 🚀 纯原生手搓液态开关
