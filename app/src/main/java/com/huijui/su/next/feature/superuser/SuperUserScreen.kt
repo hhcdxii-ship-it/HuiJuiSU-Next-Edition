@@ -86,7 +86,7 @@ fun SuperUserScreen() {
                     CircularProgressIndicator(color = AppSettings.accentColor.color)
                 }
             } else {
-                LazyColumn(
+                LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {

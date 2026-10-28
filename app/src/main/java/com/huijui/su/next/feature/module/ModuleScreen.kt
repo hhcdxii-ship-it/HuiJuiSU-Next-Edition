@@ -125,7 +125,7 @@ fun ModuleScreen() {
             } else if (modules.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("暂无已装载模块", color = Color.White.copy(0.75f), fontSize = 16.sp) }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 120.dp)) {
+                LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp),verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 120.dp)) {
                     items(modules) { module ->
                         GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

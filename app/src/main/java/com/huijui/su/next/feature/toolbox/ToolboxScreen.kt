@@ -147,7 +147,7 @@ fun ToolboxScreen() {
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("10 个超级用户，12 个模块", color = Color.White.copy(0.7f), fontSize = 13.sp)
+                            Text("${AppSettings.grantedApps.size} 个超级用户，0 个模块", color = Color.White.copy(0.7f), fontSize = 13.sp)
                         }
                     }
                 }
@@ -232,7 +232,7 @@ fun ToolboxScreen() {
                     HuijuiHotInstallCard(onFinished = { refreshTrigger++ })
                 }
 
-                Spacer(modifier = Modifier.height(120.dp))
+                Spacer(modifier = Modifier.height(160.dp))
             }
         }
     }

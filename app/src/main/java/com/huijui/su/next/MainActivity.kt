@@ -122,7 +122,7 @@ fun MainApp() {
             Brush.verticalGradient(listOf(Color.Black.copy(AppSettings.wallpaperDimAlpha * 0.1f), Color.Black.copy(AppSettings.wallpaperDimAlpha * 0.4f)))
         ))
 
-        Box(modifier = Modifier.fillMaxSize().padding(contentPadding).haze(state = hazeState)) {
+        Box(modifier = Modifier.fillMaxSize().haze(state = hazeState)) {
             NavHost(
                 navController = navController,
                 startDestination = "home",
@@ -197,7 +197,7 @@ fun DraggableGlassNavBar(
             style = HazeStyle(backgroundColor = Color.Transparent, tint = HazeTint(Color.White.copy(alpha = 0.08f)), blurRadius = 20.dp)
         )
     } else {
-        Modifier.background(Color(0xFF1E1E1E).copy(alpha = 0.9f))
+        Modifier.background(Color.Black.copy(alpha = 0.3f))
     }
 
     val containerModifier = Modifier
@@ -307,8 +307,8 @@ private fun NavItemLayout(item: NavItem, currentRoute: String?, modifier: Modifi
     }
     
     val badgeCount = when (item.route) {
-        "superuser" -> 10
-        "module" -> 12
+        "superuser" -> AppSettings.grantedApps.size
+        "module" -> 0
         else -> 0
     }
 
