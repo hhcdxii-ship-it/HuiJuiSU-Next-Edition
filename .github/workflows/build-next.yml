@@ -50,7 +50,6 @@ jobs:
           cd gki-kernel
           export ARCH=${{ matrix.arch }}
           export LLVM=1
-          if [ "${{ matrix.gki_branch }}" == "android12-5.10" ]; then export KCFLAGS="-mno-outline-atomics"; fi
           make ARCH=${{ matrix.arch }} LLVM=1 gki_defconfig
           if [ "${{ matrix.gki_branch }}" != "android12-5.10" ]; then ./scripts/config --file .config -d LTO_CLANG_FULL -e LTO_CLANG_THIN; fi
           make ARCH=${{ matrix.arch }} LLVM=1 modules_prepare
