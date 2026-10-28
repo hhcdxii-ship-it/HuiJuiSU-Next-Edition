@@ -78,7 +78,7 @@ int hui_hook_init(void) {
     }
 
     hui_disable_wp();
-    hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_hooked_execve;
+    hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_execve_with_compat;
     hui_enable_wp();
 
     pr_info("HUI: execve 劫持成功！\n");

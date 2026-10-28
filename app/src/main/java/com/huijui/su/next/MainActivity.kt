@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
         val splashScreen = androidx.core.splashscreen.SplashScreen.installSplashScreen(this)
         com.huijui.su.next.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
+        com.huijui.su.next.core.utils.CrashHandler.init(this)
                 splashScreen.setKeepOnScreenCondition {
             !AppSettings.isInitialized
         }
