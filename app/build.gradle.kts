@@ -47,6 +47,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("dev.chrisbanes.haze:haze:1.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
 
     // 3. 官方导航
