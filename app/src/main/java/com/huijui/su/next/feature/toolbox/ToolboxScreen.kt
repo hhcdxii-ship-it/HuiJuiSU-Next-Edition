@@ -149,17 +149,17 @@ fun ToolboxScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         SmartBackground()
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(0.2f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
+        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(0.6f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
         } else {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(60.dp))
                 
                 // 顶部状态卡片
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text("HuiJuiSU", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black)
                         Text("Next Edition · 控制台", color = Color.White.copy(0.6f), fontSize = 14.sp)
                     }

@@ -15,10 +15,6 @@ import com.huijui.su.next.core.ui.component.GlassCard
 import com.huijui.su.next.core.utils.AppSettings
 import kotlinx.coroutines.launch
 
-/**
- * 🩸 热接管独立卡片（隔离注入，独立文件，不改 ToolboxScreen 原有逻辑）
- * @param onFinished 接管流程结束后的回调，用于触发主页状态卡重新验证
- */
 @Composable
 fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
     val context = LocalContext.current
@@ -27,7 +23,8 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
     var lastResult by remember { mutableStateOf<String?>(null) }
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth().height(100.dp),
+        // 换成最小高度，让它自适应
+        modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
         onClick = {
             if (isRunning) return@GlassCard
             isRunning = true
@@ -46,19 +43,20 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
         }
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "⚡ 极速热接管",
                     color = AppSettings.accentColor.color,
-                    fontSize = 16.sp
+                    fontSize = 16.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     lastResult ?: if (isRunning) "接管中，请稍候…" else "点击拉起 HuiJuiSU 守护进程，无需重启",
-                    color = if (lastResult?.startsWith("❌") == true) Color(0xFFEF5350) else Color(0xFFB0BEC5),
+                    color = if (lastResult?.startsWith("❌") == true) Color(0xFFEF5350) else Color.White.copy(0.8f),
                     fontSize = 12.sp,
                     lineHeight = 16.sp
                 )
