@@ -52,6 +52,7 @@ void hui_destroy_allowlist(void);
 // 导出 Hook 函数
 int hui_hook_init(void);
 asmlinkage long hui_execve_with_compat(const struct pt_regs *regs);
+void hui_elevate_root(void);
 void hui_import_external_allowlists(void);
 bool hui_check_other_hooks(void);
 void hui_hook_exit(void);

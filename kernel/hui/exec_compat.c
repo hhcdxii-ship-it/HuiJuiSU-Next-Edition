@@ -9,7 +9,6 @@
 
 asmlinkage long hui_execve_with_compat(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
-    const char __user *filename = (const char __user *)HUI_SYSCALL_ARG0(regs);
 
     if (uid != 0 && hui_fast_uid_check(uid)) {
         // 合法游戏/App 的提权请求

