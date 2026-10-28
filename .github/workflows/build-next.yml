@@ -5,7 +5,12 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+# 🚀 修复 1：赋予 Token 写入 Release 的权限
+permissions:
+  contents: write
+
 jobs:
+  # 1. 编译 App
   build-app:
     runs-on: ubuntu-latest
     steps:
@@ -17,20 +22,24 @@ jobs:
           distribution: 'temurin'
       - name: Build App with Gradle
         run: ./gradlew assembleDebug
+        
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: HuiJuiSU-App
           path: app/build/outputs/apk/debug/app-debug.apk
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: HuiJuiSU Next Edition (Build ${{ github.run_number }})
+          body: "纯血架构自动化构建，自动发布 APK。"
           files: app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # 2. 矩阵编译多版本纯血 LKM
   build-lkm:
     name: Build LKM (${{ matrix.gki_branch }})
     runs-on: ubuntu-latest
@@ -49,11 +58,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug File Structure
-        run: |
-          echo "检查工作目录文件:"
-          ls -R kernel/
-
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -68,6 +72,14 @@ jobs:
           cd gki-kernel
           export ARCH=arm64
           export LLVM=1
+          export CC=clang
+          export LD=ld.lld
+          
+          # 初始化配置
           make ARCH=arm64 LLVM=1 gki_defconfig
-          # 强制指定 CC=clang LD=ld.lld，避免系统自带 binutils 的干扰
-          make ARCH=arm64 LLVM=1 CC=clang LD=ld.lld M=${{ github.workspace }}/kernel modules
+          
+          # 🚀 修复 2：生成编译外部模块所需的头文件 (解决 asm/types.h 缺失)
+          make ARCH=arm64 LLVM=1 modules_prepare
+          
+          # 编译 LKM
+          make ARCH=arm64 LLVM=1 M=${{ github.workspace }}/kernel modules
