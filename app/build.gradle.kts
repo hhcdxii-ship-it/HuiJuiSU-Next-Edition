@@ -49,11 +49,13 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.navigation:navigation-compose:2.8.0")
+    // 🚀 注入 Haze 2.0 液态玻璃模块
+    implementation("dev.chrisbanes.haze:haze:2.0.0-beta02")
+    implementation("dev.chrisbanes.haze:haze-glass:2.0.0-beta02")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
 
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
 
-    implementation("dev.chrisbanes.haze:haze:1.7.0")
 }

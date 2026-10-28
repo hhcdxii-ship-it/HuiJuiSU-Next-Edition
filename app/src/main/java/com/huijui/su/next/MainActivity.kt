@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
@@ -27,10 +28,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.huijui.su.next.feature.toolbox.ToolboxScreen
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 
 data class NavItem(val title: String, val icon: ImageVector)
 
@@ -59,7 +60,7 @@ fun MainApp() {
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 1. 底层内容区 (挂载 Haze 采集底层视频画面)
+        // 1. 底层内容捕获
         Box(modifier = Modifier.fillMaxSize().haze(state = hazeState)) {
             NavHost(
                 navController = navController,
@@ -73,34 +74,41 @@ fun MainApp() {
             }
         }
 
-        // 2. 顶层：液态玻璃悬浮底栏 (使用 Haze 模糊透光)
+        // 2. 顶层：真·液态玻璃悬浮底栏 (使用 Haze 2.0 API 修复重叠并增强折射)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .padding(horizontal = 20.dp, vertical = 32.dp)
                 .fillMaxWidth()
-                .height(68.dp)
-                .clip(RoundedCornerShape(34.dp))
+                .height(72.dp) // 🚀 稍微加高一点，防止文字被挤压
+                .clip(RoundedCornerShape(36.dp))
                 .hazeChild(
                     state = hazeState,
                     style = HazeStyle(
                         backgroundColor = Color.Transparent,
-                        tint = HazeTint(Color.White.copy(alpha = 0.1f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0.1f
+                        tint = HazeTint(Color.White.copy(alpha = 0.08f)),
+                        blurRadius = 25.dp, // 加强模糊
+                        noiseFactor = 0.05f
                     )
                 )
-                .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(0.4f), Color.White.copy(0.1f))), RoundedCornerShape(34.dp))
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                // 边缘高光，增加玻璃的厚度感
+                .border(
+                    1.dp, 
+                    Brush.verticalGradient(listOf(Color.White.copy(0.4f), Color.White.copy(0.05f))), 
+                    RoundedCornerShape(36.dp)
+                )
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             navItems.forEachIndexed { index, item ->
                 val isSelected = selectedTab == index
+                // 🚀 核心修复：使用 weight 均分空间，内部 Column 居中对齐，防止文字重叠
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(20.dp))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(24.dp))
                         .clickable { selectedTab = index }
                         .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -110,13 +118,15 @@ fun MainApp() {
                         imageVector = item.icon,
                         contentDescription = item.title,
                         tint = if (isSelected) Color(0xFF81C784) else Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp) // 缩小一点图标防挤压
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = item.title,
                         color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
                         fontSize = 10.sp,
+                        maxLines = 1, // 🚀 强制单行，绝不换行重叠
+                        overflow = TextOverflow.Ellipsis,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
                 }
