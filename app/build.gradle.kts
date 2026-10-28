@@ -37,24 +37,32 @@ android {
 }
 
 dependencies {
-    // 🚀 新增：导航与页面动画
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-    // 🚀 新增：液态/毛玻璃效果 (Haze 稳定版)
+    // 🚀 1. Compose BOM (统一版本管理，解决版本冲突的终极方案)
+    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
+    implementation(composeBom)
 
-    // 1. 核心 Compose 基础 (纯血，无 Material3 界面依赖，但保留底层)
-    implementation("androidx.compose.foundation:foundation:1.6.3")
-    implementation("androidx.compose.ui:ui:1.6.3")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.3")
+    // 🚀 2. 核心 Compose 基础
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3") // 官方MD3组件
     implementation("androidx.activity:activity-compose:1.8.2")
-    
-    // 2. ViewModel & 协程
+
+    // 🚀 3. 导航与动画 (BOM 会自动管理动画库版本)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // 🚀 4. ViewModel & 协程
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // 3. 动态壁纸引擎 (60帧 硬件加速)
+    // 🚀 5. 动态壁纸引擎 (Media3 ExoPlayer 稳定版 1.3.1)
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
 
-    // 4. 图标库 (补齐咱们用到的 TwoTone 图标)
-    implementation("androidx.compose.material:material-icons-extended:1.6.3")
+    // 🚀 6. 图片加载 (Coil 稳定版 2.6.0，支持静态图和 GIF)
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-gif:2.6.0")
+
+    // 🚀 7. 图标库 (extended 版才包含 TwoTone 等图标)
+    implementation("androidx.compose.material:material-icons-extended")
 }
