@@ -1,4 +1,5 @@
 package com.huijui.su.next.core.utils
+import com.huijui.su.next.core.utils.AppSettings
 
 import com.huijui.su.next.core.root.HuijuiShell
 import kotlinx.coroutines.CoroutineScope

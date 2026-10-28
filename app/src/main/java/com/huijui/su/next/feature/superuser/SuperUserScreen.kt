@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.superuser
+import com.huijui.su.next.core.utils.AppSettings
 
 import android.content.pm.ApplicationInfo
 import androidx.compose.animation.core.Spring

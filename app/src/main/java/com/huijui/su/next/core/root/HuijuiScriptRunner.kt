@@ -5,9 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * 🩸 脚本释放与执行器（隔离注入，独立文件，不改任何现有逻辑）
- */
 object HuijuiScriptRunner {
 
     private const val ASSET_DAEMON = "huijui_ksud"
@@ -34,12 +31,9 @@ object HuijuiScriptRunner {
             val script = File(assetDir, ASSET_HOT_INSTALL)
             val daemon = File(assetDir, ASSET_DAEMON)
 
+            // 这里只传一个 String，不再传 timeouts
             HuijuiShell.exec("chmod 755 '${script.absolutePath}' '${daemon.absolutePath}'")
-
-            HuijuiShell.exec(
-                "sh '${script.absolutePath}' '${workDir.absolutePath}' '${assetDir.absolutePath}'",
-                60_000
-            )
+            HuijuiShell.exec("sh '${script.absolutePath}' '${workDir.absolutePath}' '${assetDir.absolutePath}'")
         }
 
     private fun copyAsset(context: Context, name: String, destDir: File) {

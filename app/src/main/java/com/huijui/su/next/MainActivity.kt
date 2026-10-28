@@ -1,7 +1,7 @@
+package com.huijui.su.next
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.animation.core.AnimationSpec
-package com.huijui.su.next
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

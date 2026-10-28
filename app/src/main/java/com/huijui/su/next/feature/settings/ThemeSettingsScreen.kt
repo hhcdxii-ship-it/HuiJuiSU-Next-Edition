@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.settings
+import com.huijui.su.next.core.utils.AppSettings
 
 import android.content.Context
 import android.net.Uri

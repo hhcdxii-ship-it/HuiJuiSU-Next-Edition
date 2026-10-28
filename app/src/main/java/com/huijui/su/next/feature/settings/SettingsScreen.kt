@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.settings
+import androidx.compose.material3.HorizontalDivider
 
 import android.content.Intent
 import android.net.Uri
