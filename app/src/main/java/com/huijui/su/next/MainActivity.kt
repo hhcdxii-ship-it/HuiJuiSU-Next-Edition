@@ -53,7 +53,6 @@ fun MainApp() {
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 页面内容区
         NavHost(
             navController = navController,
             startDestination = "home",
@@ -65,7 +64,7 @@ fun MainApp() {
             composable("settings") { PlaceholderScreen("设置页面开发中") }
         }
 
-        // 🚀 纯血手搓悬浮底栏 (绝对编译通过)
+        // 纯原生手搓悬浮底栏
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

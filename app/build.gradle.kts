@@ -40,8 +40,6 @@ dependencies {
     // 🚀 新增：导航与页面动画
     implementation("androidx.navigation:navigation-compose:2.7.7")
     // 🚀 新增：液态/毛玻璃效果 (Haze 稳定版)
-    implementation("dev.chrisbanes.haze:haze:0.6.0")
-    implementation("dev.chrisbanes.haze:haze-blur:0.6.0")
 
     // 1. 核心 Compose 基础 (纯血，无 Material3 界面依赖，但保留底层)
     implementation("androidx.compose.foundation:foundation:1.6.3")
@@ -59,6 +57,4 @@ dependencies {
 
     // 4. 图标库 (补齐咱们用到的 TwoTone 图标)
     implementation("androidx.compose.material:material-icons-extended:1.6.3")
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-gif:2.6.0")
 }
