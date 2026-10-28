@@ -152,7 +152,7 @@ fun SettingsScreen(onNavigateToTheme: () -> Unit) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Next Edition · 纯血架构", color = Color.White.copy(0.5f), fontSize = 12.sp, letterSpacing = 2.sp)
                         }
-                        Divider(color = Color.White.copy(0.1f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+                        HorizontalDivider(color = Color.White.copy(0.1f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
                         SettingActionRow(Icons.TwoTone.Info, "版本信息", "v1.0.0-release (Build 1)") { }
                         SettingActionRow(Icons.TwoTone.Face, "开发者", "HuiJuiSU Team (酷安 @喜羊羊灰灰菜單)") { }
                     }
