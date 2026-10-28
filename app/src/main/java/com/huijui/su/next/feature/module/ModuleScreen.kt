@@ -94,7 +94,7 @@ fun ModuleScreen() {
             // 操作面板
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 GlassCard(
-                    modifier = Modifier.weight(1f).height(80.dp),
+                    modifier = Modifier.weight(1f),
                     onClick = { Toast.makeText(context, "正在连接在线模块仓库...", Toast.LENGTH_SHORT).show() }
                 ) {
                     Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
@@ -105,7 +105,7 @@ fun ModuleScreen() {
                 }
 
                 GlassCard(
-                    modifier = Modifier.weight(1f).height(80.dp),
+                    modifier = Modifier.weight(1f),
                     onClick = { filePicker.launch("application/zip") }
                 ) {
                     Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {

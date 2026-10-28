@@ -49,7 +49,6 @@ fun SuperUserScreen() {
     var isLoading by remember { mutableStateOf(true) }
     
     // 模拟用户授权状态记录
-    var grantedApps by remember { mutableStateOf(setOf<String>()) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -92,7 +91,7 @@ fun SuperUserScreen() {
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     items(apps, key = { it.packageName }) { app ->
-                        val isGranted = grantedApps.contains(app.packageName)
+                        val isGranted = AppSettings.grantedApps.contains(app.packageName)
                         
                         // 卡片弹性缩放
                         val cardScale by animateFloatAsState(
@@ -104,7 +103,8 @@ fun SuperUserScreen() {
                         GlassCard(
                             modifier = Modifier.fillMaxWidth().scale(cardScale),
                             onClick = { 
-                                grantedApps = if (isGranted) grantedApps - app.packageName else grantedApps + app.packageName
+                                AppSettings.grantedApps = if (isGranted) AppSettings.grantedApps - app.packageName else AppSettings.grantedApps + app.packageName
+                                AppSettings.save()
                             }
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -120,7 +120,7 @@ fun SuperUserScreen() {
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(app.appName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text(app.packageName, color = Color.White.copy(0.75f), fontSize = 12.sp, maxLines = 1)
+                                    Text(app.packageName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White.copy(0.75f), fontSize = 12.sp, maxLines = 1)
                                 }
                                 
                                 // 🚀 纯原生手搓液态开关

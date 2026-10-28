@@ -42,22 +42,31 @@ fun GlassCard(
     Box(
         modifier = modifier
             .scale(scale)
-            // 1. 外阴影，增加悬浮立体感
-            .shadow(elevation = 12.dp, shape = cornerRadius, ambientColor = Color.Black.copy(0.4f), spotColor = Color.Black.copy(0.4f))
+            // 1. 外阴影，制造深度的物理厚度
+            .shadow(elevation = 15.dp, shape = cornerRadius, ambientColor = Color.Black.copy(0.3f), spotColor = Color.Black.copy(0.3f))
             .clip(cornerRadius)
-            // 2. 🚀 核心修复：加一层深灰黑色底裤（alpha 0.5f），既保留透明感，又保证文字对比度
-            .background(Color(0xFF1A1A1A).copy(alpha = 0.5f))
-            // 3. 🚀 再叠一层微弱的白色渐变，模拟玻璃的高光反射
-            .background(Brush.verticalGradient(listOf(Color.White.copy(0.1f), Color.Transparent)))
-            // 4. 高光描边（左上方亮，右下方暗，体现玻璃厚度）
+            // 2. 🚀 灵魂底色：极其微弱的白色填充（替代死黑底）
+            // 依靠壁纸的底色透过来，形成自然的环境光折射
+            .background(Color.White.copy(alpha = 0.08f))
+            // 3. 🚀 液态高光：左上角受光面，向右下角逐渐消失的白色渐变
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.25f),
+                        Color.White.copy(alpha = 0.05f),
+                        Color.Transparent
+                    )
+                )
+            )
+            // 4. 边缘高光描边：模拟玻璃边缘的切角反光
             .border(
                 width = 1.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color.White.copy(0.75f),
-                        Color.White.copy(0.1f),
-                        Color.Transparent,
-                        Color.White.copy(0.05f)
+                        Color.White.copy(alpha = 0.6f), // 顶部强高光
+                        Color.White.copy(alpha = 0.1f),
+                        Color.Black.copy(alpha = 0.2f), // 底部暗边缘
+                        Color.White.copy(alpha = 0.2f)
                     )
                 ),
                 shape = cornerRadius

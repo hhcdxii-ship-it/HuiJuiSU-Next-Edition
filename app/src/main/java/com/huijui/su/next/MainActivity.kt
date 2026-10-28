@@ -1,6 +1,4 @@
 package com.huijui.su.next
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,7 +11,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +23,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -47,6 +46,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.huijui.su.next.core.root.HuijuiShell
 import com.huijui.su.next.core.utils.AppSettings
 import com.huijui.su.next.core.utils.AnimationStyle
 import com.huijui.su.next.core.utils.MaterialStyle
@@ -61,10 +61,10 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 data class NavItem(val route: String, val title: String, val icon: ImageVector)
-
-// 🚀 定义导航栏位置枚举（为了方便测试，先写死，后续可以接入 AppSettings 设置）
 enum class NavPosition { BOTTOM, LEFT, RIGHT }
 
 class MainActivity : ComponentActivity() {
@@ -73,8 +73,6 @@ class MainActivity : ComponentActivity() {
         com.huijui.su.next.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
         setContent {
-            // 🚀 这里原本有个 background(Color.Black)，我给它去掉了！
-            // 这样切页面的瞬间，底层不会漏出死黑，而是露出上一个页面的背景
             Box(modifier = Modifier.fillMaxSize()) {
                 MainApp()
             }
@@ -89,7 +87,12 @@ fun MainApp() {
     val currentRoute = navBackStackEntry?.destination?.route
     val hazeState = remember { HazeState() }
 
-    // 🚀 这里控制导航栏位置：BOTTOM (悬浮底栏), LEFT (左侧栏), RIGHT (右侧栏)
+    // 🚀 启动时检查一次真实 Root 状态
+    LaunchedEffect(Unit) {
+        AppSettings.hasRoot = HuijuiShell.isRooted()
+    }
+
+    // 这里可以改成 LEFT 或 RIGHT 测试侧边栏
     var navPosition by remember { mutableStateOf(NavPosition.BOTTOM) }
 
     val navItems = listOf(
@@ -99,7 +102,6 @@ fun MainApp() {
         NavItem("settings", "设置", Icons.Default.Settings)
     )
 
-    // 根据位置计算给 NavHost 的留白，防止内容被遮挡
     val contentPadding = when (navPosition) {
         NavPosition.BOTTOM -> PaddingValues(bottom = 110.dp)
         NavPosition.LEFT -> PaddingValues(start = 100.dp)
@@ -113,28 +115,19 @@ fun MainApp() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 底层内容区
         Box(modifier = Modifier.fillMaxSize().padding(contentPadding).haze(state = hazeState)) {
             NavHost(
                 navController = navController,
                 startDestination = "home",
                 modifier = Modifier.fillMaxSize(),
-                // 🚀 丝滑转场：彻底干掉原版引发黑屏的 scaleOut + 长 fadOut
-                // 现在的动画：旧页面 200ms 迅速淡出，新页面微滑 + 300ms 淡入
                 enterTransition = {
-                    fadeIn(animationSpec = tween(300)) +
-                    slideInHorizontally(initialOffsetX = { it / 6 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { it / 6 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
                 },
-                exitTransition = {
-                    fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
-                },
+                exitTransition = { fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) },
                 popEnterTransition = {
-                    fadeIn(animationSpec = tween(300)) +
-                    slideInHorizontally(initialOffsetX = { -it / 6 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -it / 6 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
                 },
-                popExitTransition = {
-                    fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
-                }
+                popExitTransition = { fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) }
             ) {
                 composable("home") { ToolboxScreen() }
                 composable("superuser") { SuperUserScreen() }
@@ -144,7 +137,6 @@ fun MainApp() {
             }
         }
 
-        // 液态导航栏
         if (AppSettings.materialStyle != MaterialStyle.NONE) {
             Box(modifier = Modifier.align(navAlignment)) {
                 DraggableGlassNavBar(
@@ -204,17 +196,15 @@ fun DraggableGlassNavBar(
         Modifier.background(Color(0xFF1E1E1E).copy(alpha = 0.9f))
     }
 
-    // 容器 Modifier
     val containerModifier = Modifier
         .then(if (isHorizontal) Modifier.height(72.dp).padding(horizontal = 24.dp).navigationBarsPadding().padding(bottom = 16.dp)
         else Modifier.width(72.dp).padding(vertical = 24.dp).systemBarsPadding())
         .then(if (isHorizontal) Modifier.fillMaxWidth() else Modifier.fillMaxHeight())
         .clip(RoundedCornerShape(36.dp))
         .then(bgModifier)
-        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(0.4f), Color.White.copy(0.05f))), RoundedCornerShape(36.dp))
+        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(0.2f), Color.White.copy(0.05f))), RoundedCornerShape(36.dp))
 
     Box(modifier = containerModifier) {
-        // 1. 液态滑动背景块
         Box(
             modifier = Modifier
                 .offset { IntOffset(if (isHorizontal) animatedOffset.value.roundToInt() else 0, if (isHorizontal) 0 else animatedOffset.value.roundToInt()) }
@@ -225,7 +215,6 @@ fun DraggableGlassNavBar(
                 .background(Brush.verticalGradient(listOf(Color.White.copy(0.15f), Color.White.copy(0.05f))))
         )
 
-        // 2. 交互与布局层
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -296,36 +285,63 @@ fun DraggableGlassNavBar(
 @Composable
 private fun NavItemLayout(item: NavItem, currentRoute: String?, modifier: Modifier, onClick: (String) -> Unit) {
     val isSelected = currentRoute == item.route
-    // 🚀 注入按压手势
+    val isRestricted = (item.route == "superuser" || item.route == "module") && !AppSettings.hasRoot
+    
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
-    // 🚀 弹簧动画：按下缩成 0.75f，松开弹回 1.0f（选中时 1.15f）
     val iconScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.75f else if (isSelected) 1.15f else 1f,
+        targetValue = if (isPressed && !isRestricted) 0.75f else if (isSelected && !isRestricted) 1.15f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "icon_scale"
     )
     
+    val finalColor = when {
+        isRestricted -> Color.White.copy(0.2f)
+        isSelected -> AppSettings.accentColor.color
+        else -> Color.White.copy(0.6f)
+    }
+    
+    // 🚀 模拟角标数据
+    val badgeCount = when (item.route) {
+        "superuser" -> 10
+        "module" -> 12
+        else -> 0
+    }
+
     Box(
         modifier = modifier.clickable(
+            enabled = !isRestricted,
             interactionSource = interactionSource,
-            indication = null // 干掉自带的灰色水波纹
+            indication = null
         ) { onClick(item.route) },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                item.icon, contentDescription = item.title,
-                tint = if (isSelected) AppSettings.accentColor.color else Color.White.copy(0.85f),
-                modifier = Modifier.size(22.dp).scale(iconScale)
-            )
+            BadgedBox(
+                badge = {
+                    if (badgeCount > 0) {
+                        Badge(
+                            containerColor = Color(0xFFE57373), // 红色角标
+                            contentColor = Color.White
+                        ) {
+                            Text(badgeCount.toString(), fontSize = 10.sp)
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    item.icon, contentDescription = item.title,
+                    tint = finalColor,
+                    modifier = Modifier.size(22.dp).scale(iconScale)
+                )
+            }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 item.title, 
-                color = if (isSelected) Color.White else Color.White.copy(0.75f),
+                color = finalColor,
                 fontSize = 10.sp, 
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (isSelected && !isRestricted) FontWeight.Bold else FontWeight.Normal
             )
         }
     }
