@@ -1,16 +1,17 @@
-name: Build Next Edition (App + Multi-Version LKM)
+name: Build Next Edition (Full Stack)
 
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
 
-# 赋予 Token 写入 Release 的权限
 permissions:
   contents: write
 
 jobs:
-  # 1. 编译 App
+  # ==========================================
+  # 1. 编译 App (纯血 UI)
+  # ==========================================
   build-app:
     runs-on: ubuntu-latest
     steps:
@@ -22,24 +23,23 @@ jobs:
           distribution: 'temurin'
       - name: Build App with Gradle
         run: ./gradlew assembleDebug
-        
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: HuiJuiSU-App
           path: app/build/outputs/apk/debug/app-debug.apk
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: HuiJuiSU Next Edition (Build ${{ github.run_number }})
-          body: "纯血架构自动化构建，自动发布 APK。"
           files: app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 2. 矩阵编译多版本纯血 LKM (16 个任务)
+  # ==========================================
+  # 2. 编译 LKM (16 个全架构版本)
+  # ==========================================
   build-lkm:
     name: Build LKM (${{ matrix.gki_branch }} - ${{ matrix.arch }})
     runs-on: ubuntu-latest
@@ -73,23 +73,26 @@ jobs:
       - name: Build Pure-Blood LKM
         run: |
           cd gki-kernel
-          # 使用矩阵变量动态指定架构
           export ARCH=${{ matrix.arch }}
           export LLVM=1
-          export CC=clang
-          export LD=ld.lld
           
-          # 初始化配置
+          # 🚀 修复老内核（12-5.10）的汇编器报错
+          if [ "${{ matrix.gki_branch }}" == "android12-5.10" ]; then
+              export KCFLAGS="-mno-outline-atomics"
+          fi
+          
           make ARCH=${{ matrix.arch }} LLVM=1 gki_defconfig
           
-          # 生成外部模块所需的头文件 (解决之前的 asm/types.h 缺失)
-          make ARCH=${{ matrix.arch }} LLVM=1 modules_prepare
+          # 🚀 修复新内核（15+）的全量 LTO 内存溢出报错
+          if [ "${{ matrix.gki_branch }}" != "android12-5.10" ]; then
+              ./scripts/config --file .config -d LTO_CLANG_FULL -e LTO_CLANG_THIN
+          fi
           
-          # 编译 LKM
+          make ARCH=${{ matrix.arch }} LLVM=1 modules_prepare
           make ARCH=${{ matrix.arch }} LLVM=1 M=${{ github.workspace }}/kernel modules
 
       - name: Upload LKM Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HuiJuiSU-LKM-${{ matrix.gki_branch }}-${{ matrix.arch }}
+          name: LKM-${{ matrix.gki_branch }}-${{ matrix.arch }}
           path: gki-kernel/kernel/huijui_lkm.ko
