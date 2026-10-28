@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.huijui.su.next"
-    compileSdk = 35 // 🚀 升级到 Android 15
+    compileSdk = 36 // 🚀 满足 activity 1.11.0 与 SDK 36 的强制要求
 
     defaultConfig {
         applicationId = "com.huijui.su.next"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "vNext-Edition"
     }
@@ -32,20 +32,21 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15" // 对应 Kotlin 1.9.25
+        // 与 Kotlin 2.2.20 对齐的 Compose 编译器版本
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
 
 dependencies {
-    // 🚀 升级 BOM 到最新，全面对齐 SDK 35
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
+    // 🚀 升级 Compose BOM 以匹配 Haze 1.7.0 所需的 Compose 1.9.4[reference:2]
+    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
     implementation(composeBom)
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.navigation:navigation-compose:2.8.0")
 
     // 视频引擎
