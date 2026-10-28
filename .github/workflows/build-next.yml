@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# 🚀 修复 1：赋予 Token 写入 Release 的权限
+# 赋予 Token 写入 Release 的权限
 permissions:
   contents: write
 
@@ -39,9 +39,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 2. 矩阵编译多版本纯血 LKM
+  # 2. 矩阵编译多版本纯血 LKM (16 个任务)
   build-lkm:
-    name: Build LKM (${{ matrix.gki_branch }})
+    name: Build LKM (${{ matrix.gki_branch }} - ${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -55,6 +55,9 @@ jobs:
           - "android15-6.6"
           - "android16-6.12"
           - "android17-6.18"
+        arch:
+          - "arm64"
+          - "x86_64"
     steps:
       - uses: actions/checkout@v4
 
@@ -70,16 +73,23 @@ jobs:
       - name: Build Pure-Blood LKM
         run: |
           cd gki-kernel
-          export ARCH=arm64
+          # 使用矩阵变量动态指定架构
+          export ARCH=${{ matrix.arch }}
           export LLVM=1
           export CC=clang
           export LD=ld.lld
           
           # 初始化配置
-          make ARCH=arm64 LLVM=1 gki_defconfig
+          make ARCH=${{ matrix.arch }} LLVM=1 gki_defconfig
           
-          # 🚀 修复 2：生成编译外部模块所需的头文件 (解决 asm/types.h 缺失)
-          make ARCH=arm64 LLVM=1 modules_prepare
+          # 生成外部模块所需的头文件 (解决之前的 asm/types.h 缺失)
+          make ARCH=${{ matrix.arch }} LLVM=1 modules_prepare
           
           # 编译 LKM
-          make ARCH=arm64 LLVM=1 M=${{ github.workspace }}/kernel modules
+          make ARCH=${{ matrix.arch }} LLVM=1 M=${{ github.workspace }}/kernel modules
+
+      - name: Upload LKM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HuiJuiSU-LKM-${{ matrix.gki_branch }}-${{ matrix.arch }}
+          path: gki-kernel/kernel/huijui_lkm.ko
