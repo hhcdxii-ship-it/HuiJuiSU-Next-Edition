@@ -1,0 +1,8 @@
+#!/system/bin/sh
+# ⚠️ 占位 daemon：仅用于点亮闭环验证
+HIJ_DIR=/data/adb/huijuisu
+mkdir -p "$HIJ_DIR" 2>/dev/null
+echo $$ > "$HIJ_DIR/.pid"
+echo "vNext-Edition (Stub daemon)" > "$HIJ_DIR/version"
+touch "$HIJ_DIR/.active"
+while true; do sleep 3600; done
