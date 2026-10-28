@@ -72,7 +72,6 @@ fun SuperUserScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-        SmartBackground()
         Box(modifier = Modifier.fillMaxSize().statusBarsPadding().background(Brush.verticalGradient(listOf(Color.Black.copy(0.3f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
 
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {

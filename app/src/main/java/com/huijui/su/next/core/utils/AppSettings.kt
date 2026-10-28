@@ -43,7 +43,7 @@ object AppSettings {
 
     var cardCornerRadius by mutableStateOf(24f)
     var accentColor by mutableStateOf(AccentColor.GREEN)
-    var wallpaperDimAlpha by mutableStateOf(0.6f)
+    var wallpaperDimAlpha by mutableStateOf(0.2f)
     var animationSpeedScale by mutableStateOf(1.0f)
 
     var customVideoPath by mutableStateOf<String?>(null)
@@ -75,7 +75,7 @@ object AppSettings {
 
         cardCornerRadius = prefs.getFloat("card_corner_radius", 24f)
         accentColor = AccentColor.valueOf(prefs.getString("accent_color", AccentColor.GREEN.name) ?: AccentColor.GREEN.name)
-        wallpaperDimAlpha = prefs.getFloat("wallpaper_dim", 0.6f)
+        wallpaperDimAlpha = prefs.getFloat("wallpaper_dim", 0.2f)
         animationSpeedScale = prefs.getFloat("anim_speed", 1.0f)
 
         customVideoPath = prefs.getString("custom_video", null)

@@ -12,6 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.huijui.su.next.core.root.HuijuiShell
+import com.huijui.su.next.core.ui.component.SmartBackground
 import com.huijui.su.next.core.utils.AppSettings
 import com.huijui.su.next.core.utils.AnimationStyle
 import com.huijui.su.next.core.utils.MaterialStyle
@@ -87,18 +89,17 @@ fun MainApp() {
     val currentRoute = navBackStackEntry?.destination?.route
     val hazeState = remember { HazeState() }
 
-    // 🚀 启动时检查一次真实 Root 状态
     LaunchedEffect(Unit) {
         AppSettings.hasRoot = HuijuiShell.isRooted()
     }
 
-    // 这里可以改成 LEFT 或 RIGHT 测试侧边栏
     var navPosition by remember { mutableStateOf(NavPosition.BOTTOM) }
 
     val navItems = listOf(
         NavItem("home", "主页", Icons.Default.Home),
+        NavItem("tool", "工具", Icons.Default.GridView),
         NavItem("superuser", "超管", Icons.Default.Security),
-        NavItem("module", "模块", Icons.Default.ShoppingCart),
+        NavItem("module", "模块", Icons.Default.Extension),
         NavItem("settings", "设置", Icons.Default.Settings)
     )
 
@@ -114,22 +115,25 @@ fun MainApp() {
         NavPosition.RIGHT -> Alignment.CenterEnd
     }
 
+    // 🚀 全局壁纸与遮罩，解决切换页面黑屏闪烁
     Box(modifier = Modifier.fillMaxSize()) {
+        SmartBackground()
+        Box(modifier = Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color.Black.copy(AppSettings.wallpaperDimAlpha * 0.1f), Color.Black.copy(AppSettings.wallpaperDimAlpha * 0.4f)))
+        ))
+
         Box(modifier = Modifier.fillMaxSize().padding(contentPadding).haze(state = hazeState)) {
             NavHost(
                 navController = navController,
                 startDestination = "home",
                 modifier = Modifier.fillMaxSize(),
-                enterTransition = {
-                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { it / 6 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
-                },
-                exitTransition = { fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) },
-                popEnterTransition = {
-                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -it / 6 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
-                },
-                popExitTransition = { fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) }
+                enterTransition = { fadeIn(tween(300)) + slideInVertically(initialOffsetY = { it / 10 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) },
+                exitTransition = { fadeOut(tween(200, easing = FastOutSlowInEasing)) },
+                popEnterTransition = { fadeIn(tween(300)) + slideInVertically(initialOffsetY = { -it / 10 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) },
+                popExitTransition = { fadeOut(tween(200, easing = FastOutSlowInEasing)) }
             ) {
                 composable("home") { ToolboxScreen() }
+                composable("tool") { ToolboxScreen() } 
                 composable("superuser") { SuperUserScreen() }
                 composable("module") { ModuleScreen() }
                 composable("settings") { SettingsScreen(onNavigateToTheme = { navController.navigate("themesettings") }) }
@@ -302,7 +306,6 @@ private fun NavItemLayout(item: NavItem, currentRoute: String?, modifier: Modifi
         else -> Color.White.copy(0.6f)
     }
     
-    // 🚀 模拟角标数据
     val badgeCount = when (item.route) {
         "superuser" -> 10
         "module" -> 12
@@ -322,7 +325,7 @@ private fun NavItemLayout(item: NavItem, currentRoute: String?, modifier: Modifi
                 badge = {
                     if (badgeCount > 0) {
                         Badge(
-                            containerColor = Color(0xFFE57373), // 红色角标
+                            containerColor = Color(0xFFE57373),
                             contentColor = Color.White
                         ) {
                             Text(badgeCount.toString(), fontSize = 10.sp)

@@ -81,7 +81,6 @@ fun ModuleScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        SmartBackground()
         Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(0.3f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).scale(enterAlpha)) {

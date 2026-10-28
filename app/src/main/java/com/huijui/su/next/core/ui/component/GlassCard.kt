@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.huijui.su.next.core.utils.AppSettings
+import com.huijui.su.next.core.utils.MaterialStyle
 
 @Composable
 fun GlassCard(
@@ -38,39 +39,36 @@ fun GlassCard(
     )
 
     val cornerRadius = RoundedCornerShape(AppSettings.cardCornerRadius.dp)
+    val currentStyle = AppSettings.materialStyle
+
+    // 🚀 根据材质风格计算 Modifier
+    val styleModifier = when (currentStyle) {
+        MaterialStyle.GLASS -> {
+            Modifier
+                .shadow(elevation = 15.dp, shape = cornerRadius, ambientColor = Color.Black.copy(0.3f), spotColor = Color.Black.copy(0.3f))
+                .clip(cornerRadius)
+                .background(Color.White.copy(alpha = 0.08f))
+                .background(Brush.linearGradient(listOf(Color.White.copy(0.25f), Color.White.copy(0.05f), Color.Transparent)))
+                .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(0.6f), Color.White.copy(0.1f), Color.Black.copy(0.2f), Color.White.copy(0.2f))), cornerRadius)
+        }
+        MaterialStyle.SOLID -> {
+            Modifier
+                .shadow(elevation = 8.dp, shape = cornerRadius, ambientColor = Color.Black.copy(0.5f), spotColor = Color.Black.copy(0.5f))
+                .clip(cornerRadius)
+                .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
+                .border(1.dp, Color.White.copy(0.1f), cornerRadius)
+        }
+        MaterialStyle.NONE -> {
+            Modifier
+                // 极简：完全没有背景和边框
+                .clip(cornerRadius)
+        }
+    }
 
     Box(
         modifier = modifier
             .scale(scale)
-            // 1. 外阴影，制造深度的物理厚度
-            .shadow(elevation = 15.dp, shape = cornerRadius, ambientColor = Color.Black.copy(0.3f), spotColor = Color.Black.copy(0.3f))
-            .clip(cornerRadius)
-            // 2. 🚀 灵魂底色：极其微弱的白色填充（替代死黑底）
-            // 依靠壁纸的底色透过来，形成自然的环境光折射
-            .background(Color.White.copy(alpha = 0.08f))
-            // 3. 🚀 液态高光：左上角受光面，向右下角逐渐消失的白色渐变
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.05f),
-                        Color.Transparent
-                    )
-                )
-            )
-            // 4. 边缘高光描边：模拟玻璃边缘的切角反光
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.6f), // 顶部强高光
-                        Color.White.copy(alpha = 0.1f),
-                        Color.Black.copy(alpha = 0.2f), // 底部暗边缘
-                        Color.White.copy(alpha = 0.2f)
-                    )
-                ),
-                shape = cornerRadius
-            )
+            .then(styleModifier)
             .then(
                 if (onClick != null && onClick != {}) {
                     Modifier.clickable(interactionSource = interactionSource, indication = null, onClick = onClick)

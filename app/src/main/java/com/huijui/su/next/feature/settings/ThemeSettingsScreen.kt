@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.settings
+import androidx.compose.runtime.LaunchedEffect
 import com.huijui.su.next.core.utils.AppSettings
 
 import android.content.Context
@@ -40,6 +41,12 @@ import java.io.File
 @Composable
 fun ThemeSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    LaunchedEffect(AppSettings.wallpaperType) {
+        if (AppSettings.wallpaperType == WallpaperType.NONE && AppSettings.materialStyle != MaterialStyle.NONE) {
+            AppSettings.materialStyle = MaterialStyle.NONE
+            AppSettings.save()
+        }
+    }
     val scope = rememberCoroutineScope()
     val isHighAndroidVersion = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
@@ -154,7 +161,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                     val isDimEnabled = AppSettings.wallpaperType != WallpaperType.NONE
                     SettingsGroup(title = "壁纸暗化程度", enabled = isDimEnabled) {
                         Text(
-                            text = if (isDimEnabled) "当前: ${(AppSettings.wallpaperDimAlpha * 100).toInt()}%" else "无壁纸模式下不可用",
+                            text = if (isDimEnabled) "壁纸亮度: ${((1f - AppSettings.wallpaperDimAlpha) * 100).toInt()}%" else "无壁纸模式下不可用",
                             color = Color.White.copy(0.85f), fontSize = 12.sp
                         )
                         Slider(
@@ -171,8 +178,8 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                 // ================= 材质风格 =================
                 item {
                     SettingsGroup(title = "材质风格") {
-                        ThemeOptionRow("液态玻璃 (Haze)", if (isHighAndroidVersion) "真实背景折射，质感最佳" else "您的系统低于 Android 12，不支持此特效", AppSettings.materialStyle == MaterialStyle.GLASS, isHighAndroidVersion) { AppSettings.materialStyle = MaterialStyle.GLASS; AppSettings.save() }
-                        ThemeOptionRow("纯色半透明", "纯原生渐变，性能极高", AppSettings.materialStyle == MaterialStyle.SOLID, true) { AppSettings.materialStyle = MaterialStyle.SOLID; AppSettings.save() }
+                        ThemeOptionRow("液态玻璃 (Haze)", if (isHighAndroidVersion) "真实背景折射，质感最佳" else "您的系统低于 Android 12，不支持此特效", AppSettings.materialStyle == MaterialStyle.GLASS, isHighAndroidVersion) { if (AppSettings.wallpaperType == WallpaperType.NONE) { android.widget.Toast.makeText(context, "请先设置壁纸！", android.widget.Toast.LENGTH_SHORT).show() } else { AppSettings.materialStyle = MaterialStyle.GLASS; AppSettings.save() } }
+                        ThemeOptionRow("纯色半透明", if (AppSettings.wallpaperType == WallpaperType.NONE) "无壁纸时不可用" else "纯原生渐变，性能极高", AppSettings.materialStyle == MaterialStyle.SOLID, AppSettings.wallpaperType != WallpaperType.NONE) { if (AppSettings.wallpaperType == WallpaperType.NONE) { android.widget.Toast.makeText(context, "请先设置壁纸！", android.widget.Toast.LENGTH_SHORT).show() } else { AppSettings.materialStyle = MaterialStyle.SOLID; AppSettings.save() } }
                         ThemeOptionRow("极简无材质", "完全没有背景，全靠内容", AppSettings.materialStyle == MaterialStyle.NONE, true) { AppSettings.materialStyle = MaterialStyle.NONE; AppSettings.save() }
                     }
                 }

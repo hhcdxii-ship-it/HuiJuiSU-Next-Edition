@@ -105,8 +105,6 @@ fun ToolboxScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        SmartBackground()
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(AppSettings.wallpaperDimAlpha * 0.5f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
