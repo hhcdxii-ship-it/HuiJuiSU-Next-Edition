@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 1. 编译 App
   build-app:
     runs-on: ubuntu-latest
     steps:
@@ -18,25 +17,20 @@ jobs:
           distribution: 'temurin'
       - name: Build App with Gradle
         run: ./gradlew assembleDebug
-        
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: HuiJuiSU-App
           path: app/build/outputs/apk/debug/app-debug.apk
-
-      # 🚀 自动发版（刚刚加的）
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: HuiJuiSU Next Edition (Build ${{ github.run_number }})
-          body: "纯血架构自动化构建，自动发布 APK。"
           files: app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 2. 矩阵编译多版本纯血 LKM
   build-lkm:
     name: Build LKM (${{ matrix.gki_branch }})
     runs-on: ubuntu-latest
@@ -55,6 +49,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug File Structure
+        run: |
+          echo "检查工作目录文件:"
+          ls -R kernel/
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -67,7 +66,8 @@ jobs:
       - name: Build Pure-Blood LKM
         run: |
           cd gki-kernel
+          export ARCH=arm64
+          export LLVM=1
           make ARCH=arm64 LLVM=1 gki_defconfig
-          # 🚀 修复点 1：使用 github.workspace 绝对路径，内核绝逼能找到！
-          # 🚀 修复点 2：强制指定 PATH 优先使用 LLVM clang，避开系统 GCC 干扰
-          PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH make ARCH=arm64 LLVM=1 CC=clang LD=ld.lld M=${{ github.workspace }}/kernel modules
+          # 强制指定 CC=clang LD=ld.lld，避免系统自带 binutils 的干扰
+          make ARCH=arm64 LLVM=1 CC=clang LD=ld.lld M=${{ github.workspace }}/kernel modules
