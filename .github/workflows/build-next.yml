@@ -38,7 +38,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update 
-          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm gcc-aarch64-linux-gnu
+          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm gcc-aarch64-linux-gnu libdwarf-dev libdw-dev
       - name: Download Kernel Source
         run: git clone --depth=1 https://android.googlesource.com/kernel/common -b ${{ matrix.gki_branch }} gki-kernel
       - name: Build LKM

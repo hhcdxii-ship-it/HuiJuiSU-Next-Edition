@@ -30,7 +30,8 @@ import com.huijui.su.next.feature.toolbox.ToolboxScreen
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 
 data class NavItem(val route: String, val title: String, val icon: ImageVector)
 
@@ -91,7 +92,7 @@ fun MainApp() {
                 // 核心：利用 hazeChild 产生真实的背景模糊透光效果
                 .hazeChild(
                     state = hazeState,
-                    style = HazeMaterials.ultraThin()
+                    style = HazeStyle(backgroundColor = Color.Transparent, tint = HazeTint(Color.White.copy(alpha = 0.1f)), blurRadius = 20.dp, noiseFactor = 0.1f)
                 )
                 // 叠加一层微弱的白色高光边框，增加玻璃质感
                 .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.1f))), RoundedCornerShape(34.dp))
