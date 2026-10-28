@@ -76,7 +76,7 @@ jobs:
           "android14-5.15", "android14-6.1", "android15-6.6",
           "android16-6.12", "android17-6.18"
         ]
-        arch: ["arm64", "x86_64"]
+        arch: ["arm64"]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
