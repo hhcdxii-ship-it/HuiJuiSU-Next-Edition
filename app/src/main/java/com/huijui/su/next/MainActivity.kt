@@ -1,4 +1,7 @@
 package com.huijui.su.next
+import com.huijui.su.next.core.ui.language.LocalLanguageMode
+import com.huijui.su.next.core.ui.language.LanguageMode
+import androidx.compose.runtime.CompositionLocalProvider
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -72,18 +75,28 @@ enum class NavPosition { BOTTOM, LEFT, RIGHT }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val splashScreen = androidx.core.splashscreen.SplashScreen.installSplashScreen(this)
         com.huijui.su.next.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
-        setContent {
+                splashScreen.setKeepOnScreenCondition {
+            !AppSettings.isInitialized
+        }
+        val version = "vNext-Edition (Build ${BuildConfig.VERSION_NAME})"
+setContent {
             Box(modifier = Modifier.fillMaxSize()) {
+                CompositionLocalProvider(LocalLanguageMode provides if (AppSettings.currentLanguage == "ZAKO") LanguageMode.ZAKO else LanguageMode.NORMAL) {
                 MainApp()
             }
         }
+                }
+
     }
 }
 
 @Composable
 fun MainApp() {
+    val currentLanguage = if (AppSettings.currentLanguage == "ZAKO") LanguageMode.ZAKO else LanguageMode.NORMAL
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -132,12 +145,13 @@ fun MainApp() {
                 popEnterTransition = { fadeIn(tween(300)) + slideInVertically(initialOffsetY = { -it / 10 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) },
                 popExitTransition = { fadeOut(tween(200, easing = FastOutSlowInEasing)) }
             ) {
-                composable("home") { ToolboxScreen() }
+                composable("home") { ToolboxScreen(onNavigateToConsole = { navController.navigate("hui_console") }) }
                 composable("tool") { ToolboxScreen() } 
                 composable("superuser") { SuperUserScreen() }
                 composable("module") { ModuleScreen() }
                 composable("settings") { SettingsScreen(onNavigateToTheme = { navController.navigate("themesettings") }) }
                 composable("themesettings") { ThemeSettingsScreen(onBack = { navController.popBackStack() }) }
+                composable("hui_console") { com.huijui.su.next.feature.toolbox.HuijuiConsoleScreen(onBack = { navController.popBackStack() }) }
             }
         }
 

@@ -1,35 +1,27 @@
 package com.huijui.su.next.core.root
 
-/**
- * 🩸 纯血内核版本嗅探器
- * 负责识别当前手机的内核，并匹配 Assets 中对应的 HUI 模块
- */
+import android.os.Build
+
 object KernelVersionMatcher {
 
     data class GkiInfo(val branch: String, val arch: String)
 
-    // 获取当前内核信息并解析
     fun getCurrentGkiInfo(): GkiInfo? {
-        // 1. 获取架构
-        val arch = System.getProperty("os.arch") ?: return null
+        val arch = System.getProperty("os.arch") ?: "aarch64"
         val targetArch = if (arch.contains("aarch64") || arch.contains("arm64")) "arm64" else "x86_64"
 
-        // 2. 获取 uname -r 的结果
+        // 获取内核版本 (如 6.1.25-android14-11-g...)
         val kernelRelease = try {
-            val process = ProcessBuilder("uname", "-r").start()
-            process.inputStream.bufferedReader().readText().trim()
-        } catch (e: Exception) { return null }
+            ProcessBuilder("uname", "-r").start().inputStream.bufferedReader().readText().trim()
+        } catch (e: Exception) { "" }
 
-        // 3. 用正则提取 Android 大版本和内核主版本
-        // 例如：6.1.25-android14-11-g... 提取出 14 和 6.1
         val androidVerMatch = Regex("android(\\d+)").find(kernelRelease)
         val kernelMajorMatch = Regex("^(\\d+\\.\\d+)").find(kernelRelease)
 
-        val androidVer = androidVerMatch?.groupValues?.get(1) ?: return null
-        val kernelMajor = kernelMajorMatch?.groupValues?.get(1) ?: "5.10" // 兜底
+        // 如果由于某些原因 uname 没拿到 android 版本，用 Build.VERSION 兜底
+        val androidVer = androidVerMatch?.groupValues?.get(1) ?: Build.VERSION.RELEASE.split(".")[0]
+        val kernelMajor = kernelMajorMatch?.groupValues?.get(1) ?: "5.10"
 
-        // 4. 映射到 GKI 分支名
-        // 因为同一个 Android 版本可能有多个内核版本（如 Android 13 有 5.10 和 5.15）
         val branch = when {
             androidVer == "12" -> "android12-5.10"
             androidVer == "13" -> if (kernelMajor == "5.15") "android13-5.15" else "android13-5.10"
@@ -37,13 +29,13 @@ object KernelVersionMatcher {
             androidVer == "15" -> "android15-6.6"
             androidVer == "16" -> "android16-6.12"
             androidVer == "17" -> "android17-6.18"
-            else -> return null // 不支持的系统
-        }
+            else -> null
+        } ?: return null
 
         return GkiInfo(branch, targetArch)
     }
 
-    // 生成最终应该加载的 Assets 文件名
+    // 🚀 生成最终应该加载的文件名，并加入智能容错
     fun getExpectedKoFileName(): String? {
         val info = getCurrentGkiInfo() ?: return null
         return "HUI_${info.branch}_${info.arch}.ko"

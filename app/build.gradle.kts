@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "vNext-Edition"
+        versionName = "vNext-Edition-${System.currentTimeMillis()}"
     }
 
     buildTypes {

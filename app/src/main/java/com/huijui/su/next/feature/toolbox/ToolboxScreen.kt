@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.toolbox
+import com.huijui.su.next.core.ui.language.ZakoText
 
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
@@ -59,7 +60,7 @@ enum class ManagerState(val title: String, val color: Color) {
 }
 
 @Composable
-fun ToolboxScreen() {
+fun ToolboxScreen(onNavigateToConsole: (() -> Unit)? = null) {
     val context = LocalContext.current
 
     var deviceInfo by remember { mutableStateOf(DeviceInfo()) }
@@ -124,8 +125,8 @@ fun ToolboxScreen() {
                 AnimatedCard(index = 0, trigger = animationTrigger) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {
-                            Text("HuiJuiSU NEXT Ultra", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-                            Text("Next Edition · 纯血控制台", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                            ZakoText("HuiJuiSU NEXT Ultra", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
+                            ZakoText("Next Edition · 纯血控制台", color = Color.White.copy(0.6f), fontSize = 12.sp)
                         }
                         Icon(Icons.Default.PowerSettingsNew, null, tint = Color.White.copy(0.5f))
                     }
@@ -143,11 +144,11 @@ fun ToolboxScreen() {
                                 Text(managerState.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFF81C784).copy(0.3f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                    Text("HUI", color = Color(0xFF81C784), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    ZakoText("HUI", color = Color(0xFF81C784), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("${AppSettings.grantedApps.size} 个超级用户，0 个模块", color = Color.White.copy(0.7f), fontSize = 13.sp)
+                            ZakoText("${AppSettings.grantedApps.size} 个超级用户，0 个模块", color = Color.White.copy(0.7f), fontSize = 13.sp)
                         }
                     }
                 }
@@ -158,7 +159,7 @@ fun ToolboxScreen() {
                 AnimatedCard(index = 2, trigger = animationTrigger) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            Text("系统指纹", color = Color.White.copy(0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            ZakoText("系统指纹", color = Color.White.copy(0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(deviceInfo.fingerprint, color = Color.White.copy(0.9f), fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 16.sp)
                         }
@@ -168,7 +169,7 @@ fun ToolboxScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 AnimatedCard(index = 3, trigger = animationTrigger) {
-                    Text("版本信息", color = Color.White.copy(0.6f), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                    ZakoText("版本信息", color = Color.White.copy(0.6f), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -188,7 +189,7 @@ fun ToolboxScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 AnimatedCard(index = 5, trigger = animationTrigger) {
-                    Text("状态信息", color = Color.White.copy(0.6f), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                    ZakoText("状态信息", color = Color.White.copy(0.6f), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -209,7 +210,7 @@ fun ToolboxScreen() {
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 AnimatedCard(index = 7, trigger = animationTrigger) {
-                    Text("快捷操作", color = Color.White.copy(0.6f), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                    ZakoText("快捷操作", color = Color.White.copy(0.6f), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -220,8 +221,8 @@ fun ToolboxScreen() {
                             Icon(Icons.Default.Build, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(28.dp))
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
-                                Text("纯血镜像修补", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                Text("生成可电脑刷入的 init_boot/boot 镜像", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                                ZakoText("纯血镜像修补", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                ZakoText("生成可电脑刷入的 init_boot/boot 镜像", color = Color.White.copy(0.6f), fontSize = 12.sp)
                             }
                         }
                     }
@@ -230,6 +231,19 @@ fun ToolboxScreen() {
                 Spacer(modifier = Modifier.height(12.dp))
                 AnimatedCard(index = 9, trigger = animationTrigger) {
                     HuijuiHotInstallCard(onFinished = { refreshTrigger++ })
+                Spacer(modifier = Modifier.height(12.dp))
+                GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { 
+                    onNavigateToConsole?.invoke() 
+                }) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Terminal, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            ZakoText("HUI 内核控制台", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            ZakoText("查看底层日志与性能调度", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                        }
+                    }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(160.dp))

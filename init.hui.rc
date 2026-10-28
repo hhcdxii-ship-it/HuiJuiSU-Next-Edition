@@ -1,0 +1,14 @@
+on post-fs-data
+    mkdir /data/adb/huijuisu 0770 root root
+    chmod 755 /data/adb/huijuisu
+
+service hui_daemon /data/adb/huijuisu/Hsud daemon
+    class late_start
+    user root
+    group root
+    oneshot
+    disabled
+
+on property:sys.boot_completed=1
+    insmod /data/adb/huijuisu/HUI_${ro.build.version.release}_arm64.ko
+    start hui_daemon

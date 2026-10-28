@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.module
+import com.huijui.su.next.core.ui.language.ZakoText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
@@ -104,7 +105,7 @@ fun ModuleInstallDialog(
                         .padding(12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("ZIP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    ZakoText("ZIP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -134,7 +135,7 @@ fun ModuleInstallDialog(
                     exit = fadeOut()
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text("请选择操作：", color = Color.White.copy(0.85f), fontSize = 13.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                        ZakoText("请选择操作：", color = Color.White.copy(0.85f), fontSize = 13.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
                         Spacer(modifier = Modifier.height(12.dp))
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -158,7 +159,7 @@ fun ModuleInstallDialog(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.TwoTone.VolumeUp, null, tint = Color(0xFF4CAF50))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("音量+ (确认)", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                                    ZakoText("音量+ (确认)", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                                 }
                             }
 
@@ -182,7 +183,7 @@ fun ModuleInstallDialog(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.TwoTone.VolumeDown, null, tint = Color(0xFFF44336))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("音量- (取消)", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+                                    ZakoText("音量- (取消)", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -199,7 +200,7 @@ fun ModuleInstallDialog(
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("完成", color = Color.White)
+                        ZakoText("完成", color = Color.White)
                     }
                 }
             }

@@ -1,19 +1,21 @@
 package com.huijui.su.next.feature.module
-import com.huijui.su.next.core.utils.AppSettings
+import com.huijui.su.next.core.ui.language.ZakoText
 
-import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,141 +28,142 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.huijui.su.next.core.root.HuijuiModuleInfo
-import com.huijui.su.next.core.root.ModuleEngine
+import com.huijui.su.next.core.root.HuijuiModuleBridge
+import com.huijui.su.next.core.root.HuijuiModuleInstaller
 import com.huijui.su.next.core.ui.component.GlassCard
-import com.huijui.su.next.core.ui.component.SmartBackground
-import kotlinx.coroutines.Dispatchers
+import com.huijui.su.next.core.utils.AppSettings
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 @Composable
 fun ModuleScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
-    var modules by remember { mutableStateOf<List<HuijuiModuleInfo>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
-    
-    // 刷入状态
-    var showInstallDialog by remember { mutableStateOf(false) }
-    var installFileName by remember { mutableStateOf("") }
+    var modules by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isInstalling by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf(0) }
 
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { isVisible = true }
-    val enterAlpha by animateFloatAsState(if (isVisible) 1f else 0f, tween(600), label = "enter")
-
-    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
-    val breathAlpha by infiniteTransition.animateFloat(0.3f, 1f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "breath")
-
-    fun refreshModules() {
-        scope.launch {
-            isLoading = true
-            withContext(Dispatchers.IO) {
-                try {
-                    modules = ModuleEngine.getInstalledModules()
-                } catch (e: Exception) {
-                    errorMsg = "读取模块失败: ${e.message}"
-                } finally {
-                    withContext(Dispatchers.Main) { isLoading = false }
-                }
-            }
+    // 定时拉取模块列表
+    LaunchedEffect(Unit) {
+        while (true) {
+            modules = HuijuiModuleBridge.getMountedModules()
+            kotlinx.coroutines.delay(5000)
         }
     }
 
-    LaunchedEffect(Unit) { refreshModules() }
-
-    // 文件选择器
-    val filePicker = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
+    val zipPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            installFileName = getFileNameFromUri(context, uri)
-            showInstallDialog = true // 🚀 弹出极简控制台
+            scope.launch {
+                isInstalling = true
+                progress = 0
+                val success = HuijuiModuleInstaller.installModule(context, uri) { p ->
+                    progress = p
+                }
+                isInstalling = false
+                if (success) {
+                    // 刷新列表
+                    modules = HuijuiModuleBridge.getMountedModules()
+                    android.widget.Toast.makeText(context, "✅ 模块安装并热挂载成功！", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(context, "❌ 安装失败，请检查模块文件", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(0.3f), Color.Black.copy(AppSettings.wallpaperDimAlpha)))))
+    // UI 呼吸动画值
+    val infiniteTransition = rememberInfiniteTransition(label = "breath")
+    val breathScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f, targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "breath_scale"
+    )
 
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).scale(enterAlpha)) {
-            Spacer(modifier = Modifier.height(60.dp))
-            Text("模块", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("本地模块管理与扩展", color = Color.White.copy(0.85f), fontSize = 14.sp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp)
+    ) {
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        // 头部区域
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column {
+                ZakoText("模块管理", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                ZakoText("底层热挂载 · 零重启体验", color = Color.White.copy(0.6f), fontSize = 12.sp)
+            }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            // 呼吸指示灯
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .scale(breathScale)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.radialGradient(listOf(AppSettings.accentColor.color, Color.Transparent)))
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
 
-            // 操作面板
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                GlassCard(
-                    modifier = Modifier.weight(1f),
-                    onClick = { Toast.makeText(context, "正在连接在线模块仓库...", Toast.LENGTH_SHORT).show() }
-                ) {
-                    Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.TwoTone.Cloud, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text("模块仓库", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                }
-
-                GlassCard(
-                    modifier = Modifier.weight(1f),
-                    onClick = { filePicker.launch("application/zip") }
-                ) {
-                    Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.TwoTone.SystemUpdate, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text("刷入模块", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
+        // 安装进度条（如果正在安装）
+        if (isInstalling) {
+            GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    ZakoText("正在解析并热挂载模块...", color = Color.White, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LinearProgressIndicator(
+                        progress = { progress.toFloat() },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = AppSettings.accentColor.color,
+                        trackColor = Color.White.copy(0.1f)
+                    )
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 模块列表
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
-            } else if (errorMsg != null) {
-                Text(errorMsg!!, color = Color.Red, fontSize = 14.sp)
-            } else if (modules.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("暂无已装载模块", color = Color.White.copy(0.75f), fontSize = 16.sp) }
-            } else {
-                LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp),verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 120.dp)) {
-                    items(modules) { module ->
-                        GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { }) {
+        // 模块列表
+        LazyColumn(contentPadding = PaddingValues(bottom = 160.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(modules) { modName ->
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        // 左侧图标光晕
+                        Box(
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
+                                .background(Brush.linearGradient(listOf(AppSettings.accentColor.color.copy(0.4f), AppSettings.accentColor.color.copy(0.1f)))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Extension, null, tint = Color.White)
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(modName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(AppSettings.accentColor.color.copy(alpha = 0.2f * breathAlpha)))
-                                    Icon(Icons.TwoTone.Extension, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(24.dp))
-                                }
-                                Spacer(Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(module.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text("版本: ${module.version} | 作者: ${module.author}", color = Color.White.copy(0.85f), fontSize = 12.sp)
-                                }
-                                Text("已启用", color = AppSettings.accentColor.color.copy(alpha = breathAlpha), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF81C784), modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                ZakoText("已加载 · OverlayFS", color = Color(0xFF81C784), fontSize = 12.sp)
                             }
                         }
                     }
                 }
             }
+
+            // 底部安装按钮
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth().height(80.dp),
+                    onClick = { if (!isInstalling) zipPicker.launch("application/zip") }
+                ) {
+                    Row(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Add, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        ZakoText("选择本地 ZIP 模块安装", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
-
-    // 🚀 接入全屏沉浸式极简控制台
-    if (showInstallDialog) {
-        ModuleInstallDialog(
-            fileName = installFileName,
-            onDismiss = { 
-                showInstallDialog = false
-                refreshModules() // 装完刷新列表
-            }
-        )
-    }
-}
-
-fun getFileNameFromUri(context: Context, uri: Uri): String {
-    var fileName = "unknown.zip"
-    context.contentResolver.query(uri, null, null, null, null)?.use { cursor -> if (cursor.moveToFirst()) { val displayNameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME); if (displayNameIndex != -1) fileName = cursor.getString(displayNameIndex) } }
-    return fileName
 }

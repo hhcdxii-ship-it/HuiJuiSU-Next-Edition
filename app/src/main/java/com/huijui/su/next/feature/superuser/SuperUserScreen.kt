@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.superuser
+import com.huijui.su.next.core.ui.language.ZakoText
 
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.Image
@@ -74,8 +75,8 @@ fun SuperUserScreen() {
     // 🚀 核心：这里是真正的授权拦截与下发
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
         Spacer(modifier = Modifier.height(20.dp))
-        Text("超级用户", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("已授权应用将直接获取 HUI 内核态 Root", color = Color.White.copy(0.6f), fontSize = 12.sp)
+        ZakoText("超级用户", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        ZakoText("已授权应用将直接获取 HUI 内核态 Root", color = Color.White.copy(0.6f), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(20.dp))
         
         LazyColumn(contentPadding = PaddingValues(bottom = 160.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

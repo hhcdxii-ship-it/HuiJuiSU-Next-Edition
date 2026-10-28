@@ -51,6 +51,9 @@ object AppSettings {
 
     // 🚀 真正的超级用户授权列表（使用 Set 防止重复）
     var grantedApps by mutableStateOf(setOf<String>())
+    // 语言设置，默认杂鱼
+    var currentLanguage by mutableStateOf("ZAKO")
+    // 杂鱼模式
     // 🚀 全局 Root 状态（用于控制底栏和页面拦截）
     var hasRoot by mutableStateOf(false)
 
@@ -62,6 +65,7 @@ object AppSettings {
         osMajorVersion = RomUtils.getOsMajorVersion()
 
         isCheckManagerUpdateEnabled = prefs.getBoolean("check_manager", true)
+        currentLanguage = prefs.getString("current_language", "ZAKO") ?: "ZAKO"
         isCheckModuleUpdateEnabled = prefs.getBoolean("check_module", true)
         isHideSelinuxEnabled = prefs.getBoolean("hide_selinux", false)
         isHideRootEnabled = prefs.getBoolean("hide_root", true)
@@ -89,6 +93,7 @@ object AppSettings {
     fun save() {
         prefs.edit().apply {
             putBoolean("check_manager", isCheckManagerUpdateEnabled)
+            putString("current_language", currentLanguage)
             putBoolean("check_module", isCheckModuleUpdateEnabled)
             putBoolean("hide_selinux", isHideSelinuxEnabled)
             putBoolean("hide_root", isHideRootEnabled)

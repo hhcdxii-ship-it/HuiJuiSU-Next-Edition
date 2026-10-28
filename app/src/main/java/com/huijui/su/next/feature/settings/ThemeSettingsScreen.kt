@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.settings
+import com.huijui.su.next.core.ui.language.ZakoText
 import androidx.compose.runtime.LaunchedEffect
 import com.huijui.su.next.core.utils.AppSettings
 
@@ -93,12 +94,12 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(60.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onBack() }) {
                 Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
-                Text("返回", color = Color.White, fontSize = 16.sp)
+                ZakoText("返回", color = Color.White, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Text("主题设置", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            Text("自定义你的纯血管理器外观", color = Color.White.copy(0.85f), fontSize = 14.sp)
+            ZakoText("主题设置", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
+            ZakoText("自定义你的纯血管理器外观", color = Color.White.copy(0.85f), fontSize = 14.sp)
             
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -122,7 +123,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                             ) {
                                 Icon(Icons.TwoTone.VideoFile, null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("选动态壁纸", fontSize = 12.sp, color = Color.White)
+                                ZakoText("选动态壁纸", fontSize = 12.sp, color = Color.White)
                             }
                             Button(
                                 onClick = { imagePicker.launch("image/*") },
@@ -132,7 +133,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                             ) {
                                 Icon(Icons.TwoTone.Image, null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("选静态壁纸", fontSize = 12.sp, color = Color.White)
+                                ZakoText("选静态壁纸", fontSize = 12.sp, color = Color.White)
                             }
                         }
                         
@@ -150,7 +151,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                             ) {
                                 Icon(Icons.TwoTone.Delete, null, tint = Color(0xFFF44336), modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("清除当前自定义壁纸", fontSize = 14.sp, color = Color(0xFFF44336))
+                                ZakoText("清除当前自定义壁纸", fontSize = 14.sp, color = Color(0xFFF44336))
                             }
                         }
                     }
@@ -187,7 +188,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                 // ================= 卡片圆角 =================
                 item {
                     SettingsGroup(title = "卡片圆角") {
-                        Text("当前: ${AppSettings.cardCornerRadius.toInt()} dp", color = Color.White.copy(0.85f), fontSize = 12.sp)
+                        ZakoText("当前: ${AppSettings.cardCornerRadius.toInt()} dp", color = Color.White.copy(0.85f), fontSize = 12.sp)
                         Slider(
                             value = AppSettings.cardCornerRadius,
                             onValueChange = { AppSettings.cardCornerRadius = it },
@@ -225,7 +226,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                 // ================= 全局动画速度 =================
                 item {
                     SettingsGroup(title = "全局动画速度") {
-                        Text("当前: ${AppSettings.animationSpeedScale}x", color = Color.White.copy(0.85f), fontSize = 12.sp)
+                        ZakoText("当前: ${AppSettings.animationSpeedScale}x", color = Color.White.copy(0.85f), fontSize = 12.sp)
                         Slider(
                             value = AppSettings.animationSpeedScale,
                             onValueChange = { AppSettings.animationSpeedScale = it },
