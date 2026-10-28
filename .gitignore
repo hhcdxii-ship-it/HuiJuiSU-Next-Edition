@@ -8,3 +8,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+*.apk
+*.zip
+*.bak
+*.py
+ultimate_get_apk.py
