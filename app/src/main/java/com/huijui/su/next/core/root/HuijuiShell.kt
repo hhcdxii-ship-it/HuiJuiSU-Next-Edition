@@ -9,8 +9,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 
 /**
- * 🩸 纯血自研 Root 执行引擎（Socket 通信版）
- * 彻底抛弃系统 su，直接连我们自己的 huijui_ksud daemon 的 Unix Socket！
+ * 🩸 纯血自研 Root 执行引擎（双模版：Socket 优先 + Su 降级）
  */
 object HuijuiShell {
 
@@ -23,16 +22,32 @@ object HuijuiShell {
     private const val SOCKET_PATH = "/data/adb/huijuisu/huijui.sock"
     private const val MARKER = "__HIJ_SOCKET_END__"
 
-    suspend fun exec(command: String): CommandResult = withContext(Dispatchers.IO) {
+    /**
+     * 执行命令。
+     * 优先尝试连接我们的 C Daemon Socket。如果连不上，降级使用系统 su。
+     */
+    suspend fun exec(command: String, forceSu: Boolean = false): CommandResult = withContext(Dispatchers.IO) {
+        if (forceSu) {
+            return@withContext execWithSu(command)
+        }
+
+        val socketResult = execWithSocket(command)
+        // 如果 Socket 连接失败（比如刚开始 daemon 没跑），降级到 su
+        if (socketResult.err.any { it.contains("Socket 连接失败") }) {
+            execWithSu(command)
+        } else {
+            socketResult
+        }
+    }
+
+    private fun execWithSocket(command: String): CommandResult {
         val outList = mutableListOf<String>()
         val errList = mutableListOf<String>()
         var isSuccess = false
-
         var socket: LocalSocket? = null
+
         try {
             socket = LocalSocket()
-            // 注意：Android 的 LocalSocket 默认使用 Linux Abstract 命名空间
-            // 如果要连文件路径的 socket，必须用 LocalSocketAddress.Namespace.FILESYSTEM
             socket.connect(LocalSocketAddress(SOCKET_PATH, LocalSocketAddress.Namespace.FILESYSTEM))
 
             val writer = OutputStreamWriter(socket.outputStream)
@@ -43,7 +58,6 @@ object HuijuiShell {
             var line: String?
             while (reader.readLine().also { line = it } != null) {
                 if (line == MARKER) {
-                    // 读到结束标记，下一行是退出码
                     val exitCode = reader.readLine()?.toIntOrNull() ?: -1
                     isSuccess = (exitCode == 0)
                     break
@@ -51,30 +65,62 @@ object HuijuiShell {
                 line?.let { outList.add(it) }
             }
         } catch (e: Exception) {
-            errList.add(e.message ?: "Socket 连接失败: 守护进程未启动?")
+            errList.add("Socket 连接失败: ${e.message}")
         } finally {
             try { socket?.close() } catch (_: Exception) {}
         }
+        return CommandResult(isSuccess, outList, errList)
+    }
 
-        CommandResult(isSuccess, outList, errList)
+    private fun execWithSu(command: String): CommandResult {
+        val outList = mutableListOf<String>()
+        val errList = mutableListOf<String>()
+        var exitCode = -1
+        try {
+            val process = ProcessBuilder("su").start()
+            val writer = OutputStreamWriter(process.outputStream)
+            writer.write("$command\nexit\n")
+            writer.flush()
+            writer.close()
+
+            val outReader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
+            while (outReader.readLine().also { line = it } != null) {
+                line?.let { outList.add(it) }
+            }
+            outReader.close()
+
+            val errReader = BufferedReader(InputStreamReader(process.errorStream))
+            while (errReader.readLine().also { line = it } != null) {
+                line?.let { errList.add(it) }
+            }
+            errReader.close()
+
+            exitCode = process.waitFor()
+        } catch (e: Exception) {
+            errList.add(e.message ?: "Unknown Error")
+        }
+        return CommandResult(exitCode == 0, outList, errList)
     }
 
     suspend fun isRooted(): Boolean = withContext(Dispatchers.IO) {
-        var socket: LocalSocket? = null
-        try {
-            socket = LocalSocket()
+        // 先测 Socket，不通过再测 su
+        val socketAlive = try {
+            val socket = LocalSocket()
             socket.connect(LocalSocketAddress(SOCKET_PATH, LocalSocketAddress.Namespace.FILESYSTEM))
             val writer = OutputStreamWriter(socket.outputStream)
             writer.write("PING\n")
             writer.flush()
-
             val reader = BufferedReader(InputStreamReader(socket.inputStream))
-            val response = reader.readLine()
-            return@withContext response == "PONG"
-        } catch (e: Exception) {
-            return@withContext false
-        } finally {
-            try { socket?.close() } catch (_: Exception) {}
-        }
+            val res = reader.readLine() == "PONG"
+            socket.close()
+            res
+        } catch (e: Exception) { false }
+
+        if (socketAlive) return@withContext true
+
+        // 降级测 su
+        val result = execWithSu("id")
+        result.isSuccess && result.out.any { it.contains("uid=0") }
     }
 }
