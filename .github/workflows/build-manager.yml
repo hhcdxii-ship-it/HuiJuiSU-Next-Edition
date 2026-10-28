@@ -238,7 +238,31 @@ jobs:
       # ==========================================
 
       # 10. 自动给 Release 包签名（使用临时生成的密钥，方便小白直接安装）
-`cat /tmp/sign_patch.txt`
+
+      # 10. 自动给 Release 包签名（使用临时生成的密钥，方便小白直接安装）
+      - name: Sign Release APK
+        run: |
+          # 查找云端构建工具里的 apksigner 和 zipalign
+          BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          
+          echo ">>> 正在生成临时签名..."
+          keytool -genkey -v -keystore release.keystore -alias huijui -keyalg RSA -keysize 2048 -validity 10000 -storepass huijui123 -keypass huijui123 -dname "CN=HuiJuiSU, OU=Team, O=HuiJuiSU, L=Beijing, S=Beijing, C=CN"
+          
+          UNSIGNED_APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          
+          if [ -f "$UNSIGNED_APK" ]; then
+            echo ">>> 对齐 APK..."
+            $ZIPALIGN -v -p 4 $UNSIGNED_APK aligned.apk
+            
+            echo ">>> 签名 APK..."
+            $APKSIGNER sign --ks release.keystore --ks-pass pass:huijui123 --key-pass pass:huijui123 --out app/build/outputs/apk/release/app-release-signed.apk aligned.apk
+            
+            cp app/build/outputs/apk/release/app-release-signed.apk release_out/HuiJuiSU_${{ env.APP_VERSION }}_release_signed.apk
+          else
+            echo "⚠️ 找不到未签名的 APK，跳过签名。"
+          fi
 
       # 11. 清理无用缓存，防止 GitHub 免费额度因占用过大而爆盘
       - name: Cleanup Workspace

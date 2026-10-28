@@ -1,4 +1,5 @@
 package com.huijui.su.next.core.ui.language
+import com.huijui.su.next.core.ui.language.ZakoText
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.material3.Text
