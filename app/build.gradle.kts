@@ -37,20 +37,20 @@ android {
 }
 
 dependencies {
-    // 核心 Compose 基础 (不绑定 Material3，自由度高)
+    // 1. 核心 Compose 基础 (纯血，无 Material3 界面依赖，但保留底层)
     implementation("androidx.compose.foundation:foundation:1.6.3")
     implementation("androidx.compose.ui:ui:1.6.3")
     implementation("androidx.compose.ui:ui-tooling-preview:1.6.3")
     implementation("androidx.activity:activity-compose:1.8.2")
     
-    // ViewModel & 协程
+    // 2. ViewModel & 协程
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // 动态壁纸引擎
+    // 3. 动态壁纸引擎 (60帧 硬件加速)
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
 
-    // Root 核心引擎 (libsu)
-    implementation("com.github.topjohnwu.libsu:core:5.2.2")
+    // 4. 图标库 (补齐咱们用到的 TwoTone 图标)
+    implementation("androidx.compose.material:material-icons-extended:1.6.3")
 }

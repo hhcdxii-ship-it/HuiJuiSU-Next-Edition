@@ -1,0 +1,68 @@
+name: Build Next Edition (App + Multi-Version LKM)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  # 1. 编译 App
+  build-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Build App with Gradle
+        run: ./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HuiJuiSU-App
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  # 2. 矩阵编译多版本纯血 LKM
+  build-lkm:
+    name: Build LKM (${{ matrix.gki_branch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # 即使某个版本编译失败，其他版本也会继续
+      matrix:
+        gki_branch:
+          - "android12-5.10"
+          - "android13-5.10"
+          - "android13-5.15"
+          - "android14-5.15"
+          - "android14-6.1"
+          - "android15-6.6"
+          - "android16-6.12"
+          - "android17-6.18"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm
+
+      - name: Download AOSP Kernel Source (${{ matrix.gki_branch }})
+        run: |
+          # 根据矩阵变量，浅克隆对应分支的内核源码
+          git clone --depth=1 https://android.googlesource.com/kernel/common -b ${{ matrix.gki_branch }} gki-kernel
+
+      - name: Build Pure-Blood LKM
+        run: |
+          cd gki-kernel
+          # 初始化 GKI 默认配置
+          make ARCH=arm64 LLVM=1 gki_defconfig
+          # 编译外部模块，指向我们的 kernel 目录
+          make ARCH=arm64 LLVM=1 M=../kernel modules
+
+      - name: Upload LKM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HuiJuiSU-LKM-${{ matrix.gki_branch }}
+          path: gki-kernel/kernel/huijui_lkm.ko
