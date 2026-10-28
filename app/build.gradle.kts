@@ -61,5 +61,4 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.6.0")
 
     // 6. 专业液态玻璃库 (Haze 0.7.3 兼容 Kotlin 1.9)
-    implementation("dev.chrisbanes.haze:haze:0.7.3")
 }
