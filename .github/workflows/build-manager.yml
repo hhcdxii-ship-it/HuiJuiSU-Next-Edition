@@ -65,7 +65,7 @@ jobs:
   # 4-6 段：HUI 内核模块 16 核矩阵编译
   # ==========================================
   build-hui-lkm:
-    name: Build HUI LKM (${{ matrix.gki_branch }} - ${{ matrix.arch }})
+    name: Build HUI Core (${{ matrix.gki_branch }} - ${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: build-c-tools # 确保前置任务成功，虽然没直接依赖，但保持顺序
     strategy:
@@ -85,7 +85,7 @@ jobs:
       - name: Install Cross Compilers
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu
+          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu libdwarf-dev libdw-dev
 
       # 5. 缓存内核源码，防止每次拉取浪费大量时间
       - name: Cache Kernel Source
@@ -104,7 +104,7 @@ jobs:
           fi
 
       # 6. 核心编译逻辑（含 LTO 动态关闭与架构切换）
-      - name: Build HUI LKM
+      - name: Build HUI Core
         run: |
           cd gki-kernel
           export ARCH=${{ matrix.arch }}
