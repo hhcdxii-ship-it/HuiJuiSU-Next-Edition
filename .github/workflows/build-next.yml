@@ -1,4 +1,4 @@
-name: Build Next Edition (Full Stack)
+name: Full Pure-Blood Build (App + LKM + ksud + Repack)
 
 on:
   push:
@@ -10,89 +10,129 @@ permissions:
 
 jobs:
   # ==========================================
-  # 1. 编译 App (纯血 UI)
+  # 1. 编译 App
   # ==========================================
   build-app:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Build App with Gradle
+      - name: Build App
         run: ./gradlew assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: HuiJuiSU-App
+          name: App-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: HuiJuiSU Next Edition (Build ${{ github.run_number }})
-          files: app/build/outputs/apk/debug/app-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ==========================================
-  # 2. 编译 LKM (16 个全架构版本)
+  # 2. 矩阵编译 LKM (16 个版本)
   # ==========================================
   build-lkm:
-    name: Build LKM (${{ matrix.gki_branch }} - ${{ matrix.arch }})
+    name: LKM (${{ matrix.gki_branch }} - ${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        gki_branch:
-          - "android12-5.10"
-          - "android13-5.10"
-          - "android13-5.15"
-          - "android14-5.15"
-          - "android14-6.1"
-          - "android15-6.6"
-          - "android16-6.12"
-          - "android17-6.18"
-        arch:
-          - "arm64"
-          - "x86_64"
+        gki_branch: ["android12-5.10", "android13-5.10", "android13-5.15", "android14-5.15", "android14-6.1", "android15-6.6", "android16-6.12", "android17-6.18"]
+        arch: ["arm64", "x86_64"]
     steps:
       - uses: actions/checkout@v4
-
       - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm
-
-      - name: Download AOSP Kernel Source (${{ matrix.gki_branch }})
-        run: |
-          git clone --depth=1 https://android.googlesource.com/kernel/common -b ${{ matrix.gki_branch }} gki-kernel
-
-      - name: Build Pure-Blood LKM
+        run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev libelf-dev bc zip git curl clang lld llvm
+      - name: Download Kernel Source
+        run: git clone --depth=1 https://android.googlesource.com/kernel/common -b ${{ matrix.gki_branch }} gki-kernel
+      - name: Build LKM
         run: |
           cd gki-kernel
           export ARCH=${{ matrix.arch }}
           export LLVM=1
-          
-          # 🚀 修复老内核（12-5.10）的汇编器报错
-          if [ "${{ matrix.gki_branch }}" == "android12-5.10" ]; then
-              export KCFLAGS="-mno-outline-atomics"
-          fi
-          
+          if [ "${{ matrix.gki_branch }}" == "android12-5.10" ]; then export KCFLAGS="-mno-outline-atomics"; fi
           make ARCH=${{ matrix.arch }} LLVM=1 gki_defconfig
-          
-          # 🚀 修复新内核（15+）的全量 LTO 内存溢出报错
-          if [ "${{ matrix.gki_branch }}" != "android12-5.10" ]; then
-              ./scripts/config --file .config -d LTO_CLANG_FULL -e LTO_CLANG_THIN
-          fi
-          
+          if [ "${{ matrix.gki_branch }}" != "android12-5.10" ]; then ./scripts/config --file .config -d LTO_CLANG_FULL -e LTO_CLANG_THIN; fi
           make ARCH=${{ matrix.arch }} LLVM=1 modules_prepare
           make ARCH=${{ matrix.arch }} LLVM=1 M=${{ github.workspace }}/kernel modules
-
-      - name: Upload LKM Artifact
+      - name: Upload LKM
         uses: actions/upload-artifact@v4
         with:
           name: LKM-${{ matrix.gki_branch }}-${{ matrix.arch }}
           path: gki-kernel/kernel/huijui_lkm.ko
+
+  # ==========================================
+  # 3. 编译 Rust ksud 矩阵 (arm64 + x86_64)
+  # ==========================================
+  build-ksud:
+    name: Build ksud (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: ["aarch64-linux-android", "x86_64-linux-android"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+      - name: Build ksud
+        run: |
+          cd userspace/ksud
+          cargo build --release --target ${{ matrix.target }}
+      - name: Upload ksud
+        uses: actions/upload-artifact@v4
+        with:
+          name: ksud-${{ matrix.target }}
+          path: userspace/ksud/target/${{ matrix.target }}/release/ksud
+
+  # ==========================================
+  # 4. 终极打包 (结合 App + ksud + 所有 LKM)
+  # ==========================================
+  repack-manager:
+    name: Repack Final Manager
+    needs: [build-app, build-lkm, build-ksud]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 下载所有前置产物
+      - name: Download App APK
+        uses: actions/download-artifact@v4
+        with:
+          name: App-APK
+          path: build_output/app
+          
+      - name: Download ksud (arm64)
+        uses: actions/download-artifact@v4
+        with:
+          name: ksud-aarch64-linux-android
+          path: build_output/ksud
+
+      - name: Download All LKM Modules
+        uses: actions/download-artifact@v4
+        with:
+          pattern: LKM-*
+          path: build_output/lkm
+          merge-multiple: true
+
+      # 执行打包
+      - name: Execute Repack Script
+        run: |
+          chmod +x scripts/repack.sh
+          ./scripts/repack.sh "build_output/app/app-debug.apk" "build_output/ksud/ksud" "build_output/lkm" "HuiJuiSU-Full-Release.zip"
+
+      # 发布到 GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: HuiJuiSU Full Stack (Build ${{ github.run_number }})
+          body: "纯血全家桶构建：App + Rust ksud + 16 内核模块 完美打包。"
+          files: HuiJuiSU-Full-Release.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
