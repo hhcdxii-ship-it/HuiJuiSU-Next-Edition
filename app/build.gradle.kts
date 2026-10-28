@@ -59,4 +59,6 @@ dependencies {
 
     // 4. 图标库 (补齐咱们用到的 TwoTone 图标)
     implementation("androidx.compose.material:material-icons-extended:1.6.3")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-gif:2.6.0")
 }

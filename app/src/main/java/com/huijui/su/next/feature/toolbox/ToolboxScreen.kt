@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.huijui.su.next.core.root.HuijuiShell
-import com.huijui.su.next.core.ui.component.DynamicVideoBackground
+import com.huijui.su.next.core.ui.component.SmartBackground
 import kotlinx.coroutines.launch
 
 data class ToolItem(val id: String, val icon: ImageVector, val title: String, val desc: String)
@@ -55,7 +55,7 @@ fun ToolboxScreen(viewModel: ToolboxViewModel = viewModel()) {
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        DynamicVideoBackground()
+        SmartBackground()
         Box(
             modifier = Modifier.fillMaxSize().background(
                 Brush.verticalGradient(colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Black.copy(alpha = 0.7f)))
