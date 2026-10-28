@@ -46,6 +46,6 @@ object KernelVersionMatcher {
     // 生成最终应该加载的 Assets 文件名
     fun getExpectedKoFileName(): String? {
         val info = getCurrentGkiInfo() ?: return null
-        return "huijui_lkm_${info.branch}_${info.arch}.ko"
+        return "HUI_${info.branch}_${info.arch}.ko"
     }
 }

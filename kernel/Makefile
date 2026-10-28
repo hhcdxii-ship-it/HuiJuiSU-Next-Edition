@@ -1,4 +1,4 @@
-obj-m += huijui_lkm.o
+obj-m += HUI.o
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)

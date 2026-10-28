@@ -24,7 +24,7 @@ object RootEngineVerifier {
 
         // 2. 检查内核里是否有 huijui 的模块
         val moduleLoaded = runCatching {
-            HuijuiShell.exec("lsmod | grep huijui_lkm >/dev/null 2>&1 && echo yes || echo no")
+            HuijuiShell.exec("lsmod | grep HUI >/dev/null 2>&1 && echo yes || echo no")
                 .out.joinToString("").trim() == "yes"
         }.getOrDefault(false)
 

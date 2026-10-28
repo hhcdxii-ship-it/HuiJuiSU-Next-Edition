@@ -135,7 +135,7 @@ jobs:
 
           # 归档产物，带上版本与架构，避免冲突
           mkdir -p ${{ github.workspace }}/lkm_out
-          cp kernel/huijui_lkm.ko ${{ github.workspace }}/lkm_out/huijui_lkm_${{ matrix.gki_branch }}_${{ matrix.arch }}.ko
+          cp kernel/HUI.ko ${{ github.workspace }}/lkm_out/HUI_${{ matrix.gki_branch }}_${{ matrix.arch }}.ko
           
           echo ">>> 编译产物："
           ls -la ${{ github.workspace }}/lkm_out/

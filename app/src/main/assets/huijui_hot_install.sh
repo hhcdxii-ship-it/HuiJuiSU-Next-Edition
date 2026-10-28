@@ -36,7 +36,7 @@ log " ✅ HuiJuiSU daemon 已启动 PID=$NEW_PID"
 
 log ">>> [4/7] 注入 HUI 纯血内核模块..."
 # 🚀 核心：防砖安全锁
-if lsmod | grep -q huijui_lkm; then
+if lsmod | grep -q HUI; then
     log " ⚠️ HUI 内核模块已加载，无需重复注入"
 else
     insmod "$HIJ_DIR/$KO_NAME" 2>&1
@@ -45,7 +45,7 @@ else
         log " ✅ HUI 内核模块加载成功！"
     else
         log " ❌ 内核模块加载失败 (code $INS_ERR)，正在尝试紧急卸弹以防死机..."
-        rmmod huijui_lkm 2>/dev/null
+        rmmod HUI 2>/dev/null
         dmesg | tail -n 5
         log " ⚠️ 已执行紧急卸载，系统安全。请回 App 查看报错详情。"
     fi
