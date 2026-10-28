@@ -62,7 +62,7 @@ jobs:
           path: gki-kernel/kernel/huijui_lkm.ko
 
   # ==========================================
-  # 3. 编译 Rust ksud 矩阵 (arm64 + x86_64)
+  # 3. 编译 Rust ksud (矩阵 arm64 + x86_64) —— 修复了交叉编译环境
   # ==========================================
   build-ksud:
     name: Build ksud (${{ matrix.target }})
@@ -72,18 +72,31 @@ jobs:
         target: ["aarch64-linux-android", "x86_64-linux-android"]
     steps:
       - uses: actions/checkout@v4
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - name: Install NDK
+          
+      - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r26b
-      - name: Build ksud
+          add-to-path: true
+          
+      - name: Build ksud with NDK Linker
         run: |
           cd userspace/ksud
+          
+          # 🚀 核心修复：手动指定 Rust 使用 NDK 的 clang 作为链接器
+          if [ "${{ matrix.target }}" == "aarch64-linux-android" ]; then
+            export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+          else
+            export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang"
+          fi
+          
           cargo build --release --target ${{ matrix.target }}
+          
       - name: Upload ksud
         uses: actions/upload-artifact@v4
         with:
@@ -95,12 +108,11 @@ jobs:
   # ==========================================
   repack-manager:
     name: Repack Final Manager
-    needs: [build-app, build-lkm, build-ksud]
+    needs: [build-app, build-ksud]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # 下载所有前置产物
       - name: Download App APK
         uses: actions/download-artifact@v4
         with:
@@ -113,26 +125,17 @@ jobs:
           name: ksud-aarch64-linux-android
           path: build_output/ksud
 
-      - name: Download All LKM Modules
-        uses: actions/download-artifact@v4
-        with:
-          pattern: LKM-*
-          path: build_output/lkm
-          merge-multiple: true
-
-      # 执行打包
       - name: Execute Repack Script
         run: |
           chmod +x scripts/repack.sh
           ./scripts/repack.sh "build_output/app/app-debug.apk" "build_output/ksud/ksud" "build_output/lkm" "HuiJuiSU-Full-Release.zip"
 
-      # 发布到 GitHub Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: HuiJuiSU Full Stack (Build ${{ github.run_number }})
-          body: "纯血全家桶构建：App + Rust ksud + 16 内核模块 完美打包。"
+          body: "纯血全家桶构建。"
           files: HuiJuiSU-Full-Release.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
