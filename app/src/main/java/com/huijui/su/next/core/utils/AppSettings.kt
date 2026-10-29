@@ -49,14 +49,20 @@ object AppSettings {
     var customVideoPath by mutableStateOf<String?>(null)
     var customImagePath by mutableStateOf<String?>(null)
 
-    // 🚀 真正的超级用户授权列表（使用 Set 防止重复）
     var grantedApps by mutableStateOf(setOf<String>())
     var isInitialized by mutableStateOf(false)
-    // 语言设置，默认杂鱼
-    var currentLanguage by mutableStateOf("ZAKO")
-    // 杂鱼模式
-    // 🚀 全局 Root 状态（用于控制底栏和页面拦截）
+    var isLauncherLandscape by mutableStateOf(false)
+    var currentLanguage by mutableStateOf("ZH_CN")
     var hasRoot by mutableStateOf(false)
+
+    var onboardingCompleted by mutableStateOf(false)
+    var defaultLauncherMode by mutableStateOf(true)
+
+    // 🚀 M1: 系统监控通知开关
+    var systemMonitorEnabled by mutableStateOf(false)
+
+    // 🚀 M3: Root 审计通知开关
+    var rootAuditEnabled by mutableStateOf(false)
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -66,7 +72,8 @@ object AppSettings {
         osMajorVersion = RomUtils.getOsMajorVersion()
 
         isCheckManagerUpdateEnabled = prefs.getBoolean("check_manager", true)
-        currentLanguage = prefs.getString("current_language", "ZAKO") ?: "ZAKO"
+        currentLanguage = prefs.getString("current_language", "ZH_CN") ?: "ZH_CN"
+        isLauncherLandscape = prefs.getBoolean("launcher_landscape", false)
         isCheckModuleUpdateEnabled = prefs.getBoolean("check_module", true)
         isHideSelinuxEnabled = prefs.getBoolean("hide_selinux", false)
         isHideRootEnabled = prefs.getBoolean("hide_root", true)
@@ -86,9 +93,18 @@ object AppSettings {
         customVideoPath = prefs.getString("custom_video", null)
         customImagePath = prefs.getString("custom_image", null)
 
-        // 读取已授权应用
         val grantedList = prefs.getStringSet("granted_apps", emptySet()) ?: emptySet()
         grantedApps = grantedList.toSet()
+
+        onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
+        defaultLauncherMode = prefs.getBoolean("default_launcher_mode", true)
+
+        // 🚀 M1: 监控开关
+        systemMonitorEnabled = prefs.getBoolean("system_monitor_enabled", false)
+
+        // 🚀 M3: 审计通知开关
+        rootAuditEnabled = prefs.getBoolean("root_audit_enabled", false)
+
         isInitialized = true
     }
 
@@ -96,6 +112,7 @@ object AppSettings {
         prefs.edit().apply {
             putBoolean("check_manager", isCheckManagerUpdateEnabled)
             putString("current_language", currentLanguage)
+            putBoolean("launcher_landscape", isLauncherLandscape)
             putBoolean("check_module", isCheckModuleUpdateEnabled)
             putBoolean("hide_selinux", isHideSelinuxEnabled)
             putBoolean("hide_root", isHideRootEnabled)
@@ -111,8 +128,11 @@ object AppSettings {
             putFloat("anim_speed", animationSpeedScale)
             putString("custom_video", customVideoPath)
             putString("custom_image", customImagePath)
-            // 🚀 保存授权列表
             putStringSet("granted_apps", grantedApps)
+            putBoolean("onboarding_completed", onboardingCompleted)
+            putBoolean("default_launcher_mode", defaultLauncherMode)
+            putBoolean("system_monitor_enabled", systemMonitorEnabled)
+            putBoolean("root_audit_enabled", rootAuditEnabled)
             apply()
         }
     }

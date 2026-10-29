@@ -67,7 +67,7 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
         ) {
             // 1. 性能调优区
             GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ZakoText("⚡ HUI 独占性能调优", color = AppSettings.accentColor.color, fontWeight = FontWeight.Bold)
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -93,7 +93,7 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
             ZakoText("已加载模块 (${modules.size})", color = Color.White.copy(0.7f))
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 if (modules.isEmpty()) {
-                    ZakoText("暂无已挂载模块", color = Color.Gray, modifier = Modifier.padding(16.dp))
+                    ZakoText("暂无已挂载模块", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
                 } else {
                     modules.forEach {
                         ZakoText("- $it", color = Color.White, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(4.dp))

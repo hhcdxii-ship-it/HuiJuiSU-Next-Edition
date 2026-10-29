@@ -37,7 +37,7 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
                 
                 val summary = if (result.isSuccess && verifyReport.isActive) {
                     AppSettings.hasRoot = true
-                    "✅ 热接管成功：HUI 内核已激活！"
+                    "✅ 热接管成功：HUI 已激活！"
                 } else {
                     AppSettings.hasRoot = false
                     "❌ 接管失败：${verifyReport.detail}"

@@ -1,207 +1,163 @@
 package com.huijui.su.next.feature.settings
-import com.huijui.su.next.core.ui.language.ZakoText
-import androidx.compose.material3.HorizontalDivider
 
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.twotone.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.huijui.su.next.core.root.HuijuiShell
+import com.huijui.su.next.BuildConfig
+import com.huijui.su.next.R
 import com.huijui.su.next.core.ui.component.GlassCard
-import com.huijui.su.next.core.ui.component.SmartBackground
+import com.huijui.su.next.core.utils.AppResetManager
 import com.huijui.su.next.core.utils.AppSettings
-import com.huijui.su.next.core.utils.SystemGuardian
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(onNavigateToTheme: () -> Unit) {
+fun SettingsScreen(onNavigateToTheme: () -> Unit = {}, onNavigateToLanguage: () -> Unit = {}, onResetComplete: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { isVisible = true }
-    val enterAlpha by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(500), label = "enter_alpha"
-    )
+    var showResetDialog by remember { mutableStateOf(false) }
+    var isResetting by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        SmartBackground()
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(0.3f), Color.Black.copy(0.8f)))))
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 20.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Text("设置", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("HuiJuiSU Next Edition", color = Color.White.copy(0.6f), fontSize = 12.sp)
+        }
 
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            Spacer(modifier = Modifier.height(60.dp))
-            ZakoText("设置", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            // 🚀 动态显示 ROM 标识
-            ZakoText("Next Edition · ${AppSettings.osMajorVersion} 适配", color = Color.White.copy(0.85f), fontSize = 14.sp)
-            
-            Spacer(modifier = Modifier.height(24.dp))
+        item { SectionLabel("配置与个性化") }
+        item {
+            SettingsRow(Icons.Default.Palette, "主题设置", "自定义材质、壁纸与动画效果", onClick = onNavigateToTheme)
+        }
+        item {
+            SettingsRow(Icons.Default.Language, "语言设置", "支持简繁、英日韩俄以及杂鱼语", onClick = onNavigateToLanguage)
+        }
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(bottom = 120.dp),
-                modifier = Modifier.fillMaxSize().scale(enterAlpha)
-            ) {
-                // 1. 配置
-                item {
-                    SettingsGroup(title = "配置") {
-                        SettingSwitchRow(Icons.TwoTone.Refresh, "检查管理器更新", "自动检查并提示管理器新版本", AppSettings.isCheckManagerUpdateEnabled) { AppSettings.isCheckManagerUpdateEnabled = it; AppSettings.save() }
-                        SettingSwitchRow(Icons.TwoTone.Archive, "检查模块更新", "自动检查已安装模块的更新", AppSettings.isCheckModuleUpdateEnabled) { AppSettings.isCheckModuleUpdateEnabled = it; AppSettings.save() }
-                    }
+        // ================= HUI 专属特性 =================
+        item { SectionLabel("HUI 独有特性", modifier = Modifier.padding(top = 16.dp)) }
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    FeatureRow(Icons.Default.Hub, "Omni-Root 引擎", "兼容并接管 KSU/Magisk 底层生态")
+                    FeatureRow(Icons.Default.Security, "3 级防格机拦截", "白名单分区过滤 + GKI 校验")
+                    FeatureRow(Icons.Default.SettingsBackupRestore, "无感热备份", "刷机前自动 dd 备份，秒级回滚")
+                    FeatureRow(Icons.Default.Language, "原生 WebUI 沙盒", "支持 Magisk/KSU 模块 HTML 控制台")
                 }
+            }
+        }
 
-                // 2. 个性化
-                item {
-                    SettingsGroup(title = "个性化") {
-                        SettingActionRow(Icons.TwoTone.ColorLens, "主题设置", "自定义材质、壁纸与动画效果", onNavigateToTheme)
-                    }
-                }
+        item { SectionLabel("重置与危险操作", modifier = Modifier.padding(top = 16.dp)) }
+        item {
+            SettingsRow(
+                icon = Icons.Default.RestartAlt,
+                title = "恢复出厂设置",
+                subtitle = "清空所有主题、壁纸、引导状态（保留 Root 授权）",
+                danger = true,
+                onClick = { showResetDialog = true }
+            )
+        }
 
-                // 3. 安全与隐私 (全局)
-                item {
-                    SettingsGroup(title = "安全与隐私") {
-                        SettingSwitchRow(Icons.TwoTone.Security, "隐藏 SELinux 修改", "阻止应用检测到系统的 SELinux 状态变更", AppSettings.isHideSelinuxEnabled) { AppSettings.isHideSelinuxEnabled = it; AppSettings.save() }
-                        SettingSwitchRow(Icons.TwoTone.VisibilityOff, "隐藏 Root 痕迹", "尽可能抹除对特定目录的挂载痕迹", AppSettings.isHideRootEnabled) { AppSettings.isHideRootEnabled = it; AppSettings.save() }
-                        SettingSwitchRow(Icons.TwoTone.Shield, "防止 Root 丢失", "后台守护，尝试保持 Root 环境在线", AppSettings.isAntiRootLossEnabled) { 
-                            AppSettings.isAntiRootLossEnabled = it; AppSettings.save()
-                            if (it) SystemGuardian.startGuardian(scope) else SystemGuardian.stopGuardian()
-                        }
-                    }
-                }
-
-                // 4. 小米/HyperOS 专属守护
-                if (AppSettings.isXiaomiDevice) {
-                    item {
-                        SettingsGroup(title = "${AppSettings.osMajorVersion} 系统专属守护") {
-                            SettingSwitchRow(Icons.TwoTone.DeveloperMode, "防开发者选项关闭", "强制系统保持开发者选项与 ADB 调试开启", AppSettings.isAntiDevOptionsEnabled) { 
-                                AppSettings.isAntiDevOptionsEnabled = it; AppSettings.save()
-                                if (it) SystemGuardian.startGuardian(scope)
-                            }
-                            SettingSwitchRow(Icons.TwoTone.Wallpaper, "防主题壁纸被恢复", "防止系统在重启或清理后重置自定义壁纸", AppSettings.isAntiWallpaperResetEnabled) { 
-                                AppSettings.isAntiWallpaperResetEnabled = it; AppSettings.save()
-                                Toast.makeText(context, if (it) "已开启系统壁纸守护" else "已关闭守护", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                }
-
-                // 5. 高级维护
-                item {
-                    SettingsGroup(title = "高级维护") {
-                        SettingActionRow(Icons.TwoTone.CleaningServices, "清理应用缓存", "释放管理器自身的临时文件") { 
-                            context.cacheDir.deleteRecursively()
-                            Toast.makeText(context, "管理器缓存已清理", Toast.LENGTH_SHORT).show()
-                        }
-                        SettingActionRow(Icons.TwoTone.RestartAlt, "重启管理器", "强制重启当前 App (刷新底层状态)") { 
-                            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                            intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                            context.startActivity(intent)
-                            android.os.Process.killProcess(android.os.Process.myPid())
-                        }
-                    }
-                }
-
-                // 6. 支持与反馈
-                item {
-                    SettingsGroup(title = "支持与反馈") {
-                        SettingActionRow(Icons.TwoTone.Code, "GitHub 仓库", "查看源码、提交 Issue 或点个 Star") {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hhcdxii-ship-it/HuiJuiSU-Next-Edition"))
-                            context.startActivity(intent)
-                        }
-                        SettingActionRow(Icons.TwoTone.Send, "发送日志", "导出当前运行日志供开发者排查") { 
-                            scope.launch {
-                                HuijuiShell.exec("logcat -d > /sdcard/Download/HuiJuiSU_Log.txt")
-                                Toast.makeText(context, "日志已导出至 /sdcard/Download/", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                }
-
-                // 7. 关于
-                item {
-                    SettingsGroup(title = "关于") {
-                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            ZakoText("HuiJuiSU", fontSize = 28.sp, fontWeight = FontWeight.Black, style = androidx.compose.ui.text.TextStyle(brush = Brush.linearGradient(listOf(AppSettings.accentColor.color, Color(0xFF4CAF50)))))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ZakoText("Next Edition · 纯血架构", color = Color.White.copy(0.75f), fontSize = 12.sp, letterSpacing = 2.sp)
-                        }
-                        HorizontalDivider(color = Color.White.copy(0.1f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
-                        SettingActionRow(Icons.TwoTone.Info, "版本信息", "v1.0.0-release (Build 1)") { }
-                        SettingActionRow(Icons.TwoTone.Face, "开发者", "HuiJuiSU Team (酷安 @喜羊羊灰灰菜單)") { }
-                    }
+        item { SectionLabel("关于", modifier = Modifier.padding(top = 16.dp)) }
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(painter = painterResource(id = R.drawable.ic_zako), contentDescription = "Logo", modifier = Modifier.size(72.dp).clip(CircleShape))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("HuiJuiSU NEXT", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Version ${BuildConfig.VERSION_NAME}", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Make Root Great Again.", color = AppSettings.accentColor.color.copy(0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
-}
 
-@Composable
-fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(title, color = Color.White.copy(0.85f), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
-        GlassCard(modifier = Modifier.fillMaxWidth()) { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { content() } }
+    if (showResetDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { if (!isResetting) showResetDialog = false },
+            title = { Text("恢复出厂设置", color = Color.White) },
+            text = { Text("将清空所有主题、壁纸、引导状态，保留 Root 授权记录。此操作不可撤销，是否继续？", color = Color.White.copy(0.8f)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    isResetting = true
+                    scope.launch {
+                        val result = AppResetManager.resetToFactory(context)
+                        isResetting = false
+                        showResetDialog = false
+                        if (result.success) { onResetComplete() } 
+                        else { Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show() }
+                    }
+                }) { Text("确认重置", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("取消", color = Color.White.copy(0.6f)) } },
+            containerColor = Color(0xFF1E1E1E)
+        )
     }
 }
 
 @Composable
-fun SettingSwitchRow(icon: ImageVector, title: String, desc: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }, verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = AppSettings.accentColor.color, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = Color.White.copy(0.75f), fontSize = 12.sp)
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text, color = Color.White.copy(0.5f), fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = modifier.padding(start = 4.dp))
+}
+
+@Composable
+private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, danger: Boolean = false, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (isPressed) 0.98f else 1f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "settingsRowScale")
+    val accent = if (danger) Color(0xFFEF4444) else AppSettings.accentColor.color
+
+    GlassCard(modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }, onClick = onClick) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = if (danger) Color(0xFFEF4444) else Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(subtitle, color = Color.White.copy(0.5f), fontSize = 12.sp)
+            }
+            Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(20.dp))
         }
-        LiquidSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
 @Composable
-fun SettingActionRow(icon: ImageVector, title: String, desc: String, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().clickable { onClick() }, verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = Color.White.copy(0.8f), modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = Color.White.copy(0.75f), fontSize = 12.sp)
+private fun FeatureRow(icon: ImageVector, title: String, subtitle: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.08f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(18.dp))
         }
-        Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(0.75f), modifier = Modifier.size(20.dp))
-    }
-}
-
-@Composable
-fun LiquidSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    val thumbOffset by animateDpAsState(targetValue = if (checked) 20.dp else 0.dp, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "thumb_offset")
-    val bgColor by animateColorAsState(targetValue = if (checked) AppSettings.accentColor.color else Color.White.copy(0.2f), animationSpec = tween(300), label = "bg_color")
-    Box(modifier = Modifier.width(44.dp).height(24.dp).clip(CircleShape).background(bgColor).padding(2.dp), contentAlignment = Alignment.CenterStart) {
-        Box(modifier = Modifier.offset(x = thumbOffset).size(20.dp).shadow(4.dp, CircleShape).clip(CircleShape).background(Color.White))
+        Spacer(modifier = Modifier.width(14.dp))
+        Column {
+            Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = Color.White.copy(0.5f), fontSize = 11.sp)
+        }
     }
 }
