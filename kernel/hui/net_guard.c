@@ -15,7 +15,7 @@ uid_t blocked_net_uids[16] = {0};
 
 // 检查 UID 是否在黑名单
 static bool hui_is_net_blocked(uid_t uid) {
-    for (int i = 0; i < 16; i++) {
+    for (i = 0; i < 16; i++) {
         if (blocked_net_uids[i] == uid && uid != 0) return true;
     }
     return false;
