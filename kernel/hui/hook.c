@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 HUI 终极内核架构 - 2/56：Syscall 劫持引擎
+// 🚀 HUI 终极内核架构 - Hook 劫持引擎
 // ==========================================
 #include "hui.h"
 #include "hui_compat.h"
@@ -7,13 +7,12 @@
 #include <linux/syscalls.h>
 #include <asm/ptrace.h>
 
-// 内部函数：Kprobe 寻址 sys_call_table
+// Kprobe 寻址 sys_call_table
 unsigned long *hui_get_sys_call_table(void) {
-    unsigned long *table = NULL;
     struct kprobe kp = {
         .symbol_name = "kallsyms_lookup_name"
     };
-
+    unsigned long *table = NULL;
     typedef unsigned long (*kln_t)(const char *name);
     kln_t kln;
 
@@ -23,51 +22,42 @@ unsigned long *hui_get_sys_call_table(void) {
     }
     kln = (kln_t) kp.addr;
     unregister_kprobe(&kp);
-static __attribute__((unused)) 
- if(kln) {
+
+    if (kln) {
         table = (unsigned long *)kln("sys_call_table");
     }
     return table;
 }
 
-// ARM64 写保护控制
- 
-
- 
-
 // 核心提权逻辑
-__attribute__((unused)) void hui_elevate_root(void) {
+void hui_elevate_root(void) {
     struct cred *new_cred;
-    if (!current->mm) return; // 排除内核线程
+    if (!current->mm) return;
     new_cred = prepare_kernel_cred(NULL);
-static __attribute__((unused))   if(new_cred) {
+    if (new_cred) {
         commit_creds(new_cred);
         pr_info("HUI: [%s] 提权成功！\n", current->comm);
     }
 }
 
 // 伪造的 execve 系统调用
-static __attribute__((unused)) asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs) {
-    uid_t uid = current_uid().val;
+asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs) {
+    uid_t uid = HUI_CURRENT_UID;
     if (uid != 0 && hui_is_uid_allowed(uid)) {
         hui_elevate_root();
     }
-    return hui_execve_with_compat(regs);
+    return hui_state.original_execve(regs);
 }
 
 // 初始化 Hook
-__attribute__((unused)) int hui_hook_init(void) {
+int hui_hook_init(void) {
     hui_state.sys_call_table = hui_get_sys_call_table();
     if (!hui_state.sys_call_table) return -EFAULT;
 
     hui_state.original_execve = (void *)hui_state.sys_call_table[__NR_execve];
 
-    if (hui_check_other_hooks()) {
-        pr_info("HUI: 正在以兼容模式叠加 Hook。\n");
-    }
-
     hui_disable_wp();
-    hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_execve_with_compat;
+    hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_hooked_execve_compat;
     hui_enable_wp();
 
     pr_info("HUI: execve 劫持成功！\n");
@@ -75,8 +65,8 @@ __attribute__((unused)) int hui_hook_init(void) {
 }
 
 // 退出 Hook
-__attribute__((unused)) void hui_hook_exit(void) {
-static __attribute__((unused))   if(hui_state.sys_call_table && hui_state.original_execve) {
+void hui_hook_exit(void) {
+    if (hui_state.sys_call_table && hui_state.original_execve) {
         hui_disable_wp();
         hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_state.original_execve;
         hui_enable_wp();
