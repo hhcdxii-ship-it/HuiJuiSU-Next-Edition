@@ -43,6 +43,7 @@ extern uid_t blocked_net_uids[16];
 // --- 核心提权与 Hook ---
 void hui_elevate_root(void);
 asmlinkage long hui_execve_with_compat(const struct pt_regs *regs);
+asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs);
 int hui_hook_init(void);
 void hui_hook_exit(void);
 bool hui_check_other_hooks(void);
