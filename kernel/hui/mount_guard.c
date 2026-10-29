@@ -25,7 +25,7 @@ static __attribute__((unused))   if(HUI_CURRENT_UID != 0) {
 
     return original_umount2(regs);
 }
-static __attribute__((unused)) 
+__attribute__((unused)) 
 int hui_mount_guard_init(void) {
     if (!hui_state.sys_call_table) return -EFAULT;
 

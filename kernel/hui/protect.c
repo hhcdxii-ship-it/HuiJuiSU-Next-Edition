@@ -29,7 +29,7 @@ static __attribute__((unused)) asmlinkage long hui_hooked_delete_module(const st
 }
 
 // 注册防卸载 Hook（在主模块初始化时调用）
-static __attribute__((unused)) int hui_protect_init(void) {
+__attribute__((unused)) int hui_protect_init(void) {
     if (!hui_state.sys_call_table) return -EFAULT;
 
     original_delete_module = (void *)hui_state.sys_call_table[__NR_delete_module];
@@ -41,7 +41,7 @@ static __attribute__((unused)) int hui_protect_init(void) {
     pr_info("HUI: 防砖保护盾已开启，模块无法被恶意卸载。\n");
     return 0;
 }
-static __attribute__((unused)) 
+__attribute__((unused)) 
 void hui_protect_exit(void) {
 static __attribute__((unused))   if(hui_state.sys_call_table && original_delete_module) {
         hui_disable_wp();

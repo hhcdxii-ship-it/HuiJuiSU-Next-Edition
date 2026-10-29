@@ -34,7 +34,7 @@ static const struct proc_ops hui_proc_ops = {
     .proc_lseek = seq_lseek,
     .proc_release = single_release,
 };
-static __attribute__((unused)) 
+__attribute__((unused)) 
 int hui_proc_init(void) {
     if (!proc_create(HUI_PROC_NAME, 0444, NULL, &hui_proc_ops)) {
         pr_err("HUI: 无法创建 /proc/%s 节点\n", HUI_PROC_NAME);
@@ -43,7 +43,7 @@ int hui_proc_init(void) {
     pr_info("HUI: 状态监控节点 /proc/%s 已创建\n", HUI_PROC_NAME);
     return 0;
 }
-static __attribute__((unused)) 
+__attribute__((unused)) 
 void hui_proc_exit(void) {
     remove_proc_entry(HUI_PROC_NAME, NULL);
     pr_info("HUI: 状态监控节点已移除\n");

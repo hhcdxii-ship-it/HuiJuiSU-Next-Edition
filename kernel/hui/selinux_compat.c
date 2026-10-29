@@ -4,7 +4,7 @@
 #include "hui.h"
 
 // 检查当前系统的 SELinux 是否处于 Enforcing 模式
-static __attribute__((unused)) int hui_check_selinux_status(void) {
+__attribute__((unused)) int hui_check_selinux_status(void) {
     int ret;
     struct file *fp;
     // 通过读取内核里的 selinux_state 变量（如果可用）

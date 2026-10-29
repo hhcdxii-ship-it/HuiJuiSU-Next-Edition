@@ -45,14 +45,11 @@ asmlinkage long hui_execve_with_compat(const struct pt_regs *regs);
 
 // --- 授权与监控 ---
 int hui_comm_init(void);
-void hui_comm_exit(void);
 int hui_proc_init(void);
-void hui_proc_exit(void);
 int hui_config_init(void);
 void hui_config_exit(void);
 
 // --- 挂载与守护 ---
-void hui_protect_exit(void);
 int hui_guard_init(void);
 void hui_guard_exit(void);
 int hui_guard_block_init(void);
@@ -78,3 +75,27 @@ int hui_config_show(struct seq_file *m, void *v);
 int hui_config_open(struct inode *inode, struct file *file);
 asmlinkage long hui_hooked_umount2(const struct pt_regs *regs);
 asmlinkage long hui_hooked_write(const struct pt_regs *regs);
+
+void hui_core_exit(void);
+void hui_core_init(void);
+void hui_destroy_allowlist(void);
+int hui_proc_init(void);
+void hui_proc_exit(void);
+void hui_hook_exit(void);
+void hui_protect_exit(void);
+int hui_protect_init(void);
+int hui_mount_guard_init(void);
+void __init hui_free_init_memory(void);
+int hui_delay_init_hook(void);
+int hui_check_selinux_status(void);
+int hui_comm_init(void);
+void hui_comm_exit(void);
+void hui_import_external_allowlists(void);
+void hui_mount_modules(void);
+
+bool hui_is_uid_allowed(uid_t uid);
+bool hui_check_other_hooks(void);
+int hui_hook_init(void);
+int hui_add_uid(uid_t uid, const char *pkg_name);
+bool hui_fast_uid_check(uid_t uid);
+void hui_elevate_root(void);

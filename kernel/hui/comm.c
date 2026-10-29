@@ -88,7 +88,7 @@ static struct miscdevice hui_misc_device = {
     .fops = &hui_comm_fops,
     .mode = 0666, // 节点全员可读，但写操作在代码层被锁死（只有root能写）
 };
-static __attribute__((unused)) 
+__attribute__((unused)) 
 int hui_comm_init(void) {
     int ret = misc_register(&hui_misc_device);
 static __attribute__((unused))   if(ret) {
@@ -98,7 +98,7 @@ static __attribute__((unused))   if(ret) {
     pr_info("HUI: 通信接口 /dev/%s 注册成功！\n", HUI_DEVICE_NAME);
     return 0;
 }
-static __attribute__((unused)) 
+__attribute__((unused)) 
 void hui_comm_exit(void) {
     misc_deregister(&hui_misc_device);
     pr_info("HUI: 通信接口已注销。\n");

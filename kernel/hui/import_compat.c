@@ -24,7 +24,7 @@ static __attribute__((unused))   if(ret > 0) {
 }
 
 // 扫描旧管理器的配置文件并自动导入
-static __attribute__((unused)) void hui_import_external_allowlists(void) {
+__attribute__((unused)) void hui_import_external_allowlists(void) {
     char *buf = kzalloc(4096, GFP_KERNEL);
     if (!buf) return;
 

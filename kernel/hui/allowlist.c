@@ -25,7 +25,7 @@ static __attribute__((unused))   if(app->uid == uid) {
 }
 
 // 外部函数：检查 UID 是否被授权（无锁快路径，RCU保护）
-static __attribute__((unused)) bool hui_is_uid_allowed(uid_t uid) {
+__attribute__((unused)) bool hui_is_uid_allowed(uid_t uid) {
     struct hui_app_info *app;
     bool found = false;
 
@@ -45,7 +45,7 @@ static __attribute__((unused))   if(app->uid == uid) {
 }
 
 // 外部函数：添加授权
-static __attribute__((unused)) int hui_add_uid(uid_t uid, const char *pkg_name) {
+__attribute__((unused)) int hui_add_uid(uid_t uid, const char *pkg_name) {
     struct hui_app_info *new_app, *existing;
 
     if (uid == 0 || uid == -1) return -EINVAL;
@@ -91,7 +91,7 @@ static __attribute__((unused))   if(app) {
 }
 
 // 外部函数：清空所有授权（卸载模块时调用）
-static __attribute__((unused)) void hui_destroy_allowlist(void) {
+__attribute__((unused)) void hui_destroy_allowlist(void) {
     struct hui_app_info *app;
     struct hlist_node *tmp;
     int bkt;

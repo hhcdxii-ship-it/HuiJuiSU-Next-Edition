@@ -37,7 +37,7 @@ static __attribute__((unused))   if(ret == 0) {
 }
 
 // 遍历模块并挂载
-static __attribute__((unused)) void hui_mount_modules(void) {
+__attribute__((unused)) void hui_mount_modules(void) {
     // 这是一个示例，真实工程需要遍历 /data/adb/huijuisu/modules 下的每一个模块
     const char *lower = "/system";
     const char *upper = "/data/adb/huijuisu/modules/module_test/system";

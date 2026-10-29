@@ -5,7 +5,7 @@
 #include <linux/kallsyms.h>
 
 // 检查系统调用表是否已经被其他管理器接管
-static __attribute__((unused)) bool hui_check_other_hooks(void) {
+__attribute__((unused)) bool hui_check_other_hooks(void) {
     unsigned long original_execve_addr;
     unsigned long current_execve_addr;
 
