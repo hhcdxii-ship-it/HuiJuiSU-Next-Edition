@@ -51,6 +51,7 @@ object AppSettings {
 
     // 🚀 真正的超级用户授权列表（使用 Set 防止重复）
     var grantedApps by mutableStateOf(setOf<String>())
+    var isInitialized by mutableStateOf(false)
     // 语言设置，默认杂鱼
     var currentLanguage by mutableStateOf("ZAKO")
     // 杂鱼模式
@@ -88,6 +89,7 @@ object AppSettings {
         // 读取已授权应用
         val grantedList = prefs.getStringSet("granted_apps", emptySet()) ?: emptySet()
         grantedApps = grantedList.toSet()
+        isInitialized = true
     }
 
     fun save() {

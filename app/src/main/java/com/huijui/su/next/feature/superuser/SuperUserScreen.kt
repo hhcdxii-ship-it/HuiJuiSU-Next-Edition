@@ -1,4 +1,5 @@
 package com.huijui.su.next.feature.superuser
+import androidx.compose.foundation.background
 import com.huijui.su.next.core.ui.language.ZakoText
 
 import android.content.pm.ApplicationInfo

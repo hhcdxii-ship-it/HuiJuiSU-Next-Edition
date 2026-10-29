@@ -1,4 +1,5 @@
 package com.huijui.su.next
+import androidx.core.splashscreen.SplashScreen
 import com.huijui.su.next.core.ui.language.LocalLanguageMode
 import com.huijui.su.next.core.ui.language.LanguageMode
 import androidx.compose.runtime.CompositionLocalProvider
@@ -75,7 +76,7 @@ enum class NavPosition { BOTTOM, LEFT, RIGHT }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val splashScreen = androidx.core.splashscreen.SplashScreen.installSplashScreen(this)
+        val splashScreen = installSplashScreen()
         com.huijui.su.next.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
         com.huijui.su.next.core.utils.CrashHandler.init(this)
