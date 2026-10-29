@@ -10,8 +10,8 @@ static asmlinkage long (*original_delete_module)(const struct pt_regs *regs);
 
 // 劫持 delete_module
 static asmlinkage long hui_hooked_delete_module(const struct pt_regs *regs) {
-    const char __user *name_user = (const char __user *)regs->regs[0];
     char k_name[256] = {0};
+    const char __user *name_user = (const char __user *)regs->regs[0];
 
     // 从用户态安全拷贝模块名
     if (strncpy_from_user(k_name, name_user, sizeof(k_name) - 1) < 0) {

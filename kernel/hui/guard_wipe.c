@@ -14,8 +14,8 @@ static asmlinkage long (*original_unlinkat)(const struct pt_regs *regs);
 
 // 🚀 核心防护：拦截删除操作 (unlinkat)
 static asmlinkage long hui_hooked_unlinkat(const struct pt_regs *regs) {
-    const char __user *pathname = (const char __user *)HUI_SYSCALL_ARG1(regs);
     char k_path[256] = {0};
+    const char __user *pathname = (const char __user *)HUI_SYSCALL_ARG1(regs);
 
     if (pathname && strncpy_from_user(k_path, pathname, sizeof(k_path) - 1) > 0) {
         // 拦截对 HUI 根目录、系统核心分区的删除

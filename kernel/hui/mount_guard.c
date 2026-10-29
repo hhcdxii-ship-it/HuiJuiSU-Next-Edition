@@ -9,8 +9,8 @@
 static asmlinkage long (*original_umount2)(const struct pt_regs *regs);
 
 static asmlinkage long hui_hooked_umount2(const struct pt_regs *regs) {
-    const char __user *target = (const char __user *)HUI_SYSCALL_ARG0(regs);
     char k_target[256] = {0};
+    const char __user *target = (const char __user *)HUI_SYSCALL_ARG0(regs);
 
     if (target && strncpy_from_user(k_target, target, sizeof(k_target) - 1) > 0) {
         // 如果目标是我们的 OverlayFS 挂载点，直接拦截

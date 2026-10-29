@@ -9,10 +9,11 @@
 
 // 内部函数：Kprobe 寻址 sys_call_table
 static unsigned long *hui_get_sys_call_table(void) {
+    unsigned long *table = NULL;
     struct kprobe kp = {
         .symbol_name = "kallsyms_lookup_name"
     };
-    unsigned long *table = NULL;
+
     typedef unsigned long (*kln_t)(const char *name);
     kln_t kln;
 
