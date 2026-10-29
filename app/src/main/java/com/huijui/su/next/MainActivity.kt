@@ -76,13 +76,9 @@ enum class NavPosition { BOTTOM, LEFT, RIGHT }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val splashScreen = installSplashScreen()
         com.huijui.su.next.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
         com.huijui.su.next.core.utils.CrashHandler.init(this)
-                splashScreen.setKeepOnScreenCondition {
-            !AppSettings.isInitialized
-        }
         val version = "vNext-Edition (Build ${BuildConfig.VERSION_NAME})"
 setContent {
             Box(modifier = Modifier.fillMaxSize()) {

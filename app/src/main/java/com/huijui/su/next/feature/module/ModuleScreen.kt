@@ -1,12 +1,10 @@
 package com.huijui.su.next.feature.module
-import com.huijui.su.next.core.ui.language.ZakoText
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +40,6 @@ fun ModuleScreen() {
     var isInstalling by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0) }
 
-    // 定时拉取模块列表
     LaunchedEffect(Unit) {
         while (true) {
             modules = HuijuiModuleBridge.getMountedModules()
@@ -60,7 +57,6 @@ fun ModuleScreen() {
                 }
                 isInstalling = false
                 if (success) {
-                    // 刷新列表
                     modules = HuijuiModuleBridge.getMountedModules()
                     android.widget.Toast.makeText(context, "✅ 模块安装并热挂载成功！", android.widget.Toast.LENGTH_SHORT).show()
                 } else {
@@ -70,7 +66,6 @@ fun ModuleScreen() {
         }
     }
 
-    // UI 呼吸动画值
     val infiniteTransition = rememberInfiniteTransition(label = "breath")
     val breathScale by infiniteTransition.animateFloat(
         initialValue = 0.95f, targetValue = 1.05f,
@@ -86,14 +81,16 @@ fun ModuleScreen() {
     ) {
         Spacer(modifier = Modifier.height(20.dp))
         
-        // 头部区域
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column {
-                ZakoText("模块管理", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                ZakoText("底层热挂载 · 零重启体验", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                Text("模块管理", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text("底层热挂载 · 零重启体验", color = Color.White.copy(0.6f), fontSize = 12.sp)
             }
             
-            // 呼吸指示灯
             Box(
                 modifier = Modifier
                     .size(32.dp)
@@ -105,11 +102,13 @@ fun ModuleScreen() {
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 安装进度条（如果正在安装）
         if (isInstalling) {
             GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ZakoText("正在解析并热挂载模块...", color = Color.White, fontWeight = FontWeight.Bold)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("正在解析并热挂载模块...", color = Color.White, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
                     LinearProgressIndicator(
                         progress = { progress.toFloat() },
@@ -121,12 +120,13 @@ fun ModuleScreen() {
             }
         }
 
-        // 模块列表
         LazyColumn(contentPadding = PaddingValues(bottom = 160.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(modules) { modName ->
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        // 左侧图标光晕
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
                                 .background(Brush.linearGradient(listOf(AppSettings.accentColor.color.copy(0.4f), AppSettings.accentColor.color.copy(0.1f)))),
@@ -143,24 +143,27 @@ fun ModuleScreen() {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF81C784), modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                ZakoText("已加载 · OverlayFS", color = Color(0xFF81C784), fontSize = 12.sp)
+                                Text("已加载 · OverlayFS", color = Color(0xFF81C784), fontSize = 12.sp)
                             }
                         }
                     }
                 }
             }
 
-            // 底部安装按钮
             item {
                 Spacer(modifier = Modifier.height(12.dp))
                 GlassCard(
                     modifier = Modifier.fillMaxWidth().height(80.dp),
                     onClick = { if (!isInstalling) zipPicker.launch("application/zip") }
                 ) {
-                    Row(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(Icons.Default.Add, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(12.dp))
-                        ZakoText("选择本地 ZIP 模块安装", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("选择本地 ZIP 模块安装", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
