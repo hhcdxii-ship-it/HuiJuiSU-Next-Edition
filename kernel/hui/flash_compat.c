@@ -12,7 +12,7 @@ static asmlinkage long (*original_write_prev)(const struct pt_regs *regs);
 // 临时记录允许刷机的 UID
 static uid_t flash_authorized_uid = -1;
 
-void hui_set_flash_token(uid_t uid) {
+static __attribute__((unused)) void hui_set_flash_token(uid_t uid) {
     flash_authorized_uid = uid;
     pr_info("HUI: 已为 UID [%d] 开放临时块设备写入权限。\n", uid);
 }
@@ -32,7 +32,7 @@ static asmlinkage long hui_hooked_write_flash_compat(const struct pt_regs *regs)
 }
 
 // 在主模块初始化时注册（先撤销 guard_block 的 hook，再挂上自己）
-int hui_flash_compat_init(void) {
+static __attribute__((unused)) int hui_flash_compat_init(void) {
     // 实际工程中要注意 Hook 的链式调用
     pr_info("HUI: 刷机白名单引擎已激活。\n");
     return 0;

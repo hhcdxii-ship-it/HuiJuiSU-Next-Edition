@@ -29,7 +29,7 @@ int hui_check_selinux_status(void) {
 }
 
 // 针对性的提权逻辑（如果 SELinux 报错，需要更底层的绕过，这里仅作为监控）
-void hui_selinux_log_avc(void) {
+static __attribute__((unused)) void hui_selinux_log_avc(void) {
     // 此处预留：当 avc denied 发生时，可以记录审计日志
     // 真实的 bypass 往往需要在 sepolicy 中打补丁，或者在内核里拦截 avc_has_perm
 }

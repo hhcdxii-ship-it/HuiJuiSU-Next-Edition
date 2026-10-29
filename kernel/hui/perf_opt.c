@@ -7,7 +7,7 @@
 
 // 🚀 功耗核心：减少日志频繁唤醒 CPU
 // 把普通 printk 替换为限流版，防止恶意 App 疯狂 execve 导致 CPU 满载发热
-void hui_opt_log_execve(const char *comm) {
+static __attribute__((unused)) void hui_opt_log_execve(const char *comm) {
     // 每秒最多打印 1 次，彻底杜绝刷屏导致的耗电
     pr_info_ratelimited("HUI: 高频拦截 execve 请求 [%s]\n", comm);
 }

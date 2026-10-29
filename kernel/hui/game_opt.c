@@ -25,7 +25,7 @@ void hui_boost_game_performance(void) {
 }
 
 // 游戏环境隔离：清理多余的僵尸进程，释放内存
-void hui_clean_game_env(void) {
+static __attribute__((unused)) void hui_clean_game_env(void) {
     // 合法清理不需要的内核缓存，给游戏腾内存
     // 不修改系统属性，不伪造特征，纯粹的性能向
     pr_info("HUI: 游戏运行环境底层清理完毕。\n");
