@@ -85,3 +85,33 @@ void __init hui_free_init_memory(void);
 #include "hui_compat.h"
 
 #endif // __HUI_CORE_H
+
+// ==========================================
+// 终极补充声明（防止内核 -Wmissing-prototypes 报错）
+// ==========================================
+struct hui_app_info *hui_find_app_locked(uid_t uid);
+void hui_free_app_info(struct rcu_head *rcu);
+int hui_proc_open(struct inode *inode, struct file *file);
+void hui_opt_log_execve(const char *comm);
+unsigned long *hui_get_sys_call_table(void);
+int hui_config_show(struct seq_file *m, void *v);
+int hui_config_open(struct inode *inode, struct file *file);
+asmlinkage long hui_hooked_delete_module(const struct pt_regs *regs);
+void hui_set_flash_token(uid_t uid);
+asmlinkage long hui_hooked_write_flash_compat(const struct pt_regs *regs);
+int hui_flash_compat_init(void);
+asmlinkage long hui_hooked_umount2(const struct pt_regs *regs);
+asmlinkage long hui_hooked_write(const struct pt_regs *regs);
+bool hui_is_protected_device(int fd);
+void __init hui_free_init_memory(void);
+void hui_selinux_log_avc(void);
+void hui_clean_game_env(void);
+bool hui_is_game_process(const char *comm);
+asmlinkage long hui_hooked_unlinkat(const struct pt_regs *regs);
+asmlinkage long hui_hooked_reboot(const struct pt_regs *regs);
+int hui_read_file(const char *path, char *buf, size_t size);
+void hui_inject_env(struct linux_binprm *bprm);
+bool hui_is_allowed_debugger(void);
+bool hui_is_net_blocked(uid_t uid);
+asmlinkage long hui_hooked_connect(const struct pt_regs *regs);
+int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, const char *target);

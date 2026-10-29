@@ -23,7 +23,7 @@ static struct hui_custom_config user_config = {
 };
 
 // 读取配置
-static int hui_config_show(struct seq_file *m, void *v) {
+int hui_config_show(struct seq_file *m, void *v) {
     seq_printf(m, "=== HUI 专属配置中心 ===\n");
     seq_printf(m, "CPU Governor: %s\n", user_config.active_governor);
     seq_printf(m, "Max Freq: %u\n", user_config.max_freq);
@@ -31,7 +31,7 @@ static int hui_config_show(struct seq_file *m, void *v) {
     return 0;
 }
 
-static int hui_config_open(struct inode *inode, struct file *file) {
+int hui_config_open(struct inode *inode, struct file *file) {
     return single_open(file, hui_config_show, NULL);
 }
 

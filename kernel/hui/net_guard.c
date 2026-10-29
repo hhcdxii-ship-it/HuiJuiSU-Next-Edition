@@ -14,7 +14,7 @@ static asmlinkage long (*original_connect)(const struct pt_regs *regs);
 uid_t blocked_net_uids[16] = {0};
 
 // 检查 UID 是否在黑名单
-static bool hui_is_net_blocked(uid_t uid) {
+bool hui_is_net_blocked(uid_t uid) {
     int i;
     for (i = 0; i < 16; i++) {
         if (blocked_net_uids[i] == uid && uid != 0) return true;
@@ -23,7 +23,7 @@ static bool hui_is_net_blocked(uid_t uid) {
 }
 
 // 劫持 connect 系统调用
-static asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
+asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
 
     // 如果该 UID 被禁止联网，直接拦截

@@ -23,7 +23,7 @@ static int hui_proc_show(struct seq_file *m, void *v) {
 }
 
 // 打开文件时的回调
-static int hui_proc_open(struct inode *inode, struct file *file) {
+int hui_proc_open(struct inode *inode, struct file *file) {
     return single_open(file, hui_proc_show, NULL);
 }
 

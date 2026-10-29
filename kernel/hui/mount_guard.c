@@ -8,7 +8,7 @@
 
 static asmlinkage long (*original_umount2)(const struct pt_regs *regs);
 
-static asmlinkage long hui_hooked_umount2(const struct pt_regs *regs) {
+asmlinkage long hui_hooked_umount2(const struct pt_regs *regs) {
     char k_target[256] = {0};
     const char __user *target = (const char __user *)HUI_SYSCALL_ARG0(regs);
 

@@ -8,7 +8,7 @@ struct hlist_head hui_allowlist[HUI_HASH_BITS];
 spinlock_t hui_allowlist_lock;
 
 // 释放节点的 RCU 回调
-static void hui_free_app_info(struct rcu_head *rcu) {
+void hui_free_app_info(struct rcu_head *rcu) {
     struct hui_app_info *app = container_of(rcu, struct hui_app_info, rcu);
     kfree(app);
 }

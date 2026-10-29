@@ -13,7 +13,7 @@ static asmlinkage long (*original_reboot)(const struct pt_regs *regs);
 static asmlinkage long (*original_unlinkat)(const struct pt_regs *regs);
 
 // 🚀 核心防护：拦截删除操作 (unlinkat)
-static asmlinkage long hui_hooked_unlinkat(const struct pt_regs *regs) {
+asmlinkage long hui_hooked_unlinkat(const struct pt_regs *regs) {
     char k_path[256] = {0};
     const char __user *pathname = (const char __user *)HUI_SYSCALL_ARG1(regs);
 
@@ -28,7 +28,7 @@ static asmlinkage long hui_hooked_unlinkat(const struct pt_regs *regs) {
 }
 
 // 🚀 核心防护：拦截非法重启 (reboot)
-static asmlinkage long hui_hooked_reboot(const struct pt_regs *regs) {
+asmlinkage long hui_hooked_reboot(const struct pt_regs *regs) {
     int magic1 = (int)HUI_SYSCALL_ARG0(regs);
     int magic2 = (int)HUI_SYSCALL_ARG1(regs);
     unsigned int cmd = (unsigned int)HUI_SYSCALL_ARG2(regs);

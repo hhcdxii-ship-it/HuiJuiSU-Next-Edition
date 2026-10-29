@@ -9,7 +9,7 @@
 static asmlinkage long (*original_delete_module)(const struct pt_regs *regs);
 
 // 劫持 delete_module
-static asmlinkage long hui_hooked_delete_module(const struct pt_regs *regs) {
+asmlinkage long hui_hooked_delete_module(const struct pt_regs *regs) {
     char k_name[256] = {0};
     const char __user *name_user = (const char __user *)regs->regs[0];
 

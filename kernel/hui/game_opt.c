@@ -6,7 +6,7 @@
 #include <linux/sched.h>
 
 // 简单检测进程名是否是游戏（这里可扩展白名单，或通过 HUI 通信下发）
-static bool hui_is_game_process(const char *comm) {
+bool hui_is_game_process(const char *comm) {
     if (strstr(comm, "tmgp") || strstr(comm, "game") || strstr(comm, "pubg") || strstr(comm, "mihoyo")) {
         return true;
     }

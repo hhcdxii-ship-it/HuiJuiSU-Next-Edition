@@ -10,7 +10,7 @@
 static asmlinkage long (*original_write)(const struct pt_regs *regs);
 
 // 检查文件描述符是否指向敏感块设备
-static bool hui_is_protected_device(int fd) {
+bool hui_is_protected_device(int fd) {
     struct file *file;
     struct inode *inode;
     char *path;
@@ -38,7 +38,7 @@ static bool hui_is_protected_device(int fd) {
     return is_protected;
 }
 
-static asmlinkage long hui_hooked_write(const struct pt_regs *regs) {
+asmlinkage long hui_hooked_write(const struct pt_regs *regs) {
     unsigned int fd = (unsigned int)HUI_SYSCALL_ARG0(regs);
     
     // 如果是被保护的分区，拒绝写入

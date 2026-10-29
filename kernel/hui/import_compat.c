@@ -6,7 +6,7 @@
 #include <linux/file.h>
 
 // 读取系统文件内容
-static int hui_read_file(const char *path, char *buf, size_t size) {
+int hui_read_file(const char *path, char *buf, size_t size) {
     int ret;
     struct file *fp;
     loff_t pos = 0;
