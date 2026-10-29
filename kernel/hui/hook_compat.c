@@ -1,3 +1,4 @@
+#include "hui_compat.h"
 #include "hui.h"
 #include <linux/kallsyms.h>
 

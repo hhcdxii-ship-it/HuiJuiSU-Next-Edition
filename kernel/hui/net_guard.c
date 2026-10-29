@@ -1,7 +1,5 @@
-#include "hui.h"
 #include "hui_compat.h"
-#include <linux/net.h>
-#include <linux/socket.h>
+#include "hui.h"
 
 static asmlinkage long (*original_connect)(const struct pt_regs *regs);
 uid_t blocked_net_uids[16] = {0};
@@ -16,9 +14,7 @@ bool hui_is_net_blocked(uid_t uid) {
 
 asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
-    if (hui_is_net_blocked(uid)) {
-        return -EACCES;
-    }
+    if (hui_is_net_blocked(uid)) return -EACCES;
     return original_connect(regs);
 }
 
