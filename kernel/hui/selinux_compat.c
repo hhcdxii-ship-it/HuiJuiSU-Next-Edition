@@ -16,5 +16,5 @@ int hui_check_selinux_status(void) {
     return 0;
 }
 
-void hui_selinux_log_avc(void) {
+static void __attribute__((unused)) hui_selinux_log_avc(void) {
 }

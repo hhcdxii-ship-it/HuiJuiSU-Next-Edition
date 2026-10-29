@@ -2,7 +2,7 @@
 #include <linux/limits.h>
 #include <linux/jiffies.h>
 
-void hui_opt_log_execve(const char *comm) {
+static void __attribute__((unused)) hui_opt_log_execve(const char *comm) {
     pr_info_ratelimited("HUI: 高频拦截 execve [%s]\n", comm);
 }
 

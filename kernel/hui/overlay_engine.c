@@ -2,7 +2,7 @@
 #include <linux/kmod.h>
 #include <linux/fs.h>
 
-int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, const char *target) {
+static int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, const char *target) {
     char options[512];
     char *argv[] = { "/system/bin/mount", "-t", "overlay", "-o", options, "overlay", (char *)target, NULL };
     char *envp[] = { "HOME=/", "PATH=/sbin:/system/bin", NULL };

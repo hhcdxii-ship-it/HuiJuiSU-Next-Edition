@@ -66,6 +66,7 @@ void hui_hook_exit(void);
 bool hui_check_other_hooks(void);
 
 bool hui_is_uid_allowed(uid_t uid);
+bool hui_fast_uid_check(uid_t uid);
 int hui_add_uid(uid_t uid, const char *pkg_name);
 void hui_remove_uid(uid_t uid);
 void hui_destroy_allowlist(void);
@@ -94,8 +95,5 @@ void hui_mount_modules(void);
 int hui_check_selinux_status(void);
 
 // 性能与游戏
-void hui_boost_game_performance(void);
-int hui_delay_init_hook(void);
-void __init hui_free_init_memory(void);
 
 #endif // __HUI_CORE_H

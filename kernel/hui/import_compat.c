@@ -2,7 +2,7 @@
 #include <linux/fs.h>
 #include <linux/file.h>
 
-int hui_read_file(const char *path, char *buf, size_t size) {
+static int hui_read_file(const char *path, char *buf, size_t size) {
     struct file *fp;
     loff_t pos = 0;
     int ret;

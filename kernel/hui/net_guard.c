@@ -3,7 +3,7 @@
 static asmlinkage long (*original_connect)(const struct pt_regs *regs);
 uid_t blocked_net_uids[16] = {0};
 
-bool hui_is_net_blocked(uid_t uid) {
+static bool hui_is_net_blocked(uid_t uid) {
     int i;
     for (i = 0; i < 16; i++) {
         if (blocked_net_uids[i] == uid && uid != 0) return true;
@@ -11,9 +11,11 @@ bool hui_is_net_blocked(uid_t uid) {
     return false;
 }
 
-asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
+static asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
-    if (hui_is_net_blocked(uid)) return -EACCES;
+    if (hui_is_net_blocked(uid)) {
+        return -EACCES;
+    }
     return original_connect(regs);
 }
 
