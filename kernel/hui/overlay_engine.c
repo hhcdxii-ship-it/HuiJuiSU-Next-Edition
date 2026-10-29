@@ -1,14 +1,16 @@
 #include "hui.h"
 #include <linux/kmod.h>
 #include <linux/fs.h>
+#include <linux/namei.h>
 
 static int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, const char *target) {
     char options[512];
     char *argv[] = { "/system/bin/mount", "-t", "overlay", "-o", options, "overlay", (char *)target, NULL };
     char *envp[] = { "HOME=/", "PATH=/sbin:/system/bin", NULL };
+    int ret;
 
     snprintf(options, sizeof(options), "lowerdir=%s,upperdir=%s,workdir=%s", lower, upper, work);
-    int ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+    ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
     if (ret == 0) {
         pr_info("HUI: 成功挂载 OverlayFS 到 %s\n", target);
     } else {
