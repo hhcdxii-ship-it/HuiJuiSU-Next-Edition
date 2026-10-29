@@ -285,20 +285,6 @@ jobs:
             zipalign -c -v 4 app/build/outputs/apk/release/app-release-signed.apk || echo "⚠️ 存在非 4KB 对齐的 so 文件，可能在 Android 15+ 上闪退"
           fi
 
-      # 13. Telegram 推送通知（需要你在 GitHub Secrets 里配置 TELEGRAM_TOKEN 和 TELEGRAM_TO）
-      - name: Send Telegram Notification
-        if: always()
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: |
-            🚀 HuiJuiSU 流水线已结束！
-            状态: ${{ job.status }}
-            版本: ${{ env.APP_VERSION }}
-            
-            请前往 Releases 页面下载最新构建！
-
       # 14. 抓取构建失败日志（方便排查 16 个 HUI 里哪个版本报错）
       - name: Dump Build Logs (On Failure)
         if: failure()
