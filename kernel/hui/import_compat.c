@@ -7,9 +7,9 @@
 
 // 读取系统文件内容
 static int hui_read_file(const char *path, char *buf, size_t size) {
+    int ret;
     struct file *fp;
     loff_t pos = 0;
-    int ret;
 
     fp = filp_open(path, O_RDONLY, 0);
     if (IS_ERR(fp)) return -ENOENT;
@@ -31,7 +31,7 @@ void hui_import_external_allowlists(void) {
 
     // 1. 尝试读取 KernelSU 的包名配置 (简单文本格式)
     if (hui_read_file("/data/adb/ksu/allowlist.txt", buf, 4096) == 0) {
-        char *line;
+    char *line;
         while ((line = strsep(&buf, "\n")) != NULL) {
             // 解析 ksu 的格式，例如 "10381:com.example"
             pr_info("HUI: 发现 KSU 遗留授权: %s\n", line);

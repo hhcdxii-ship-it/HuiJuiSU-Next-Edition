@@ -5,12 +5,12 @@
 
 // 检查当前系统的 SELinux 是否处于 Enforcing 模式
 int hui_check_selinux_status(void) {
+    int ret;
+    struct file *fp;
     // 通过读取内核里的 selinux_state 变量（如果可用）
     // 或者简单点，直接读取 /sys/fs/selinux/enforce 节点的值
-    struct file *fp;
     char buf[16] = {0};
     loff_t pos = 0;
-    int ret;
 
     fp = filp_open("/sys/fs/selinux/enforce", O_RDONLY, 0);
     if (IS_ERR(fp)) {

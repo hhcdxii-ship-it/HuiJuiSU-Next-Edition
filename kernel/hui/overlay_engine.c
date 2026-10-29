@@ -45,6 +45,7 @@ static int hui_do_overlay_mount(const char *lowerdir, const char *upperdir, cons
 
 // 遍历模块并挂载
 void hui_mount_modules(void) {
+    struct path upper_path;
     // 这是一个示例，真实工程需要遍历 /data/adb/huijuisu/modules 下的每一个模块
     // 假设存在一个测试模块 module_test，有 system 目录
     const char *lower = "/system";
@@ -52,7 +53,6 @@ void hui_mount_modules(void) {
     const char *work = "/data/adb/huijuisu/work";
     const char *target = "/system";
 
-    struct path upper_path;
     // 先检查 upperdir 是否存在，不存在说明没有模块，直接跳过
     if (kern_path(upper, LOOKUP_FOLLOW, &upper_path) == 0) {
         path_put(&upper_path);
