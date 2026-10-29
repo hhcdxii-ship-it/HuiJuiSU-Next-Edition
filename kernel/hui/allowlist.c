@@ -1,4 +1,3 @@
-#include "hui_compat.h"
 #include "hui.h"
 struct hlist_head hui_allowlist[HUI_HASH_BITS];
 spinlock_t hui_allowlist_lock;

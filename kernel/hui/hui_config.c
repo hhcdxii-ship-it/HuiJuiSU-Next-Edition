@@ -2,7 +2,6 @@
 // 🚀 HUI 终极内核架构 - 37/56：独有内核配置引擎
 // ==========================================
 #include "hui.h"
-#include "hui_compat.h"
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>

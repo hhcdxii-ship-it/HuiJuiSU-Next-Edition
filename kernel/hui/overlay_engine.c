@@ -1,5 +1,4 @@
 #include "hui.h"
-#include "hui_compat.h"
 #include <linux/kmod.h>
 #include <linux/fs.h>
 

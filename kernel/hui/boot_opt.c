@@ -1,4 +1,3 @@
-#include "hui_compat.h"
 #include "hui.h"
 #include <linux/init.h>
 #include <linux/delay.h>

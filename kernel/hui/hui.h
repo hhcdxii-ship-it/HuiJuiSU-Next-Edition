@@ -1,5 +1,6 @@
 #ifndef __HUI_CORE_H
 #define __HUI_CORE_H
+#include "hui_compat.h"
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -46,20 +47,8 @@
 #endif
 
 // 写保护操作 (针对 ARM64)
-static inline void hui_disable_wp(void) {
-    unsigned long val;
-    asm volatile("mrs %0, sctlr_el1" : "=r" (val));
-    val &= ~(1 << 19);
-    asm volatile("msr sctlr_el1, %0" : : "r" (val));
-    asm volatile("isb");
-}
-static inline void hui_enable_wp(void) {
-    unsigned long val;
-    asm volatile("mrs %0, sctlr_el1" : "=r" (val));
-    val |= (1 << 19);
-    asm volatile("msr sctlr_el1, %0" : : "r" (val));
-    asm volatile("isb");
-}
+
+
 
 struct hui_app_info {
     uid_t uid;

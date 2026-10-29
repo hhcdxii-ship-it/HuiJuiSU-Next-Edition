@@ -1,4 +1,3 @@
-#include "hui_compat.h"
 #include "hui.h"
 
 static ssize_t hui_comm_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos) {

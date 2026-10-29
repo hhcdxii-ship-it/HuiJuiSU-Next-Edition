@@ -1,5 +1,4 @@
 #include "hui.h"
-#include "hui_compat.h"
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/fdtable.h>

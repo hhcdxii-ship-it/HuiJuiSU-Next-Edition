@@ -1,4 +1,3 @@
-#include "hui_compat.h"
 #include "hui.h"
 #include <linux/fs.h>
 #include <linux/file.h>

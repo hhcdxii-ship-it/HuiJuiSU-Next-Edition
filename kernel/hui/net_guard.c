@@ -1,4 +1,3 @@
-#include "hui_compat.h"
 #include "hui.h"
 
 static asmlinkage long (*original_connect)(const struct pt_regs *regs);
