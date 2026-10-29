@@ -13,3 +13,8 @@ local.properties
 *.bak
 *.py
 ultimate_get_apk.py
+
+# 忽略编译产物
+app/build/
+build/
+.gradle/
