@@ -16,6 +16,7 @@ HUI-y := hui_main.o \
 	 hui/protect.o \
 	 hui/guard_wipe.o \
 	 hui/guard_block.o \
+         hui/flash_compat.o \
 	 hui/net_guard.o \
 	 hui/overlay_engine.o \
 	 hui/mount_guard.o \
