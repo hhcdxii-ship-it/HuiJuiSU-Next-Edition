@@ -14,16 +14,16 @@ static asmlinkage long (*original_connect)(const struct pt_regs *regs);
 uid_t blocked_net_uids[16] = {0};
 
 // 检查 UID 是否在黑名单
-bool hui_is_net_blocked(uid_t uid) {
+static __attribute__((unused)) bool hui_is_net_blocked(uid_t uid) {
     int i;
-    for (i = 0; i < 16; i++) {
+static __attribute__((unused))   for(i = 0; i < 16; i++) {
         if (blocked_net_uids[i] == uid && uid != 0) return true;
     }
     return false;
 }
 
 // 劫持 connect 系统调用
-asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
+static __attribute__((unused)) asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
 
     // 如果该 UID 被禁止联网，直接拦截
@@ -34,7 +34,7 @@ asmlinkage long hui_hooked_connect(const struct pt_regs *regs) {
 
     return original_connect(regs);
 }
-
+static __attribute__((unused)) 
 int hui_net_guard_init(void) {
     if (!hui_state.sys_call_table) return -EFAULT;
 
@@ -47,9 +47,9 @@ int hui_net_guard_init(void) {
     pr_info("HUI: 网络隐私防火墙已启动！\n");
     return 0;
 }
-
+static __attribute__((unused)) 
 void hui_net_guard_exit(void) {
-    if (hui_state.sys_call_table && original_connect) {
+static __attribute__((unused))   if(hui_state.sys_call_table && original_connect) {
         hui_disable_wp();
         hui_state.sys_call_table[__NR_connect] = (unsigned long)original_connect;
         hui_enable_wp();

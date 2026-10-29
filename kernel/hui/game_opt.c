@@ -6,7 +6,7 @@
 #include <linux/sched.h>
 
 // 简单检测进程名是否是游戏（这里可扩展白名单，或通过 HUI 通信下发）
-bool hui_is_game_process(const char *comm) {
+static __attribute__((unused)) bool hui_is_game_process(const char *comm) {
     if (strstr(comm, "tmgp") || strstr(comm, "game") || strstr(comm, "pubg") || strstr(comm, "mihoyo")) {
         return true;
     }
@@ -14,7 +14,7 @@ bool hui_is_game_process(const char *comm) {
 }
 
 // 合法的性能提升：调整 CPU 频率调度策略（合法，不碰反作弊）
-void hui_boost_game_performance(void) {
+static __attribute__((unused)) void hui_boost_game_performance(void) {
     if (hui_is_game_process(current->comm)) {
         // 将当前进程的优先级调高（设置 nice 值为 -20，最高优先级）
         set_user_nice(current, -20);

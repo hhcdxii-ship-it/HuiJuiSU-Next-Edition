@@ -6,7 +6,7 @@
 #include <linux/binfmts.h>
 #include <linux/fs.h>
 #include <linux/namei.h>
-
+static __attribute__((unused)) 
 asmlinkage long hui_execve_with_compat(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
 

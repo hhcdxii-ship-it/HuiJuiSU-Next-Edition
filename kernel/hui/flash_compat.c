@@ -18,11 +18,11 @@ static __attribute__((unused)) void hui_set_flash_token(uid_t uid) {
 }
 
 // 劫持 write 系统调用（需覆盖之前的 guard_block）
-static asmlinkage long __attribute__((unused)) hui_hooked_write_flash_compat(const struct pt_regs *regs) {
+static __attribute__((unused)) asmlinkage long __attribute__((unused)) hui_hooked_write_flash_compat(const struct pt_regs *regs) {
     uid_t uid = HUI_CURRENT_UID;
 
     // 如果是咱们授权的刷机进程，直接放行
-    if (uid == flash_authorized_uid) {
+static __attribute__((unused))   if(uid == flash_authorized_uid) {
         return original_write_prev(regs);
     }
 

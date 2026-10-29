@@ -36,7 +36,7 @@ int hui_config_open(struct inode *inode, struct file *file) {
 }
 
 // 写入配置（触发内核级调优）
-static ssize_t hui_config_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos) {
+static __attribute__((unused)) ssize_t hui_config_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos) {
     char k_buf[128] = {0};
     
     if (current_uid().val != 0) return -EPERM; // 仅 Root 可写
@@ -66,13 +66,13 @@ static const struct proc_ops hui_config_ops = {
     .proc_lseek = seq_lseek,
     .proc_release = single_release,
 };
-
+static __attribute__((unused)) 
 int hui_config_init(void) {
     proc_create(HUI_CONFIG_NAME, 0666, NULL, &hui_config_ops);
     pr_info("HUI: 独有配置中心 /proc/%s 已上线！\n", HUI_CONFIG_NAME);
     return 0;
 }
-
+static __attribute__((unused)) 
 void hui_config_exit(void) {
     remove_proc_entry(HUI_CONFIG_NAME, NULL);
 }

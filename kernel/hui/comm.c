@@ -10,7 +10,7 @@
 #define HUI_CMD_BUF_SIZE 512
 
 // 设备操作：处理用户态写入（格式: "UID:pkg_name"）
-static ssize_t hui_comm_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos) {
+static __attribute__((unused)) ssize_t hui_comm_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos) {
     char k_buf[HUI_CMD_BUF_SIZE];
     int ret = 0;
     int uid;
@@ -22,8 +22,8 @@ static ssize_t hui_comm_write(struct file *file, const char __user *buf, size_t 
         pr_warn("HUI: 拦截非法写入！非 Root 进程 (UID: %d) 无权操作 HUI 设备！\n", current_uid().val);
         return -EPERM;
     }
-
-    if (count >= HUI_CMD_BUF_SIZE) {
+static __attribute__((unused)) 
+ if(count >= HUI_CMD_BUF_SIZE) {
         return -EINVAL;
     }
 
@@ -35,7 +35,7 @@ static ssize_t hui_comm_write(struct file *file, const char __user *buf, size_t 
 
     // 3. 字符串解析 (防越界)
     delimiter = strchr(k_buf, ':');
-    if (!delimiter) {
+static __attribute__((unused))   if(!delimiter) {
         return -EINVAL;
     }
 
@@ -49,14 +49,14 @@ static ssize_t hui_comm_write(struct file *file, const char __user *buf, size_t 
 
     // 4. 添加到授权引擎
     ret = hui_add_uid(uid, pkg);
-    if (ret == 0 || ret == -EEXIST) {
+static __attribute__((unused))   if(ret == 0 || ret == -EEXIST) {
         return count; // 返回成功写入的字节数
     }
     return ret;
 }
 
 // 设备操作：处理用户态读取（目前仅返回 HUI 状态）
-static ssize_t hui_comm_read(struct file *file, char __user *buf, size_t count, loff_t *ppos) {
+static __attribute__((unused)) ssize_t hui_comm_read(struct file *file, char __user *buf, size_t count, loff_t *ppos) {
     char k_buf[128];
     int len;
 
@@ -88,17 +88,17 @@ static struct miscdevice hui_misc_device = {
     .fops = &hui_comm_fops,
     .mode = 0666, // 节点全员可读，但写操作在代码层被锁死（只有root能写）
 };
-
+static __attribute__((unused)) 
 int hui_comm_init(void) {
     int ret = misc_register(&hui_misc_device);
-    if (ret) {
+static __attribute__((unused))   if(ret) {
         pr_err("HUI: 无法注册杂项设备 /dev/%s\n", HUI_DEVICE_NAME);
         return ret;
     }
     pr_info("HUI: 通信接口 /dev/%s 注册成功！\n", HUI_DEVICE_NAME);
     return 0;
 }
-
+static __attribute__((unused)) 
 void hui_comm_exit(void) {
     misc_deregister(&hui_misc_device);
     pr_info("HUI: 通信接口已注销。\n");

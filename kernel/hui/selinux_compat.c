@@ -4,7 +4,7 @@
 #include "hui.h"
 
 // 检查当前系统的 SELinux 是否处于 Enforcing 模式
-int hui_check_selinux_status(void) {
+static __attribute__((unused)) int hui_check_selinux_status(void) {
     int ret;
     struct file *fp;
     // 通过读取内核里的 selinux_state 变量（如果可用）
@@ -20,8 +20,8 @@ int hui_check_selinux_status(void) {
 
     ret = kernel_read(fp, buf, sizeof(buf) - 1, &pos);
     filp_close(fp, NULL);
-
-    if (ret > 0 && buf[0] == '1') {
+static __attribute__((unused)) 
+ if(ret > 0 && buf[0] == '1') {
         pr_info("HUI: SELinux 处于 Enforcing 强制模式。\n");
         return 1;
     }

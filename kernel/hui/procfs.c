@@ -8,7 +8,7 @@
 #define HUI_PROC_NAME "hui_status"
 
 // 当用户读取 /proc/hui_status 时，触发展示
-static int hui_proc_show(struct seq_file *m, void *v) {
+static __attribute__((unused)) int hui_proc_show(struct seq_file *m, void *v) {
     seq_printf(m, "========== HUI 内核模块状态 ==========\n");
     seq_printf(m, "Version: %s\n", HUI_VERSION_CODE);
     seq_printf(m, "Status: Active (Pure-Blood)\n");
@@ -34,7 +34,7 @@ static const struct proc_ops hui_proc_ops = {
     .proc_lseek = seq_lseek,
     .proc_release = single_release,
 };
-
+static __attribute__((unused)) 
 int hui_proc_init(void) {
     if (!proc_create(HUI_PROC_NAME, 0444, NULL, &hui_proc_ops)) {
         pr_err("HUI: 无法创建 /proc/%s 节点\n", HUI_PROC_NAME);
@@ -43,7 +43,7 @@ int hui_proc_init(void) {
     pr_info("HUI: 状态监控节点 /proc/%s 已创建\n", HUI_PROC_NAME);
     return 0;
 }
-
+static __attribute__((unused)) 
 void hui_proc_exit(void) {
     remove_proc_entry(HUI_PROC_NAME, NULL);
     pr_info("HUI: 状态监控节点已移除\n");

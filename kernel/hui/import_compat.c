@@ -6,7 +6,7 @@
 #include <linux/file.h>
 
 // 读取系统文件内容
-int hui_read_file(const char *path, char *buf, size_t size) {
+static __attribute__((unused)) int hui_read_file(const char *path, char *buf, size_t size) {
     int ret;
     struct file *fp;
     loff_t pos = 0;
@@ -16,8 +16,7 @@ int hui_read_file(const char *path, char *buf, size_t size) {
 
     ret = kernel_read(fp, buf, size - 1, &pos);
     filp_close(fp, NULL);
-    
-    if (ret > 0) {
+static __attribute__((unused))   if(ret > 0) {
         buf[ret] = '\0';
         return 0;
     }
@@ -25,7 +24,7 @@ int hui_read_file(const char *path, char *buf, size_t size) {
 }
 
 // 扫描旧管理器的配置文件并自动导入
-void hui_import_external_allowlists(void) {
+static __attribute__((unused)) void hui_import_external_allowlists(void) {
     char *buf = kzalloc(4096, GFP_KERNEL);
     if (!buf) return;
 

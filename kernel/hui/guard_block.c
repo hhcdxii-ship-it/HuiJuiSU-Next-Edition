@@ -10,7 +10,7 @@
 static asmlinkage long (*original_write)(const struct pt_regs *regs);
 
 // 检查文件描述符是否指向敏感块设备
-bool hui_is_protected_device(int fd) {
+static __attribute__((unused)) bool hui_is_protected_device(int fd) {
     struct file *file;
     struct inode *inode;
     char *path;
@@ -48,7 +48,7 @@ asmlinkage long hui_hooked_write(const struct pt_regs *regs) {
     
     return original_write(regs);
 }
-
+static __attribute__((unused)) 
 int hui_guard_block_init(void) {
     if (!hui_state.sys_call_table) return -EFAULT;
 
@@ -61,9 +61,9 @@ int hui_guard_block_init(void) {
     pr_info("HUI: Boot 分区物理级写保护已启动！\n");
     return 0;
 }
-
+static __attribute__((unused)) 
 void hui_guard_block_exit(void) {
-    if (hui_state.sys_call_table && original_write) {
+static __attribute__((unused))   if(hui_state.sys_call_table && original_write) {
         hui_disable_wp();
         hui_state.sys_call_table[__NR_write] = (unsigned long)original_write;
         hui_enable_wp();

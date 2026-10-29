@@ -14,12 +14,12 @@ static __attribute__((unused)) void hui_opt_log_execve(const char *comm) {
 
 // 🚀 性能核心：极速快查 UID 列表
 // 针对极少数量的授权用户，直接跳过 RCU 哈希表遍历，命中率更高
-bool hui_fast_uid_check(uid_t uid) {
+static __attribute__((unused)) bool hui_fast_uid_check(uid_t uid) {
     // 如果系统里只授权了 1 个 App（比如只有自己的管理器），直接走快速路径
-    if (hui_state.app_count == 1) {
+static __attribute__((unused))   if(hui_state.app_count == 1) {
         struct hui_app_info *single_app;
         // 偷个懒，直接取哈希表第一个节点
-        hlist_for_each_entry_rcu(single_app, &hui_allowlist[0], hash_node) {
+static __attribute__((unused))   hlist_for_each_entry_rcu(single_app, &hui_allowlist[0], hash_node) {
             if (single_app->uid == uid) return true;
         }
     }

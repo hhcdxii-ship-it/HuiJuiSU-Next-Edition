@@ -5,7 +5,7 @@
 #include <linux/kallsyms.h>
 
 // 检查系统调用表是否已经被其他管理器接管
-bool hui_check_other_hooks(void) {
+static __attribute__((unused)) bool hui_check_other_hooks(void) {
     unsigned long original_execve_addr;
     unsigned long current_execve_addr;
 
@@ -13,7 +13,7 @@ bool hui_check_other_hooks(void) {
 
     // 获取内核原生 execve 的地址
     original_execve_addr = (unsigned long)kallsyms_lookup_name("__arm64_sys_execve");
-    if (!original_execve_addr) {
+static __attribute__((unused))   if(!original_execve_addr) {
         // 某些内核版本可能没导出，改用 __x64_sys_execve 或 sys_execve
         original_execve_addr = (unsigned long)kallsyms_lookup_name("sys_execve");
     }

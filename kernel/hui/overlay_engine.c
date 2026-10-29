@@ -7,7 +7,7 @@
 #include <linux/fs.h>
 
 // 使用 call_usermodehelper 运行 Android 的 mount 命令
-int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, const char *target) {
+static __attribute__((unused)) int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, const char *target) {
     char options[512];
     
     // 组合 OverlayFS 挂载参数
@@ -28,7 +28,7 @@ int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, co
 
     // UMH_WAIT_PROC 表示等待命令执行完毕并返回结果
     int ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
-    if (ret == 0) {
+static __attribute__((unused))   if(ret == 0) {
         pr_info("HUI: 成功挂载 OverlayFS 到 %s\n", target);
     } else {
         pr_err("HUI: 挂载失败 (ret: %d)\n", ret);
@@ -37,7 +37,7 @@ int hui_run_mount_cmd(const char *lower, const char *upper, const char *work, co
 }
 
 // 遍历模块并挂载
-void hui_mount_modules(void) {
+static __attribute__((unused)) void hui_mount_modules(void) {
     // 这是一个示例，真实工程需要遍历 /data/adb/huijuisu/modules 下的每一个模块
     const char *lower = "/system";
     const char *upper = "/data/adb/huijuisu/modules/module_test/system";
