@@ -76,8 +76,6 @@ int hui_config_open(struct inode *inode, struct file *file);
 asmlinkage long hui_hooked_umount2(const struct pt_regs *regs);
 asmlinkage long hui_hooked_write(const struct pt_regs *regs);
 
-void hui_core_exit(void);
-void hui_core_init(void);
 void hui_destroy_allowlist(void);
 int hui_proc_init(void);
 void hui_proc_exit(void);
