@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 HUI 终极内核架构 - 1/56：授权引擎
+// 🚀 HUI 终极内核架构 - 授权引擎
 // ==========================================
 #include "hui.h"
 
@@ -8,16 +8,16 @@ struct hlist_head hui_allowlist[HUI_HASH_BITS];
 spinlock_t hui_allowlist_lock;
 
 // 释放节点的 RCU 回调
-static __attribute__((unused)) void hui_free_app_info(struct rcu_head *rcu) {
+void hui_free_app_info(struct rcu_head *rcu) {
     struct hui_app_info *app = container_of(rcu, struct hui_app_info, rcu);
     kfree(app);
 }
 
 // 内部函数：根据 UID 查找节点（需在锁内或 RCU 保护下调用）
-static struct hui_app_info *hui_find_app_locked(uid_t uid) {
+struct hui_app_info *hui_find_app_locked(uid_t uid) {
     struct hui_app_info *app;
-static __attribute__((unused))   hash_for_each_possible(hui_allowlist, app, hash_node, uid) {
-static __attribute__((unused))   if(app->uid == uid) {
+    hash_for_each_possible(hui_allowlist, app, hash_node, uid) {
+        if (app->uid == uid) {
             return app;
         }
     }
@@ -25,7 +25,7 @@ static __attribute__((unused))   if(app->uid == uid) {
 }
 
 // 外部函数：检查 UID 是否被授权（无锁快路径，RCU保护）
-__attribute__((unused)) bool hui_is_uid_allowed(uid_t uid) {
+bool hui_is_uid_allowed(uid_t uid) {
     struct hui_app_info *app;
     bool found = false;
 
@@ -33,8 +33,8 @@ __attribute__((unused)) bool hui_is_uid_allowed(uid_t uid) {
     if (uid == -1) return false;
 
     rcu_read_lock();
-static __attribute__((unused))   hash_for_each_possible_rcu(hui_allowlist, app, hash_node, uid) {
-static __attribute__((unused))   if(app->uid == uid) {
+    hash_for_each_possible_rcu(hui_allowlist, app, hash_node, uid) {
+        if (app->uid == uid) {
             found = true;
             break;
         }
@@ -45,7 +45,7 @@ static __attribute__((unused))   if(app->uid == uid) {
 }
 
 // 外部函数：添加授权
-__attribute__((unused)) int hui_add_uid(uid_t uid, const char *pkg_name) {
+int hui_add_uid(uid_t uid, const char *pkg_name) {
     struct hui_app_info *new_app, *existing;
 
     if (uid == 0 || uid == -1) return -EINVAL;
@@ -60,7 +60,7 @@ __attribute__((unused)) int hui_add_uid(uid_t uid, const char *pkg_name) {
 
     spin_lock(&hui_allowlist_lock);
     existing = hui_find_app_locked(uid);
-static __attribute__((unused))   if(existing) {
+    if (existing) {
         spin_unlock(&hui_allowlist_lock);
         kfree(new_app); // 已存在，直接丢弃新建的
         return -EEXIST;
@@ -74,12 +74,12 @@ static __attribute__((unused))   if(existing) {
 }
 
 // 外部函数：移除授权
-static __attribute__((unused)) void hui_remove_uid(uid_t uid) {
+void hui_remove_uid(uid_t uid) {
     struct hui_app_info *app;
 
     spin_lock(&hui_allowlist_lock);
     app = hui_find_app_locked(uid);
-static __attribute__((unused))   if(app) {
+    if (app) {
         hash_del_rcu(&app->hash_node);
         hui_state.app_count--;
         spin_unlock(&hui_allowlist_lock);
@@ -91,13 +91,13 @@ static __attribute__((unused))   if(app) {
 }
 
 // 外部函数：清空所有授权（卸载模块时调用）
-__attribute__((unused)) void hui_destroy_allowlist(void) {
+void hui_destroy_allowlist(void) {
     struct hui_app_info *app;
     struct hlist_node *tmp;
     int bkt;
 
     spin_lock(&hui_allowlist_lock);
-static __attribute__((unused))   hash_for_each_safe(hui_allowlist, bkt, tmp, app, hash_node) {
+    hash_for_each_safe(hui_allowlist, bkt, tmp, app, hash_node) {
         hash_del_rcu(&app->hash_node);
         call_rcu(&app->rcu, hui_free_app_info);
     }
