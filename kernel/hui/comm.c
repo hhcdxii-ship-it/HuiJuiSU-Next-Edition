@@ -78,7 +78,7 @@ static const struct file_operations hui_comm_fops = {
     .owner = THIS_MODULE,
     .write = hui_comm_write,
     .read = hui_comm_read,
-    .llseek = no_llseek,
+    .llseek = noop_llseek,
 };
 
 // 杂项设备注册结构
