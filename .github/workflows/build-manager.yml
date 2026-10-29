@@ -225,8 +225,9 @@ jobs:
             - **包含组件**: 纯血 C Daemon (Hsud), 纯血镜像工具 (huijui_boot)
             
             ### 📦 下载说明
-            - `HuiJuiSU_xxx_debug.apk`: 调试包（建议直接安装）
-            - `HuiJuiSU_xxx_release_unsigned.apk`: 未签名正式包（需自行签名）
+            - **HuiJuiSU_xxx_debug.apk**: 调试包（建议直接安装）
+            - **HuiJuiSU_xxx_release_unsigned.apk**: 未正式包（需自行签名）
+
           files: |
             release_out/HuiJuiSU_${{ env.APP_VERSION }}_Full.zip
             release_out/HuiJuiSU_${{ env.APP_VERSION }}_debug.apk
