@@ -134,12 +134,10 @@ object HsudInstaller {
             onLog("> [修补] 开始执行镜像解包与重打包...")
             
             var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
-            scriptCmd += "./$daemonName unpack stock_boot.img\n"
+            scriptCmd += "${cacheDaemon.absolutePath} unpack stock_boot.img\n"
 
             // 提取纯血守护进程
-            val cacheSud = File(workDir, "huijuisud")
-            extractAsset(context, "exploit/huijuisud", cacheSud)
-            runShellCommandSync("chmod 755 ${cacheSud.absolutePath}")
+            val cacheSud = File(context.applicationInfo.nativeLibraryDir, "libhuijuisud.so")
 
             scriptCmd += "mkdir -p huijui_files\n"
             scriptCmd += "cp ${cacheKo.absolutePath} huijui_files/huijui_phantom.ko\n"
@@ -152,9 +150,9 @@ object HsudInstaller {
                 // ==========================================
                 scriptCmd += """
                     # 塞入底层内核模块和守护进程
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
                 """.trimIndent()
             } else {
                 // ==========================================
@@ -162,21 +160,21 @@ object HsudInstaller {
                 // ==========================================
                 scriptCmd += """
                     # 塞入守护进程 (老机型不依赖 kprobe 内核模块)
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
                     
                     # 提取原厂 init.rc 并追加启动脚本
-                    ./$daemonName cpio ramdisk.cpio "extract init.rc init.rc.orig" || true
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "extract init.rc init.rc.orig" || true
                     if [ -f init.rc.orig ]; then
                         echo 'on post-fs-data' >> init.rc.orig
                         echo '    exec - root -- /sbin/huijuisud' >> init.rc.orig
-                        ./$daemonName cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
+                        ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
                     fi
                     rm -f init.rc.orig
                 """.trimIndent()
             }
 
-            scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
+            scriptCmd += "\n${cacheDaemon.absolutePath} repack stock_boot.img new_boot.img\n"
             
             if (localImgUri != null) {
                 scriptCmd += "cp new_boot.img /sdcard/Download/HuiJuiPhantom_patched_${targetPartition}.img\n"
