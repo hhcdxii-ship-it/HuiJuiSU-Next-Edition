@@ -75,61 +75,60 @@ fun ToolboxScreen(
     LaunchedEffect(refreshTrigger) {
         isLoading = true
         try {
-            withTimeoutOrNull(3000L) {
+            val result = withTimeoutOrNull(5000L) { // 🚀 加大超时时间
                 withContext(Dispatchers.IO) {
-                    try { HuijuiShell.exec("su -c id", useCache = false) } catch (e: Exception) {}
-                    
-                    val detected = RootManagerDetector.detect(forceRefresh = true)
+                    try { HuijuiShell.exec("su -c id", useCache = false, timeoutMs = 2000L) } catch (_: Exception) {}
+                    val detected = RootManagerDetector.detect(forceRefresh = false)
                     val isRooted = HuijuiShell.isRooted()
-                    delay(100)
+                    
+                    val (bootState, chunqiu) = getBootAndChunqiu(context)
 
-                    // 🚀 调用最新的春秋检测，传入了 context
-                    val bootState = BootloaderDetector.detectBootState()
-                    val chunqiu = ChunqiuDetector.comprehensiveCheck(context)
+                    return@withContext Triple(detected, isRooted, Pair(bootState, chunqiu))
+                }
+            }
 
-                    withContext(Dispatchers.Main) {
-                        detectedManager = detected
-                        deviceInfo = DeviceInfo(
-                            brand = android.os.Build.MANUFACTURER ?: "未知",
-                            model = android.os.Build.MODEL ?: "未知",
-                            androidVer = android.os.Build.VERSION.RELEASE ?: "未知",
-                            kernelVer = System.getProperty("os.version") ?: "未知",
-                            fingerprint = android.os.Build.FINGERPRINT ?: "未知"
-                        )
-                        managerState = when {
-                            !isRooted -> ManagerState.NOT_WORKING
-                            detected == RootManager.HUIJUI -> ManagerState.WORKING_HUIJUI
-                            detected == RootManager.HUIJUI_ULTRA -> ManagerState.WORKING_ULTRA
-                            else -> ManagerState.WORKING_COMPAT
-                        }
-                        managerTitle = when (managerState) {
-                            ManagerState.WORKING_HUIJUI -> "工作中 (HUI)"
-                            ManagerState.WORKING_ULTRA -> "工作中 (HUI-Ultra)"
-                            ManagerState.WORKING_COMPAT -> "工作中 (${detected?.shortName ?: "未知"} 兼容)"
-                            ManagerState.NOT_WORKING -> "未工作"
-                        }
+            if (result != null) {
+                val (detected, isRooted, envCheck) = result
+                val (bootState, chunqiu) = envCheck
+                withContext(Dispatchers.Main) {
+                    detectedManager = detected
+                    deviceInfo = DeviceInfo(
+                        brand = android.os.Build.MANUFACTURER ?: "未知",
+                        model = android.os.Build.MODEL ?: "未知",
+                        androidVer = android.os.Build.VERSION.RELEASE ?: "未知",
+                        kernelVer = System.getProperty("os.version") ?: "未知",
+                        fingerprint = android.os.Build.FINGERPRINT ?: "未知"
+                    )
+                    managerState = when {
+                        !isRooted -> ManagerState.NOT_WORKING
+                        detected == RootManager.HUIJUI -> ManagerState.WORKING_HUIJUI
+                        detected == RootManager.HUIJUI_ULTRA -> ManagerState.WORKING_ULTRA
+                        else -> ManagerState.WORKING_COMPAT
+                    }
+                    managerTitle = when (managerState) {
+                        ManagerState.WORKING_HUIJUI -> "工作中 (HUI)"
+                        ManagerState.WORKING_ULTRA -> "工作中 (HUI-Ultra)"
+                        ManagerState.WORKING_COMPAT -> "工作中 (${detected?.shortName ?: "未知"} 兼容)"
+                        ManagerState.NOT_WORKING -> "未工作"
+                    }
 
-                        // 🚀 终极防御：多重条件全部满足，且无任何报错时，才弹窗！
-                        if (!isRooted) {
-                            val isTrulyCleanLocked = 
-                                bootState.isBootloaderLocked && 
-                                !bootState.isProbablyRootedEnv && 
-                                !bootState.isSuspicious && 
-                                !chunqiu.isSuspicious &&
-                                !chunqiu.isDefinitelyRooted &&
-                                chunqiu.reasons.isEmpty()
+                    if (!isRooted) {
+                        val isTrulyCleanLocked =
+                            bootState.isBootloaderLocked &&
+                            !bootState.isProbablyRootedEnv &&
+                            !bootState.isSuspicious &&
+                            !chunqiu.isSuspicious &&
+                            !chunqiu.isDefinitelyRooted &&
+                            chunqiu.reasons.isEmpty()
 
-                            if (isTrulyCleanLocked) {
-                                showTempRootDialog = true
-                            } else {
-                                android.util.Log.e("GhostModeBlock", "环境不干净，阻止幽灵模式。原因: ${chunqiu.reasons} | BootState: $bootState")
-                            }
+                        if (isTrulyCleanLocked) {
+                            showTempRootDialog = true
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            // 异常忽略
+            // 忽略异常
         } finally {
             isLoading = false
         }
@@ -153,9 +152,31 @@ fun ToolboxScreen(
                         Column {
                             ZakoText("SYSTEM TIME", color = Color.White.copy(0.5f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 3.sp)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(currentTime, color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Thin, fontFamily = FontFamily.Monospace)
+                            // 🚀 极致美学时钟：渐变色 + 发光阴影 + 适中字重
+                            Text(
+                                text = currentTime,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color.White, Color(0xFFE0E0E0), Color.White.copy(alpha = 0.7f))
+                                    ),
+                                    fontSize = 76.sp,
+                                    fontWeight = FontWeight.Light,
+                                    fontFamily = FontFamily.Monospace,
+                                    letterSpacing = 2.sp,
+                                    shadow = androidx.compose.ui.graphics.Shadow(
+                                        color = AppSettings.accentColor.color.copy(alpha = 0.5f),
+                                        offset = androidx.compose.ui.geometry.Offset(0f, 8f),
+                                        blurRadius = 24f
+                                    )
+                                )
+                            )
                         }
-                        IconButton(onClick = { refreshTrigger++ }) { Icon(Icons.Default.Refresh, "刷新", tint = Color.White.copy(0.5f)) }
+                        IconButton(onClick = {
+                            if (!isLoading) {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                refreshTrigger++
+                            }
+                        }) { Icon(Icons.Default.Refresh, "刷新", tint = Color.White.copy(0.5f)) }
                     }
                 }
 
@@ -293,4 +314,23 @@ private fun DeviceInfoRow(label: String, value: String) {
         ZakoText(label, color = Color.White.copy(0.5f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
         ZakoText(value, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f))
     }
+}
+
+// 简单的内存缓存
+private var lastBootState: BootloaderDetector.BootState? = null
+private var lastChunqiuResult: ChunqiuDetector.DetectionResult? = null
+private var lastCheckTime = 0L
+private const val CHECK_CACHE_TTL = 30_000L // 30秒内不重复检测
+
+suspend fun getBootAndChunqiu(context: android.content.Context): Pair<BootloaderDetector.BootState, ChunqiuDetector.DetectionResult> {
+    val now = System.currentTimeMillis()
+    if (lastBootState != null && lastChunqiuResult != null && now - lastCheckTime < CHECK_CACHE_TTL) {
+        return Pair(lastBootState!!, lastChunqiuResult!!)
+    }
+    val boot = BootloaderDetector.detectBootState()
+    val chunqiu = ChunqiuDetector.comprehensiveCheck(context)
+    lastBootState = boot
+    lastChunqiuResult = chunqiu
+    lastCheckTime = now
+    return Pair(boot, chunqiu)
 }

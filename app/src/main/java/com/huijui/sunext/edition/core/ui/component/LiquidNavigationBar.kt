@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -16,10 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -43,24 +47,73 @@ fun LiquidNavigationBar(
     if (items.isEmpty()) return
 
     val density = LocalDensity.current
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+    val barWidth = screenWidthDp - 40.dp
+    val itemWidth = barWidth / items.size
+    val itemWidthPx = with(density) { itemWidth.toPx() }
+
     val selectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
-    
+    val accentColor = AppSettings.accentColor.color
+
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
 
-    BoxWithConstraints(
+    val animatedBaseX by animateFloatAsState(
+        targetValue = selectedIndex * itemWidthPx,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 350f),
+        label = "indicatorX"
+    )
+
+    val currentX = if (isDragging) (selectedIndex * itemWidthPx + dragOffset) else animatedBaseX
+
+    val dragFraction = if (itemWidthPx > 0f) (dragOffset / itemWidthPx).coerceIn(-1.2f, 1.2f) else 0f
+    val stretchX by animateFloatAsState(
+        targetValue = if (isDragging) 1f + abs(dragFraction) * 0.4f else 1f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = 600f),
+        label = "stretchX"
+    )
+    val stretchY by animateFloatAsState(
+        targetValue = if (isDragging) 1f - abs(dragFraction) * 0.2f else 1f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = 600f),
+        label = "stretchY"
+    )
+
+    val transformOrigin = if (dragOffset >= 0) TransformOrigin(0f, 0.5f) else TransformOrigin(1f, 0.5f)
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .height(72.dp)
             .clip(RoundedCornerShape(36.dp))
-            .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
+            // 🚀 极致毛玻璃：半透明暗底 + 顶部高光渐变
+            .background(Color(0xFF141414).copy(alpha = 0.45f))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.15f), // 顶部高光
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.2f)   // 底部暗角
+                    )
+                )
+            )
+            // 🚀 玻璃反光边框
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.6f),
+                        Color.White.copy(alpha = 0.05f),
+                        Color.White.copy(alpha = 0.2f)
+                    )
+                ),
+                shape = RoundedCornerShape(36.dp)
+            )
             .pointerInput(items.size, selectedIndex) {
                 detectHorizontalDragGestures(
                     onDragStart = { isDragging = true; dragOffset = 0f },
                     onDragEnd = {
                         isDragging = false
-                        val itemWidthPx = size.width / items.size.toFloat()
                         val dragItems = (dragOffset / itemWidthPx).roundToInt()
                         val newIndex = (selectedIndex + dragItems).coerceIn(0, items.size - 1)
                         if (newIndex != selectedIndex) onItemSelected(items[newIndex].route)
@@ -74,60 +127,49 @@ fun LiquidNavigationBar(
                 )
             }
     ) {
-        val itemWidth = maxWidth / items.size
-        val itemWidthPx = with(density) { itemWidth.toPx() }
-
-        val targetOffsetX = itemWidth * selectedIndex + (if (isDragging) with(density) { dragOffset.toDp() } else 0.dp)
-        
-        val animatedX by animateDpAsState(
-            targetValue = targetOffsetX,
-            animationSpec = spring(dampingRatio = 0.65f, stiffness = 350f),
-            label = "indicatorX"
-        )
-        val currentX = if (isDragging) targetOffsetX else animatedX
-        val currentXPx = with(density) { currentX.toPx() }
-
-        val dragFraction = if (itemWidthPx > 0f) (dragOffset / itemWidthPx).coerceIn(-1.2f, 1.2f) else 0f
-        val stretchX by animateFloatAsState(
-            targetValue = if (isDragging) 1f + abs(dragFraction) * 0.4f else 1f,
-            animationSpec = spring(dampingRatio = 0.4f, stiffness = 600f),
-            label = "stretchX"
-        )
-        val stretchY by animateFloatAsState(
-            targetValue = if (isDragging) 1f - abs(dragFraction) * 0.2f else 1f,
-            animationSpec = spring(dampingRatio = 0.4f, stiffness = 600f),
-            label = "stretchY"
-        )
-
-        // 🚀 Canvas 硬画！绝不用 scale 函数，手动算坐标！
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        // 🚀 液态气泡：保留之前的 Canvas 绘制逻辑，但增强高光
+        Canvas(modifier = Modifier.fillMaxSize().zIndex(0f)) {
             val padX = 8.dp.toPx()
             val padY = 12.dp.toPx()
-            
-            // 基础宽高
             val baseW = itemWidthPx - padX * 2
             val baseH = size.height - padY * 2
-            
-            // 应用缩放
             val scaledW = baseW * stretchX
             val scaledH = baseH * stretchY
-            
-            // 计算中心点，然后反推左上角坐标（这样缩放永远是围绕中心的）
-            val centerX = currentXPx + itemWidthPx / 2f
+            val centerX = currentX + itemWidthPx / 2f
             val centerY = size.height / 2f
-            
             val left = centerX - scaledW / 2f
             val top = centerY - scaledH / 2f
-            
+
+            // 画玻璃底色（半透明主题色）
             drawRoundRect(
-                color = Color.Red, // 🚨 红色测试块，绝对不可能不出现！
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        accentColor.copy(alpha = 0.8f),
+                        accentColor.copy(alpha = 0.2f)
+                    )
+                ),
                 topLeft = Offset(left, top),
                 size = Size(scaledW, scaledH),
                 cornerRadius = CornerRadius(scaledH / 2f)
             )
+            
+            // 画内部高光反光
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.6f),
+                        Color.Transparent
+                    ),
+                    startY = top,
+                    endY = top + scaledH / 2f
+                ),
+                topLeft = Offset(left, top),
+                size = Size(scaledW, scaledH / 2f),
+                cornerRadius = CornerRadius(scaledH / 2f)
+            )
         }
 
-        // 图标文字层
+        // 图标层
         Row(modifier = Modifier.fillMaxSize().zIndex(1f)) {
             items.forEachIndexed { index, item ->
                 val isSelected = index == selectedIndex
