@@ -213,19 +213,21 @@ void cpio::load_cpio(const char *buf, size_t sz) {
     size_t pos = 0;
     while (pos < sz) {
         auto hdr = reinterpret_cast<const cpio_newc_header *>(buf + pos);
-        if (memcmp(hdr->magic, "070701", 6) != 0)
+        if (memcmp(hdr->magic, "070701", 6) != 0) {
             LOGE("bad cpio header\n");
+            break; // 🚀 致命防御：遇到乱码直接退出循环，防止越界死循环！
+        }
         pos += sizeof(cpio_newc_header);
         string_view name(buf + pos);
-        pos += x8u(hdr->namesize);
+        size_t namesize = x8u(hdr->namesize);
+        if (namesize == 0 || pos + namesize >= sz) break; // 🚀 防止文件大小异常导致死循环
+        pos += namesize;
         pos_align(pos);
         if (name == "." || name == "..")
             continue;
         if (name == "TRAILER!!!") {
-            // Android support multiple CPIO being concatenated
-            // Search for the next cpio header
             auto next = static_cast<const char *>(memmem(buf + pos, sz - pos, "070701", 6));
-            if (next == nullptr)
+            if (next == nullptr || next == buf + pos) // 🚀 防止原地踏步死循环
                 break;
             pos = next - buf;
             continue;

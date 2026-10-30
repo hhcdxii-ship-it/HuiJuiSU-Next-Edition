@@ -6,6 +6,7 @@
 #include <sys/prctl.h>
 #include <signal.h>
 #include <cstdlib>
+#include <cstdio>
 #include <android/log.h>
 
 #define LOG_TAG "HsudJNI"
@@ -39,39 +40,50 @@ Java_com_huijui_sunext_edition_core_root_HsudNative_runCommand(
         wd = env->GetStringUTFChars(workDirStr, nullptr);
     }
 
-    // 🚀 核心护盾：使用 fork 隔离
     pid_t pid = fork();
 
     if (pid == 0) {
         // --- 子进程区域 ---
-        prctl(PR_SET_PDEATHSIG, SIGKILL); // 父进程死，子进程跟着死
+        prctl(PR_SET_PDEATHSIG, SIGKILL);
         
-        // 拦截导致闪退的异常信号，转成静默退出
-        signal(SIGTRAP, SIG_DFL);
-        signal(SIGSEGV, SIG_DFL);
-        signal(SIGABRT, SIG_DFL);
+        // 🚀 将标准输出和错误输出重定向到黑洞，防止底层疯狂打日志导致管道阻塞死锁
+        freopen("/dev/null", "w", stdout);
+        freopen("/dev/null", "w", stderr);
 
         if (wd) {
             if (chdir(wd) != 0) _exit(-2);
         }
 
         int ret = hsud_main(argc, argv.data());
-        _exit(ret); // 子进程强制退出，绝不波及主进程
+        _exit(ret);
     } else if (pid > 0) {
         // --- 父进程区域 ---
-        int status;
-        waitpid(pid, &status, 0);
+        int status = 0;
+        int timeout_ms = 15000; 
+        int waited_ms = 0;
+
+        while (waited_ms < timeout_ms) {
+            pid_t res = waitpid(pid, &status, WNOHANG);
+            if (res == pid) break; 
+            usleep(100000); 
+            waited_ms += 100;
+        }
+
+        if (waited_ms >= timeout_ms) {
+            LOGD("子进程执行超时，强杀！");
+            kill(pid, SIGKILL);
+            waitpid(pid, &status, 0); 
+            if (wd) env->ReleaseStringUTFChars(workDirStr, wd);
+            return -911; // 超时强杀返回码
+        }
+
         if (wd) env->ReleaseStringUTFChars(workDirStr, wd);
 
-        if (WIFEXITED(status)) {
-            return WEXITSTATUS(status); // 正常退出码
-        } else if (WIFSIGNALED(status)) {
-            LOGD("子进程崩溃，信号: %d", WTERMSIG(status));
-            return -100 - WTERMSIG(status); // 返回异常退出码，方便 App 捕获
-        }
+        if (WIFEXITED(status)) return WEXITSTATUS(status);
+        else if (WIFSIGNALED(status)) return -100 - WTERMSIG(status);
         return -3;
     } else {
         if (wd) env->ReleaseStringUTFChars(workDirStr, wd);
-        return -4; // fork 失败
+        return -4;
     }
 }
