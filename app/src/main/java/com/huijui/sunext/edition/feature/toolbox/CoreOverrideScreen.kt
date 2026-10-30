@@ -60,6 +60,15 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
             processLog += "> 已加载本地镜像: ${it.lastPathSegment}\n"
         }
     }
+    
+    var customKoUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var customKoName by remember { mutableStateOf<String?>(null) }
+    val koPickerLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        customKoUri = uri
+        customKoName = uri?.lastPathSegment
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -67,6 +76,48 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
             contentPadding = PaddingValues(top = 40.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.White.copy(alpha = 0.2f), Color.Transparent)
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .clickable { koPickerLauncher.launch("*/*") }
+                        .padding(20.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(48.dp)
+                                .background(if (customKoUri != null) Color(0xFF00E5FF).copy(0.2f) else Color.White.copy(0.05f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🧩", fontSize = 24.sp)
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = if (customKoName == null) "塞点你自己的底层模块啦，杂鱼~" else "已选: $customKoName (能跑就行)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "老机型没有我内置的模块？自己动手编一个啊！",
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
@@ -182,7 +233,8 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                                 val success = HsudInstaller.installLkm(
                                     context = context,
                                     installToInactiveSlot = selectedMode == "ghost",
-                                    localImgUri = selectedUri
+                                    localImgUri = selectedUri,
+                                    customKoUri = customKoUri
                                 ) { log -> processLog += "$log\n" }
                                 
                                 if (success) {

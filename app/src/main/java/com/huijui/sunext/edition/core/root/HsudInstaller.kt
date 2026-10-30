@@ -18,7 +18,8 @@ object HsudInstaller {
         context: Context,
         installToInactiveSlot: Boolean,
         localImgUri: Uri? = null,
-        onLog: (String) -> Unit
+        onLog: (String) -> Unit,
+        customKoUri: android.net.Uri? = null
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             onLog("> [初始化] 正在检测底层环境...")
@@ -67,18 +68,29 @@ object HsudInstaller {
             }
 
             // 3. 模块匹配与工具解压
-            val gkiBranch = matchGkiBranch(mainVer, subVer)
-            val koName = "HuiJuiPhantom_${gkiBranch}_${arch}.ko"
-            onLog("> [模块] 匹配纯血内核: $koName")
-
             val workDir = File(context.cacheDir, "huijui_patch")
             if (workDir.exists()) workDir.deleteRecursively()
             workDir.mkdirs()
 
-            val cacheKo = File(workDir, koName)
-            if (!extractAsset(context, "exploit/$koName", cacheKo)) {
-                onLog("❌ 错误：APK 中缺失 $koName。")
-                return@withContext false
+            val cacheKo: File
+            if (customKoUri != null) {
+                // 🚀 使用用户手动选择的 .ko
+                onLog("> [模块] 正在读取用户提供的自定义内核模块...")
+                cacheKo = File(workDir, "custom_huijui.ko")
+                if (!copyUriToFile(context, customKoUri, cacheKo)) {
+                    onLog("❌ 错误：无法读取自定义模块文件。")
+                    return@withContext false
+                }
+            } else {
+                // 🚀 使用 APK 内置的 .ko
+                val gkiBranch = matchGkiBranch(mainVer, subVer)
+                val koName = "HuiJuiPhantom_${gkiBranch}_${arch}.ko"
+                onLog("> [模块] 匹配内置纯血内核: $koName")
+                cacheKo = File(workDir, koName)
+                if (!extractAsset(context, "exploit/$koName", cacheKo)) {
+                    onLog("❌ 错误：APK 中缺失 $koName，请尝试手动选择本地模块。")
+                    return@withContext false
+                }
             }
 
             val cacheDaemon = File(workDir, daemonName)
@@ -124,36 +136,15 @@ object HsudInstaller {
             var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
             scriptCmd += "./$daemonName unpack stock_boot.img\n"
 
-            // 准备纯血引擎
-            val cacheSud = File(workDir, "huijuisud")
-            extractAsset(context, "exploit/huijuisud", cacheSud)
-            runShellCommandSync("chmod 755 ${cacheSud.absolutePath}")
-
             scriptCmd += "mkdir -p huijui_files\n"
             scriptCmd += "cp ${cacheKo.absolutePath} huijui_files/huijui_phantom.ko\n"
-            scriptCmd += "cp ${cacheSud.absolutePath} huijui_files/huijuisud\n"
 
-            // 🚀 双路架构判断：Android 13 及以下 vs Android 14+
-            // 仅支持 Android 14+
-                // 路线二：GKI 时代 (A14+)，注入 .rc 文件，绝不碰 init
-                scriptCmd += """
-                    # 塞入核心文件
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+            scriptCmd += """
+                # 极简纯净注入：不碰 init，不塞 rc，只替换内核模块！
+                ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
+                ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+            """.trimIndent()
 
-                    # 生成 huijui.rc
-                    echo 'on post-fs-data' > huijui_files/huijui.rc
-                    echo '    exec - root -- /sbin/huijuisud' >> huijui_files/huijui.rc
-
-                    # 注入到 system/etc/init 目录，让原厂 init 读取
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system"
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc"
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc/init"
-                    ./$daemonName cpio ramdisk.cpio "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc"
-                """.trimIndent()
-            } else {
-                }
             scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
             
             if (localImgUri != null) {
