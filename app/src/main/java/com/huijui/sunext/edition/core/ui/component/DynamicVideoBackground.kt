@@ -244,13 +244,28 @@ private fun VideoBackground(videoUri: String, onFailed: () -> Unit) {
                 PlayerView(ctx).apply {
                     player = exoPlayer
                     useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    
+                    // 🚀 核心防大头照逻辑：根据用户设置动态切换缩放模式
+                    resizeMode = when (AppSettings.wallpaperScaleMode) {
+                        AppSettings.WallpaperScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        AppSettings.WallpaperScaleMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                        AppSettings.WallpaperScaleMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    }
+                    
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                     // 🚀 保存实例到状态中
                     playerViewRef = this
+                }
+            },
+            update = { view ->
+                // 当设置改变时，实时刷新缩放模式，不需要重建视图
+                view.resizeMode = when (AppSettings.wallpaperScaleMode) {
+                    AppSettings.WallpaperScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    AppSettings.WallpaperScaleMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    AppSettings.WallpaperScaleMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
             },
             modifier = Modifier.fillMaxSize()
