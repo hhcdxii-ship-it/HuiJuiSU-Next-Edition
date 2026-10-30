@@ -19,6 +19,26 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    # 🚀 关键新增 1：配置 Android NDK
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+      with:
+        ndk-version: '26.1.10909125'
+
+    # 🚀 关键新增 2：云端编译 C++ 引擎 (hsud & huijuiinit)
+    - name: Build Native Engines (hsud & huijuiinit)
+      run: |
+        cd core/root/native
+        cmake -B build -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24
+        cmake --build build -j4
+        
+        # 把编译好的引擎塞进 assets（覆盖本地旧文件）
+        mkdir -p ../../../app/src/main/assets/exploit
+        cp build/hsud ../../../app/src/main/assets/exploit/hsud
+        cp build/hsud ../../../app/src/main/assets/exploit/hud
+        cp build/huijuiinit ../../../app/src/main/assets/exploit/huijuiinit
+        chmod 755 ../../../app/src/main/assets/exploit/hsud ../../../app/src/main/assets/exploit/hud ../../../app/src/main/assets/exploit/huijuiinit
+
     - name: Setup Gradle Cache
       uses: actions/cache@v4
       with:
@@ -28,10 +48,10 @@ jobs:
         key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: gradle-
 
-    # 验证一下本地的 8 个 ko 是否都推上来了
-    - name: Verify Local KOs
+    # 验证一下引擎和 KO 是否都准备好了
+    - name: Verify Engines & KOs
       run: |
-        echo "📦 检查 assets/exploit 目录下的内核模块："
+        echo "📦 检查 assets/exploit 目录下的所有文件："
         ls -lh app/src/main/assets/exploit/
 
     - name: Build Signed APK
@@ -53,7 +73,6 @@ jobs:
       run: |
         mkdir -p final_package
         cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-Full-Universal.apk
-        # 打包时把 8 个内核也一起塞进去
         cp app/src/main/assets/exploit/*.ko final_package/
         echo "Build Date: $(date)" > final_package/build-info.txt
         zip -r HuiJuiSU-Full-Release.zip final_package/
