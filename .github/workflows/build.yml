@@ -1,4 +1,4 @@
-name: HuiJui Phantom CI/CD (Pureblood)
+name: HuiJui Phantom CI/CD
 
 on:
   push:
@@ -6,10 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-pureblood-apk:
-    name: Build Pureblood (APK + KO)
+  # ==========================================
+  # 阶段 1：纯血编译内核模块
+  # ==========================================
+  build-kernel:
+    name: Build Kernel Module (arm64)
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -18,7 +20,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y clang lld llvm make bc cpio flex bison libssl-dev libelf-dev ccache git curl
-        # 获取 Google 官方的 repo 工具
         mkdir -p ~/bin
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
@@ -28,44 +29,62 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.ccache
-        key: ccache-pureblood-${{ github.sha }}
-        restore-keys: ccache-pureblood-
+        key: ccache-kernel-${{ github.sha }}
+        restore-keys: ccache-kernel-
 
-    - name: Fetch AOSP Kernel Source (5.10)
+    - name: Fetch AOSP Kernel Source
       run: |
-        echo "🔄 正在使用 Google 官方 repo 工具拉取内核源码..."
-        mkdir -p kernel_headers
-        cd kernel_headers
-        # 初始化 Google 官方仓库（只拉取 5.10 分支）
+        echo "🔄 正在拉取 AOSP 5.10 内核源码..."
+        mkdir -p kernel_headers && cd kernel_headers
         ~/bin/repo init -u https://android.googlesource.com/kernel/manifest -b common-android12-5.10
-        # 同步代码，只拉取 manifest 中定义的核心部分，大大节省时间
         ~/bin/repo sync -c --no-tags --optimized-fetch --prune -j4
 
     - name: Prepare Kernel Build
       run: |
         cd kernel_headers
-        echo "⚙️ 正在准备 AOSP 内核编译环境..."
-        # 使用官方脚本构建环境并生成 gki_defconfig
+        echo "⚙️ 正在生成 defconfig..."
         make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
         make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-    - name: Build Kernel Module (Pureblood)
+    - name: Compile Module
       run: |
         cd kernel
         export CCACHE_DIR=~/.ccache
-        export USE_CCACHE=1
-        
-        echo "🚀 正在编译咱们自己写的 HuiJuiPhantom.ko..."
-        # 编译咱们自己的模块，KDIR 指向刚才拉取下的源码树
         make ARCH=arm64 CC="ccache clang" LLVM=1 \
           CROSS_COMPILE=aarch64-linux-gnu- \
           KDIR=../kernel_headers \
           modules KBUILD_MODPOST_WARN=1
-
-        # 瘦身并把纯净的 ko 放进 assets
         llvm-strip --strip-debug HuiJuiPhantom.ko
-        mkdir -p ../app/src/main/assets/exploit/
-        cp HuiJuiPhantom.ko ../app/src/main/assets/exploit/HuiJuiPhantom_arm64.ko
+
+    - name: Upload .ko Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HuiJuiPhantom-ko
+        path: kernel/HuiJuiPhantom.ko
+
+
+  # ==========================================
+  # 阶段 2：依赖编译产物，打包签名 APK
+  # ==========================================
+  build-app:
+    name: Build & Package APK
+    needs: build-kernel # 🚀 核心：等待内核编译完成
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Download .ko Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: HuiJuiPhantom-ko
+        path: app/src/main/assets/exploit/
+
+    - name: Rename .ko
+      run: |
+        cd app/src/main/assets/exploit/
+        mv HuiJuiPhantom.ko HuiJuiPhantom_arm64.ko
+        ls -lh
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -100,12 +119,12 @@ jobs:
       run: |
         mkdir -p final_package
         cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-Pureblood-arm64.apk
-        cp app/src/main/assets/exploit/*.ko final_package/ || true
+        cp app/src/main/assets/exploit/*.ko final_package/
         echo "Build Date: $(date)" > final_package/build-info.txt
         zip -r HuiJuiSU-Pureblood-Release.zip final_package/
 
-    - name: Upload Final Pureblood Package
+    - name: Upload Full Package
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Pureblood-Package
+        name: HuiJuiSU-Pureblood-Release
         path: HuiJuiSU-Pureblood-Release.zip
