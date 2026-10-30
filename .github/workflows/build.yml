@@ -2,7 +2,7 @@ name: HuiJui Phantom CI/CD (Pure Pack)
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "gki-a14", "legacy-a13" ]
   workflow_dispatch:
 
 jobs:
@@ -81,11 +81,11 @@ jobs:
     - name: Upload Final APK
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-APK
+        name: HuiJuiSU-APK-${{ github.ref_name }}
         path: app/build/outputs/apk/release/*.apk
 
     - name: Upload Full Package (APK + All KOs)
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Full-Package
+        name: HuiJuiSU-Full-Package-${{ github.ref_name }}
         path: HuiJuiSU-Full-Release.zip
