@@ -26,6 +26,7 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.huijui.sunext.edition.core.utils.AppSettings
+import com.huijui.sunext.edition.core.utils.WallpaperScaleMode
 import com.huijui.sunext.edition.core.utils.WallpaperType
 import java.io.File
 
@@ -247,9 +248,10 @@ private fun VideoBackground(videoUri: String, onFailed: () -> Unit) {
                     
                     // 🚀 核心防大头照逻辑：根据用户设置动态切换缩放模式
                     resizeMode = when (AppSettings.wallpaperScaleMode) {
-                        AppSettings.WallpaperScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        AppSettings.WallpaperScaleMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                        AppSettings.WallpaperScaleMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        WallpaperScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        WallpaperScaleMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                        WallpaperScaleMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                     
                     layoutParams = ViewGroup.LayoutParams(
