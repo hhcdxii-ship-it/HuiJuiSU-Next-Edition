@@ -93,14 +93,7 @@ object HsudInstaller {
                 }
             }
 
-            val cacheDaemon = File(workDir, daemonName)
-            if (!extractAsset(context, "exploit/$daemonName", cacheDaemon)) {
-                onLog("❌ 错误：APK 中缺失 $daemonName 引擎。")
-                return@withContext false
-            }
-            
-            // 赋予执行权限
-            runShellCommandSync("chmod 755 ${cacheDaemon.absolutePath}")
+            val cacheDaemon = File(context.applicationInfo.nativeLibraryDir, "lib${daemonName}.so")
 
             // 4. 准备原始镜像 (核心：加入原厂备份机制)
             val targetImgFile = File(workDir, "stock_boot.img")

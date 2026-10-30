@@ -79,11 +79,11 @@ jobs:
     - name: Upload Final APK
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-APK-${{ github.ref_name }}
+        name: HuiJuiSU-Universal-APK
         path: app/build/outputs/apk/release/*.apk
 
     - name: Upload Full Package (APK + All KOs)
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Full-Package-${{ github.ref_name }}
+        name: HuiJuiSU-Universal-Full-Package
         path: HuiJuiSU-Full-Release.zip
