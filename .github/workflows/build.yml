@@ -34,11 +34,9 @@ jobs:
         mkdir -p ../../../app/src/main/assets/exploit
         cp build/hsud ../../../app/src/main/assets/exploit/hsud
         cp build/hsud ../../../app/src/main/assets/exploit/hud
-        cp build/huijuiinit ../../../app/src/main/assets/exploit/huijuiinit
         cp build/huijuisud ../../../app/src/main/assets/exploit/huijuisud
-        cp build/su ../../../app/src/main/assets/exploit/su
         
-        chmod 755 ../../../app/src/main/assets/exploit/hsud ../../../app/src/main/assets/exploit/hud ../../../app/src/main/assets/exploit/huijuiinit ../../../app/src/main/assets/exploit/huijuisud ../../../app/src/main/assets/exploit/su
+        chmod 755 ../../../app/src/main/assets/exploit/hsud ../../../app/src/main/assets/exploit/hud ../../../app/src/main/assets/exploit/huijuisud
 
     - name: Setup Gradle Cache
       uses: actions/cache@v4
