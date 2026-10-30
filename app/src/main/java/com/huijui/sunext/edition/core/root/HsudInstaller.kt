@@ -111,12 +111,15 @@ object HsudInstaller {
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 sbin")
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko")
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0755 sbin/huijuisud huijui_files/huijuisud")
-            
+
             if (isAndroid14Plus) {
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 system")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 system/etc")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 system/etc/init")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc")
+                // 🚀 直接修改原生 init.rc，确保 .ko 第一时间被 insmod
+                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "extract init.rc init.rc.orig")
+                val initRcFile = File(workDir, "init.rc.orig")
+                if (initRcFile.exists()) {
+                    initRcFile.appendText("\non early-init\n    insmod /sbin/huijui_phantom.ko\n    chmod 0755 /sbin/huijuisud\n")
+                    HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.rc init.rc.orig")
+                }
             }
 
             onLog("> [修补] 重新打包镜像...")
