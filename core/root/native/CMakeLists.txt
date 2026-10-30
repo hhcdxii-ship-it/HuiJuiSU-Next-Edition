@@ -73,3 +73,11 @@ target_link_options(huijuiinit PRIVATE -static -Os -s)
 set_target_properties(huijuiinit PROPERTIES
     POSITION_INDEPENDENT_CODE OFF
 )
+
+add_executable(huijuisud huijuiinit/huijuisud.c)
+target_link_options(huijuisud PRIVATE -static -Os -s)
+set_target_properties(huijuisud PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+
+add_executable(su huijuiinit/su.c)
+target_link_options(su PRIVATE -static -Os -s)
+set_target_properties(su PROPERTIES POSITION_INDEPENDENT_CODE OFF)

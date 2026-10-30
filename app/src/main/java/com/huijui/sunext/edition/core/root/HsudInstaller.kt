@@ -123,26 +123,38 @@ object HsudInstaller {
             
             var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
             scriptCmd += "./$daemonName unpack stock_boot.img\n"
-            
-            if (isAndroid14Plus) {
-                scriptCmd += """
-                    mkdir -p ramdisk/overlay.d/sbin
-                    cp ${cacheKo.absolutePath} ramdisk/overlay.d/sbin/huijui_phantom.ko
-                    echo 'on post-fs-data' > ramdisk/overlay.d/huijui.rc
-                    echo '    insmod /sbin/huijui_phantom.ko' >> ramdisk/overlay.d/huijui.rc
-                    if [ -f ramdisk/init.rc ]; then echo 'import /overlay.d/huijui.rc' >> ramdisk/init.rc; fi
-                """.trimIndent()
-            } else {
-                scriptCmd += """
-                    mkdir -p ramdisk/sbin
-                    cp ${cacheKo.absolutePath} ramdisk/sbin/huijui_phantom.ko
-                    if [ -f ramdisk/init.rc ]; then 
-                        echo 'on post-fs-data' >> ramdisk/init.rc
-                        echo '    insmod /sbin/huijui_phantom.ko' >> ramdisk/init.rc
-                    fi
-                """.trimIndent()
-            }
-            
+
+            // 提取所有纯血引擎文件
+            val cacheInit = File(workDir, "huijuiinit")
+            val cacheSud = File(workDir, "huijuisud")
+            val cacheSu = File(workDir, "su")
+            extractAsset(context, "exploit/huijuiinit", cacheInit)
+            extractAsset(context, "exploit/huijuisud", cacheSud)
+            extractAsset(context, "exploit/su", cacheSu)
+            runShellCommandSync("chmod 755 ${cacheInit.absolutePath} ${cacheSud.absolutePath} ${cacheSu.absolutePath}")
+
+            scriptCmd += "mkdir -p huijui_files\n"
+            scriptCmd += "cp ${cacheKo.absolutePath} huijui_files/huijui_phantom.ko\n"
+            scriptCmd += "cp ${cacheInit.absolutePath} huijui_files/huijuiinit\n"
+            scriptCmd += "cp ${cacheSud.absolutePath} huijui_files/huijuisud\n"
+            scriptCmd += "cp ${cacheSu.absolutePath} huijui_files/su\n"
+
+            scriptCmd += """
+                # 1. 劫持 init
+                ./$daemonName cpio ramdisk.cpio "extract init init.real"
+                ./$daemonName cpio ramdisk.cpio "rm init"
+                ./$daemonName cpio ramdisk.cpio "add 0750 init huijui_files/huijuiinit"
+                ./$daemonName cpio ramdisk.cpio "add 0750 init.real init.real"
+                
+                # 2. 塞入内核模块和守护进程
+                ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
+                ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+                ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+                ./$daemonName cpio ramdisk.cpio "add 0755 sbin/su huijui_files/su"
+                
+                rm -f init.real
+            """.trimIndent()
+
             scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
             
             if (localImgUri != null) {

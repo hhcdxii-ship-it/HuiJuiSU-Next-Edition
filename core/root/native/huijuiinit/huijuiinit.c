@@ -46,7 +46,15 @@ int main(int argc, char *argv[]) {
         klog("huijuiinit: ko file not found at %s\n", ko_path);
     }
 
-    // 3. 将控制权交还给原厂 init (被咱们改名为 init.real)
+    // 3. 🚀 拉起咱们的纯血守护进程 huijuisud
+    klog("huijuiinit: Starting huijuisud daemon...\n");
+    if (fork() == 0) {
+        execl("/sbin/huijuisud", "huijuisud", NULL);
+        klog("huijuiinit: exec huijuisud FAILED!\n");
+        exit(1);
+    }
+
+    // 4. 将控制权交还给原厂 init (被咱们改名为 init.real)
     klog("huijuiinit: Handing over to /init.real...\n");
     
     char *new_argv[] = { "/init.real", NULL };
