@@ -153,7 +153,8 @@ object AppSettings {
         customImagePath?.let { java.io.File(it).delete() }
         customVideoPath = null
         customImagePath = null
-        wallpaperType = WallpaperType.NONE
+        // 🚀 恢复默认时，直接切回内置视频（初音未来），不要变纯黑
+        wallpaperType = WallpaperType.VIDEO
         save()
     }
 
