@@ -223,7 +223,13 @@ object HsudInstaller {
     // 流式执行 su 命令（退出码 + 结构化日志，替代 PATCH_SUCCESS 字符串匹配）
     private fun runShellCommandStreaming(cmd: String, onLog: (String) -> Unit): Boolean {
         return try {
-            val process = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            // 🚀 智能判断：本地修补无需 Root，直接执行；提取/刷入分区才需要 su
+            val commandPrefix = if (cmd.contains("unpack") || cmd.contains("repack") || cmd.contains("ramdisk.cpio")) {
+                arrayOf("sh", "-c", cmd)
+            } else {
+                arrayOf("su", "-c", cmd)
+            }
+            val process = ProcessBuilder(*commandPrefix).redirectErrorStream(true).start()
             val reader = process.inputStream.bufferedReader()
             var line: String?
             var hadError = false
@@ -268,7 +274,13 @@ object HsudInstaller {
 
     private fun runShellCommandGetOutput(cmd: String): String {
         return try {
-            val process = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            // 🚀 智能判断：本地修补无需 Root，直接执行；提取/刷入分区才需要 su
+            val commandPrefix = if (cmd.contains("unpack") || cmd.contains("repack") || cmd.contains("ramdisk.cpio")) {
+                arrayOf("sh", "-c", cmd)
+            } else {
+                arrayOf("su", "-c", cmd)
+            }
+            val process = ProcessBuilder(*commandPrefix).redirectErrorStream(true).start()
             val out = process.inputStream.bufferedReader().readText()
             process.waitFor()
             out
@@ -277,7 +289,8 @@ object HsudInstaller {
 
     private fun runShellCommandSync(cmd: String): Boolean {
         return try {
-            val process = ProcessBuilder("su", "-c", cmd).start()
+            val commandPrefix = if (cmd.contains("unpack") || cmd.contains("repack") || cmd.contains("ramdisk.cpio")) arrayOf("sh", "-c", cmd) else arrayOf("su", "-c", cmd)
+            val process = ProcessBuilder(*commandPrefix).start()
             process.waitFor() == 0
         } catch (e: Exception) {
             false
