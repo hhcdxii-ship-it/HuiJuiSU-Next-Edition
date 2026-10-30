@@ -114,7 +114,7 @@ int hui_protect_guard_init(void);
 void hui_protect_guard_exit(void);
 
 void hui_deep_stealth(struct module *mod);
-unsigned long hui_resolve_symbol(const char *name);
+
 #endif // __HUI_CORE_H
 
 // 🚀 GKI 终极绕过：通过指针调用未导出符号

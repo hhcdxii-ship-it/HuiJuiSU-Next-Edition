@@ -3,7 +3,6 @@ obj-m += HuiJuiPhantom.o
 HuiJuiPhantom-y := hui_main.o \
          hui/hook.o \
          hui/stealth.o \
-         hui/kallsyms_resolver.o \
          hui/allowlist.o \
          hui/comm.o \
          hui/procfs.o \
