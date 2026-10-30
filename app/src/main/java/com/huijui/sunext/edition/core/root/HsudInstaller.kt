@@ -136,14 +136,45 @@ object HsudInstaller {
             var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
             scriptCmd += "./$daemonName unpack stock_boot.img\n"
 
+            // 提取纯血守护进程
+            val cacheSud = File(workDir, "huijuisud")
+            extractAsset(context, "exploit/huijuisud", cacheSud)
+            runShellCommandSync("chmod 755 ${cacheSud.absolutePath}")
+
             scriptCmd += "mkdir -p huijui_files\n"
             scriptCmd += "cp ${cacheKo.absolutePath} huijui_files/huijui_phantom.ko\n"
+            scriptCmd += "cp ${cacheSud.absolutePath} huijui_files/huijuisud\n"
 
-            scriptCmd += """
-                # 极简纯净注入：不碰 init，不塞 rc，只替换内核模块！
-                ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-            """.trimIndent()
+            // 🚀 合体大招：双路智能分流
+            if (isAndroid14Plus) {
+                // ==========================================
+                // 路线 A：Android 14+ (GKI 架构，纯血内核劫持)
+                // ==========================================
+                scriptCmd += """
+                    # 塞入底层内核模块和守护进程
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+                """.trimIndent()
+            } else {
+                // ==========================================
+                // 路线 B：Android 13- (传统架构，脚本注入)
+                // ==========================================
+                scriptCmd += """
+                    # 塞入守护进程 (老机型不依赖 kprobe 内核模块)
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+                    
+                    # 提取原厂 init.rc 并追加启动脚本
+                    ./$daemonName cpio ramdisk.cpio "extract init.rc init.rc.orig" || true
+                    if [ -f init.rc.orig ]; then
+                        echo 'on post-fs-data' >> init.rc.orig
+                        echo '    exec - root -- /sbin/huijuisud' >> init.rc.orig
+                        ./$daemonName cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
+                    fi
+                    rm -f init.rc.orig
+                """.trimIndent()
+            }
 
             scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
             
