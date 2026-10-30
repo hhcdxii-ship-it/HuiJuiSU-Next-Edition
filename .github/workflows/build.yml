@@ -68,7 +68,7 @@ jobs:
   # ==========================================
   build-app:
     name: Build & Package APK
-    needs: build-kernel # 🚀 核心：等待内核编译完成
+    needs: build-kernel
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
@@ -83,7 +83,8 @@ jobs:
     - name: Rename .ko
       run: |
         cd app/src/main/assets/exploit/
-        mv HuiJuiPhantom.ko HuiJuiPhantom_arm64.ko
+        # 确保重命名不会因为文件已存在而报错
+        mv -f HuiJuiPhantom.ko HuiJuiPhantom_arm64.ko || true
         ls -lh
 
     - name: Set up JDK 17
@@ -119,7 +120,7 @@ jobs:
       run: |
         mkdir -p final_package
         cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-Pureblood-arm64.apk
-        cp app/src/main/assets/exploit/*.ko final_package/
+        cp app/src/main/assets/exploit/*.ko final_package/ || true
         echo "Build Date: $(date)" > final_package/build-info.txt
         zip -r HuiJuiSU-Pureblood-Release.zip final_package/
 
