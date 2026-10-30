@@ -1,4 +1,4 @@
-name: HuiJui Phantom CI/CD
+name: HuiJui Phantom CI/CD (Pureblood)
 
 on:
   push:
@@ -6,20 +6,66 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ==========================================
-  # 任务 1：按架构拆分，打出专属轻量 APK
-  # ==========================================
-  build-split-apk:
-    name: Build Split APK (${{ matrix.arch }})
+  build-pureblood-apk:
+    name: Build Pureblood (APK + KO)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ "arm64", "x86_64", "x86" ]
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
+
+    - name: Install Build Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang lld llvm make bc cpio flex bison libssl-dev libelf-dev ccache git curl
+        # 获取 Google 官方的 repo 工具
+        mkdir -p ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        echo "$HOME/bin" >> $GITHUB_PATH
+
+    - name: Setup ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ccache-pureblood-${{ github.sha }}
+        restore-keys: ccache-pureblood-
+
+    - name: Fetch AOSP Kernel Source (5.10)
+      run: |
+        echo "🔄 正在使用 Google 官方 repo 工具拉取内核源码..."
+        mkdir -p kernel_headers
+        cd kernel_headers
+        # 初始化 Google 官方仓库（只拉取 5.10 分支）
+        ~/bin/repo init -u https://android.googlesource.com/kernel/manifest -b common-android12-5.10
+        # 同步代码，只拉取 manifest 中定义的核心部分，大大节省时间
+        ~/bin/repo sync -c --no-tags --optimized-fetch --prune -j4
+
+    - name: Prepare Kernel Build
+      run: |
+        cd kernel_headers
+        echo "⚙️ 正在准备 AOSP 内核编译环境..."
+        # 使用官方脚本构建环境并生成 gki_defconfig
+        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
+        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+
+    - name: Build Kernel Module (Pureblood)
+      run: |
+        cd kernel
+        export CCACHE_DIR=~/.ccache
+        export USE_CCACHE=1
+        
+        echo "🚀 正在编译咱们自己写的 HuiJuiPhantom.ko..."
+        # 编译咱们自己的模块，KDIR 指向刚才拉取下的源码树
+        make ARCH=arm64 CC="ccache clang" LLVM=1 \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          KDIR=../kernel_headers \
+          modules KBUILD_MODPOST_WARN=1
+
+        # 瘦身并把纯净的 ko 放进 assets
+        llvm-strip --strip-debug HuiJuiPhantom.ko
+        mkdir -p ../app/src/main/assets/exploit/
+        cp HuiJuiPhantom.ko ../app/src/main/assets/exploit/HuiJuiPhantom_arm64.ko
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -34,15 +80,6 @@ jobs:
           ~/.gradle/caches
           ~/.gradle/wrapper
         key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: gradle-
-
-    # 🚀 核心逻辑：只保留当前架构的 .ko，删掉其他的
-    - name: Prepare Assets for ${{ matrix.arch }}
-      run: |
-        mkdir -p app/src/main/assets/exploit/
-        find app/src/main/assets/exploit/ -name "*.ko" ! -name "*_${{ matrix.arch }}.ko" -exec rm {} \;
-        echo "✅ 当前 ${{ matrix.arch }} 架构包内包含的 .ko："
-        ls -lh app/src/main/assets/exploit/
 
     - name: Build Signed APK
       env:
@@ -59,63 +96,16 @@ jobs:
           -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
           -Pandroid.injected.signing.key.password=$KEY_PASSWORD
 
-    - name: Rename and Upload ${{ matrix.arch }} APK
+    - name: Package Final ZIP
       run: |
         mkdir -p final_package
-        cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-${{ matrix.arch }}.apk
+        cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-Pureblood-arm64.apk
+        cp app/src/main/assets/exploit/*.ko final_package/ || true
+        echo "Build Date: $(date)" > final_package/build-info.txt
+        zip -r HuiJuiSU-Pureblood-Release.zip final_package/
 
-    - name: Upload ${{ matrix.arch }} APK
+    - name: Upload Final Pureblood Package
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Split-${{ matrix.arch }}
-        path: final_package/*.apk
-
-
-  # ==========================================
-  # 任务 2：打全量 APK + ZIP
-  # ==========================================
-  build-full-package:
-    name: Build Full Package (APK + All KOs)
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-    - name: Build Signed APK (Full)
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: |
-        echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
-        chmod +x gradlew
-        ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=$(pwd)/app/keystore.jks \
-          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-          -Pandroid.injected.signing.key.password=$KEY_PASSWORD
-
-    - name: Package ZIP
-      run: |
-        mkdir -p full_package
-        cp app/build/outputs/apk/release/*.apk full_package/HuiJuiSU-Full-Universal.apk
-        cp -r app/src/main/assets/exploit/*.ko full_package/ || true
-        echo "Build Date: $(date)" > full_package/build-info.txt
-        echo "Commit: ${{ github.sha }}" >> full_package/build-info.txt
-        zip -r HuiJuiSU-Full-Release.zip full_package/
-
-    - name: Upload Full Package
-      uses: actions/upload-artifact@v4
-      with:
-        name: HuiJuiSU-Full-Package
-        path: HuiJuiSU-Full-Release.zip
+        name: HuiJuiSU-Pureblood-Package
+        path: HuiJuiSU-Pureblood-Release.zip
