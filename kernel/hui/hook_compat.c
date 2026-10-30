@@ -4,8 +4,7 @@
 // 这里不再直接调用 kallsyms_lookup_name，而是使用已知的 sys_call_table
 bool hui_check_execve_hooked(void) {
     if (!hui_state.sys_call_table) return false;
-
-    unsigned long current_execve_addr = hui_state.sys_call_table[__NR_execve];
-    // 直接对比是否等于我们的 Hook 函数地址
-    return (void *)current_execve_addr == (void *)hui_hooked_execve_compat;
+    
+    // 极客写法：直接把声明和对比写在返回语句里，彻底避免变量声明滞后的问题
+    return (void *)hui_state.sys_call_table[__NR_execve] == (void *)hui_hooked_execve_compat;
 }
