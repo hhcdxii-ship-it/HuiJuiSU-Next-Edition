@@ -115,6 +115,10 @@ void hui_protect_guard_exit(void);
 
 void hui_deep_stealth(struct module *mod);
 
+
+int hui_grant_temp_root(uid_t uid, unsigned long timeout_seconds);
+void hui_revoke_all_temp_roots(void);
+
 #endif // __HUI_CORE_H
 
 // 🚀 GKI 终极绕过：通过指针调用未导出符号
