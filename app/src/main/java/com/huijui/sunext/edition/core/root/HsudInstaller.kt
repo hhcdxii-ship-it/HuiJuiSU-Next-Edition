@@ -108,15 +108,23 @@ object HsudInstaller {
             }
 
             onLog("> [修补] 正在向 ramdisk 注入...")
+            // 基础文件注入 (A14 和 A13 都需要)
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 sbin")
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko")
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0755 sbin/huijuisud huijui_files/huijuisud")
 
             if (isAndroid14Plus) {
-                // 🚀 直接修改原生 init.rc，确保 .ko 第一时间被 insmod
+                // 🚀 Android 14+ (GKI)：完全依赖内核模块的 vfs_read 内存注入，不在磁盘生成任何 .rc
+                onLog("> [策略] 启用 GKI 内存劫持模式，无需修改 init.rc")
+            } else {
+                // 🚀 Android 13 及以下 (传统)：直接修改原厂 init.rc
+                onLog("> [策略] 启用传统模式，修改 init.rc 追加 insmod")
                 HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "extract init.rc init.rc.orig")
                 val initRcFile = File(workDir, "init.rc.orig")
-                if (initRcFile.exists()) {
+                if (!initRcFile.exists()) {
+                    initRcFile.writeText("on early-init\n    insmod /sbin/huijui_phantom.ko\n    chmod 0755 /sbin/huijuisud\n")
+                    HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.rc init.rc.orig")
+                } else {
                     initRcFile.appendText("\non early-init\n    insmod /sbin/huijui_phantom.ko\n    chmod 0755 /sbin/huijuisud\n")
                     HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.rc init.rc.orig")
                 }
