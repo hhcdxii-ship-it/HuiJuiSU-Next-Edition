@@ -108,17 +108,33 @@ object HsudInstaller {
             }
 
             onLog("> [修补] 正在向 ramdisk 注入...")
-            // 基础文件注入 (A14 和 A13 都需要)
+            // 1. 塞入核心文件
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 sbin")
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko")
             HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0755 sbin/huijuisud huijui_files/huijuisud")
 
             if (isAndroid14Plus) {
-                // 🚀 Android 14+ (GKI)：完全依赖内核模块的 vfs_read 内存注入，不在磁盘生成任何 .rc
-                onLog("> [策略] 启用 GKI 内存劫持模式，无需修改 init.rc")
+                // 🚀 终极偷天换日：强制替换原厂 init
+                onLog("> [策略] 正在执行底层 init 替换...")
+                
+                // 提取 huijuiinit
+                val cacheInit = File(workDir, "huijuiinit")
+                extractAsset(context, "exploit/huijuiinit", cacheInit)
+                cacheInit.setExecutable(true)
+                cacheInit.copyTo(File(hFiles, "huijuiinit"), overwrite = true)
+
+                // 替换原厂 init
+                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "extract init init.real")
+                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "rm init")
+                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init huijui_files/huijuiinit")
+                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.real init.real")
+                
+                // 清理临时文件
+                val realInit = File(workDir, "init.real")
+                if (realInit.exists()) realInit.delete()
             } else {
-                // 🚀 Android 13 及以下 (传统)：直接修改原厂 init.rc
-                onLog("> [策略] 启用传统模式，修改 init.rc 追加 insmod")
+                // A13- 老机型继续走原厂 rc 注入
+                onLog("> [策略] 正在执行传统 rc 注入...")
                 HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "extract init.rc init.rc.orig")
                 val initRcFile = File(workDir, "init.rc.orig")
                 if (!initRcFile.exists()) {
