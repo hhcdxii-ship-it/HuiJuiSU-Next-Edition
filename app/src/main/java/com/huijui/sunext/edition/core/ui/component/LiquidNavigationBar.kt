@@ -19,14 +19,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -78,33 +76,31 @@ fun LiquidNavigationBar(
         label = "stretchY"
     )
 
-    val transformOrigin = if (dragOffset >= 0) TransformOrigin(0f, 0.5f) else TransformOrigin(1f, 0.5f)
-
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .height(72.dp)
             .clip(RoundedCornerShape(36.dp))
-            // 🚀 极致毛玻璃：半透明暗底 + 顶部高光渐变
-            .background(Color(0xFF141414).copy(alpha = 0.45f))
+            // 🚀 满血浅色毛玻璃：高透白底 + 微弱暗角
+            .background(Color.White.copy(alpha = 0.12f))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.15f), // 顶部高光
+                        Color.White.copy(alpha = 0.25f), // 顶部强高光
                         Color.Transparent,
-                        Color.Black.copy(alpha = 0.2f)   // 底部暗角
+                        Color.Black.copy(alpha = 0.05f)   // 底部轻微暗角增加立体感
                     )
                 )
             )
-            // 🚀 玻璃反光边框
+            // 🚀 玻璃反光边框（更亮、更通透）
             .border(
                 width = 1.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.6f),
-                        Color.White.copy(alpha = 0.05f),
-                        Color.White.copy(alpha = 0.2f)
+                        Color.White.copy(alpha = 0.8f),
+                        Color.White.copy(alpha = 0.1f),
+                        Color.White.copy(alpha = 0.4f)
                     )
                 ),
                 shape = RoundedCornerShape(36.dp)
@@ -127,7 +123,7 @@ fun LiquidNavigationBar(
                 )
             }
     ) {
-        // 🚀 液态气泡：保留之前的 Canvas 绘制逻辑，但增强高光
+        // 🚀 液态气泡：高对比度叠加
         Canvas(modifier = Modifier.fillMaxSize().zIndex(0f)) {
             val padX = 8.dp.toPx()
             val padY = 12.dp.toPx()
@@ -152,7 +148,7 @@ fun LiquidNavigationBar(
                 size = Size(scaledW, scaledH),
                 cornerRadius = CornerRadius(scaledH / 2f)
             )
-            
+
             // 画内部高光反光
             drawRoundRect(
                 brush = Brush.verticalGradient(
@@ -178,8 +174,9 @@ fun LiquidNavigationBar(
                     animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f),
                     label = "iconScale_$index"
                 )
+                // 🚀 浅色玻璃下，未选中的纯灰会显脏，改为半透明白，与玻璃融合
                 val color by animateColorAsState(
-                    targetValue = if (isSelected) Color.White else Color.Gray,
+                    targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.65f),
                     animationSpec = tween(300),
                     label = "color_$index"
                 )

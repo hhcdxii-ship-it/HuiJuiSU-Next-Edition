@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.root.HsudInstaller
+import com.huijui.sunext.edition.core.root.AdbUsbController
 import com.huijui.sunext.edition.core.root.HuijuiShell
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.ui.language.zakoString
@@ -113,12 +114,38 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                 )
             }
 
+            item {
+                var adbLog by remember { mutableStateOf("") }
+                var isAdbProcessing by remember { mutableStateOf(false) }
+                OverrideModeCard(
+                    title = "强制开启 ADB 调试",
+                    desc = if (adbLog.isEmpty()) "一键注入调试通道，彻底告别电脑连接弹窗" else adbLog,
+                    icon = Icons.Default.Usb,
+                    accent = Color(0xFF4CAF50),
+                    isSelected = false,
+                    onClick = {
+                        if (!isAdbProcessing) {
+                            isAdbProcessing = true
+                            adbLog = "正在执行..."
+                            scope.launch {
+                                val log = AdbUsbController.forceEnableAdb(context)
+                                adbLog = log
+                                isAdbProcessing = false
+                            }
+                        }
+                    }
+                )
+            }
+
+
             if (processLog.isNotEmpty()) {
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF111111))
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .border(1.dp, Color.White.copy(alpha = 0.3f), androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                             .border(1.dp, Color.White.copy(0.1f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                     ) {
@@ -134,8 +161,7 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(24.dp)
         ) {
-            val bgBrush = if (patchedImgPath != null || isPatched) Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF00E5FF))) 
-                          else if (isProcessing) Brush.linearGradient(listOf(activeColor.copy(0.5f), activeColor.copy(0.5f))) 
+            val bgBrush = if (true) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.12f)
                           else Brush.linearGradient(listOf(activeColor, activeColor.copy(0.8f)))
             
             Box(
@@ -189,11 +215,11 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
 
 @Composable
 fun OverrideModeCard(title: String, desc: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, isSelected: Boolean, onClick: () -> Unit) {
-    val bgBrush = if (isSelected) Brush.verticalGradient(listOf(accent.copy(alpha = 0.2f), Color(0x1FFFFFFF))) else Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x1FFFFFFF)))
+    val bgBrush = if (true) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.12f)
     val borderColor = if (isSelected) accent.copy(alpha = 0.8f) else Color(0x2BFFFFFF)
     
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(bgBrush).border(1.dp, borderColor, RoundedCornerShape(24.dp)).clickable { onClick() }.padding(20.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White.copy(alpha = 0.12f)).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.2f), Color.Transparent))).border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)).clickable { onClick() }.padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(48.dp).background(if (isSelected) accent.copy(0.2f) else Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) {

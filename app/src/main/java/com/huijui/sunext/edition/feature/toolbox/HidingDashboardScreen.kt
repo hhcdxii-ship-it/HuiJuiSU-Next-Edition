@@ -1,7 +1,5 @@
 package com.huijui.sunext.edition.feature.toolbox
 
-import com.huijui.sunext.edition.core.ui.language.ZakoText
-
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,11 +21,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.root.HuiHidingManager
 import com.huijui.sunext.edition.core.ui.component.GlassCard
+import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.ui.layout.HuijuiLayout
 import com.huijui.sunext.edition.core.utils.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun HidingDashboardScreen(onBack: () -> Unit) {
@@ -36,10 +36,13 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
     var status by remember { mutableStateOf<HuiHidingManager.HidingStatus?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
-        status = withContext(Dispatchers.IO) { HuiHidingManager.getStatus(context) }
+    suspend fun reload() {
+        isLoading = true
+        status = withTimeoutOrNull(8000L) { withContext(Dispatchers.IO) { HuiHidingManager.getStatus(context) } }
         isLoading = false
     }
+
+    LaunchedEffect(Unit) { reload() }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = HuijuiLayout.ScreenHorizontal)) {
         Spacer(modifier = Modifier.height(HuijuiLayout.DetailTopSpacer))
@@ -88,10 +91,10 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
                     GlassCard(modifier = Modifier.fillMaxWidth(), onClick = {
                         scope.launch {
                             isLoading = true
-                            val ok = withContext(Dispatchers.IO) { HuiHidingManager.clearMountsGlobal() }
-                            status = withContext(Dispatchers.IO) { HuiHidingManager.getStatus(context) }
+                            val ok = withTimeoutOrNull(10000L) { withContext(Dispatchers.IO) { HuiHidingManager.clearMountsGlobal() } } ?: false
+                            status = withTimeoutOrNull(8000L) { withContext(Dispatchers.IO) { HuiHidingManager.getStatus(context) } }
                             isLoading = false
-                            Toast.makeText(context, if (ok) "已下发全局挂载擦除指令" else "执行失败", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, if (ok) "已下发全局挂载擦除指令" else "执行失败或超时", Toast.LENGTH_SHORT).show()
                         }
                     }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

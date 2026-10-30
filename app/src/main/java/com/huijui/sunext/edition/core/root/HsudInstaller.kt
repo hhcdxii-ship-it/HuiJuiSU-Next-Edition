@@ -124,37 +124,52 @@ object HsudInstaller {
             var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
             scriptCmd += "./$daemonName unpack stock_boot.img\n"
 
-            // 提取所有纯血引擎文件
-            val cacheInit = File(workDir, "huijuiinit")
+            // 准备纯血引擎
             val cacheSud = File(workDir, "huijuisud")
-            val cacheSu = File(workDir, "su")
-            extractAsset(context, "exploit/huijuiinit", cacheInit)
             extractAsset(context, "exploit/huijuisud", cacheSud)
-            extractAsset(context, "exploit/su", cacheSu)
-            runShellCommandSync("chmod 755 ${cacheInit.absolutePath} ${cacheSud.absolutePath} ${cacheSu.absolutePath}")
+            runShellCommandSync("chmod 755 ${cacheSud.absolutePath}")
 
             scriptCmd += "mkdir -p huijui_files\n"
             scriptCmd += "cp ${cacheKo.absolutePath} huijui_files/huijui_phantom.ko\n"
-            scriptCmd += "cp ${cacheInit.absolutePath} huijui_files/huijuiinit\n"
             scriptCmd += "cp ${cacheSud.absolutePath} huijui_files/huijuisud\n"
-            scriptCmd += "cp ${cacheSu.absolutePath} huijui_files/su\n"
 
-            scriptCmd += """
-                # 1. 劫持 init
-                ./$daemonName cpio ramdisk.cpio "extract init init.real"
-                ./$daemonName cpio ramdisk.cpio "rm init"
-                ./$daemonName cpio ramdisk.cpio "add 0750 init huijui_files/huijuiinit"
-                ./$daemonName cpio ramdisk.cpio "add 0750 init.real init.real"
-                
-                # 2. 塞入内核模块和守护进程
-                ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
-                ./$daemonName cpio ramdisk.cpio "add 0755 sbin/su huijui_files/su"
-                
-                rm -f init.real
-            """.trimIndent()
+            // 🚀 双路架构判断：Android 13 及以下 vs Android 14+
+            if (isAndroid14Plus) {
+                // 路线二：GKI 时代 (A14+)，注入 .rc 文件，绝不碰 init
+                scriptCmd += """
+                    # 塞入核心文件
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
 
+                    # 生成 huijui.rc
+                    echo 'on post-fs-data' > huijui_files/huijui.rc
+                    echo '    exec - root -- /sbin/huijuisud' >> huijui_files/huijui.rc
+
+                    # 注入到 system/etc/init 目录，让原厂 init 读取
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system"
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc"
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc/init"
+                    ./$daemonName cpio ramdisk.cpio "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc"
+                """.trimIndent()
+            } else {
+                // 路线一：传统时代 (A13-)，用最稳的 overlay 方式注入
+                scriptCmd += """
+                    # 塞入核心文件到 sbin
+                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+
+                    # 修改原厂的 init.rc
+                    ./$daemonName cpio ramdisk.cpio "extract init.rc init.rc.orig"
+                    if [ -f init.rc.orig ]; then
+                        echo 'on post-fs-data' >> init.rc.orig
+                        echo '    exec - root -- /sbin/huijuisud' >> init.rc.orig
+                        ./$daemonName cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
+                    fi
+                    rm -f init.rc.orig
+                """.trimIndent()
+            }
             scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
             
             if (localImgUri != null) {

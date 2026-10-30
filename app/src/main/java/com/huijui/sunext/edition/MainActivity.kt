@@ -1,12 +1,8 @@
 package com.huijui.sunext.edition
 
-import com.huijui.sunext.edition.core.ui.language.ZakoText
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
@@ -20,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,9 +23,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,6 +39,7 @@ import com.huijui.sunext.edition.core.ui.component.LocalStrongGlass
 import com.huijui.sunext.edition.core.ui.component.SmartBackground
 import com.huijui.sunext.edition.core.ui.language.LanguageMode
 import com.huijui.sunext.edition.core.ui.language.LocalLanguageMode
+import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.utils.AppSettings
 import com.huijui.sunext.edition.feature.module.ModuleScreen
 import com.huijui.sunext.edition.feature.module.ModuleWebUIScreen
@@ -49,6 +49,9 @@ import com.huijui.sunext.edition.feature.settings.SettingsScreen
 import com.huijui.sunext.edition.feature.settings.ThemeSettingsScreen
 import com.huijui.sunext.edition.feature.superuser.SuperUserScreen
 import com.huijui.sunext.edition.feature.toolbox.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class NavItem(val route: String, val title: String, val icon: ImageVector)
 
@@ -67,14 +70,34 @@ fun MainApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val scope = rememberCoroutineScope()
+
+    // 生命周期感知：切回前台重新检查 Root
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                scope.launch(Dispatchers.IO) {
+                    // 🚀 闭环：重启后强制清理缓存，重新检测 Root 状态
+                    HuijuiShell.release()
+                    val rooted = HuijuiShell.isRooted()
+                    withContext(Dispatchers.Main) { 
+                        AppSettings.hasRoot = rooted 
+                        // 刷新触发主页状态重载
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val hideBottomBar = currentRoute == "onboarding" || currentRoute?.startsWith("toolbox_") == true || currentRoute == "module_webui" || currentRoute == "language_settings"
     val forceStrongGlass = currentRoute?.startsWith("toolbox_") == true || currentRoute == "module_webui"
 
-    LaunchedEffect(Unit) {
-        AppSettings.hasRoot = HuijuiShell.isRooted()
+    val languageMode = remember(AppSettings.currentLanguage) {
+        try { LanguageMode.valueOf(AppSettings.currentLanguage) } catch (_: Exception) { LanguageMode.ZH_CN }
     }
-
-    val languageMode = try { LanguageMode.valueOf(AppSettings.currentLanguage) } catch (e: Exception) { LanguageMode.ZH_CN }
 
     CompositionLocalProvider(
         LocalLanguageMode provides languageMode,
@@ -95,8 +118,8 @@ fun MainApp() {
                     navController = navController,
                     startDestination = if (AppSettings.onboardingCompleted) "home" else "onboarding",
                     modifier = Modifier.fillMaxSize(),
-                    enterTransition = { fadeIn(tween(300)) },
-                    exitTransition = { fadeOut(tween(300)) }
+                    enterTransition = { fadeIn(tween(200)) },
+                    exitTransition = { fadeOut(tween(200)) }
                 ) {
                     composable("onboarding") {
                         OnboardingScreen(onFinish = {
@@ -153,7 +176,7 @@ fun MainApp() {
                     }
                     composable("themesettings") { ThemeSettingsScreen(onBack = { navController.popBackStack() }) }
                     composable("language_settings") { LanguageSettingsScreen(onBack = { navController.popBackStack() }) }
-                    
+
                     composable("toolbox_console") { HuijuiConsoleScreen(onBack = { navController.popBackStack() }) }
                     composable("toolbox_flash") { FlashScreen(onBack = { navController.popBackStack() }) }
                     composable("toolbox_backup") { BackupScreen(onBack = { navController.popBackStack() }) }
@@ -186,13 +209,15 @@ fun MainApp() {
 
 @Composable
 fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
-    val navItems = listOf(
-        NavItem("home", "主页", Icons.Default.Home),
-        NavItem("tool", "工具", Icons.Default.Build),
-        NavItem("superuser", "超管", Icons.Default.Security),
-        NavItem("module", "模块", Icons.Default.Extension),
-        NavItem("settings", "设置", Icons.Default.Settings)
-    )
+    val navItems = remember {
+        listOf(
+            NavItem("home", "主页", Icons.Default.Home),
+            NavItem("tool", "工具", Icons.Default.Build),
+            NavItem("superuser", "超管", Icons.Default.Security),
+            NavItem("module", "模块", Icons.Default.Extension),
+            NavItem("settings", "设置", Icons.Default.Settings)
+        )
+    }
 
     Row(
         modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp).navigationBarsPadding().height(72.dp)
@@ -204,7 +229,7 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
             val isRestricted = (item.route == "superuser") && !AppSettings.hasRoot
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
-            val scale by animateFloatAsState(if (isPressed && !isRestricted) 0.8f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f), label = "scale")
+            val scale by androidx.compose.animation.core.animateFloatAsState(if (isPressed && !isRestricted) 0.8f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 400f), label = "scale")
             val finalColor = when { isRestricted -> Color.White.copy(0.2f); isSelected -> AppSettings.accentColor.color; else -> Color.White.copy(0.6f) }
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(enabled = !isRestricted, interactionSource = interactionSource, indication = null) { onNavigate(item.route) }, contentAlignment = Alignment.Center) {

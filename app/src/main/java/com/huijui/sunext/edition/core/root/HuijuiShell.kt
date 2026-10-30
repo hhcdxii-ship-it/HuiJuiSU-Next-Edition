@@ -16,11 +16,13 @@ object HuijuiShell {
         val durationMs: Long = 0L
     )
 
-    // 缓存加个时间戳，防止内存泄漏和状态过期
     private data class CacheEntry(val result: CommandResult, val timestamp: Long)
     private val cache = ConcurrentHashMap<String, CacheEntry>()
-    private const val CACHE_TTL_MS = 30_000L // 缓存 30 秒自动过期
+    private const val CACHE_TTL_MS = 30_000L
     private const val DEFAULT_TIMEOUT_MS = 15_000L
+    private const val MAX_CACHE_SIZE = 100
+    // 🛡️ 流式输出防 OOM 阀值
+    private const val MAX_STREAM_LINES = 2000 
 
     suspend fun exec(
         command: String,
@@ -38,6 +40,8 @@ object HuijuiShell {
         }
         val result = PersistentShellSession.exec(command, timeoutMs)
         if (useCache && result.isSuccess) {
+            // 缓存容量控制，防止无限膨胀
+            if (cache.size > MAX_CACHE_SIZE) cache.clear()
             cache[command] = CacheEntry(result, System.currentTimeMillis())
         }
         result
@@ -54,71 +58,80 @@ object HuijuiShell {
         onLine: (String, Boolean) -> Unit = { _, _ -> }
     ): CommandResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
+        // 使用 CircularFifoQueue 类似逻辑或者手动控制大小
         val outList = mutableListOf<String>()
         val errList = mutableListOf<String>()
         var exitCode = -1
         var timedOut = false
+        var process: Process? = null
 
-        val process = try {
-            // 🚀 核心修复：必须用 su 提权，否则刷机写分区绝对没权限！
-            ProcessBuilder("su", "-c", command).start()
+        try {
+            process = ProcessBuilder("su", "-c", command).start()
         } catch (e: Exception) {
-            return@withContext CommandResult(
-                false, emptyList(), listOf("启动 su 进程失败：${e.message}"), 0L
-            )
+            return@withContext CommandResult(false, emptyList(), listOf("启动进程失败：${e.message}"), 0L)
         }
 
+        val p = process
         val outThread = Thread {
-            runCatching {
-                BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+            try {
+                BufferedReader(InputStreamReader(p.inputStream)).use { reader ->
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
                         val l = line ?: break
-                        synchronized(outList) { outList.add(l) }
+                        synchronized(outList) {
+                            if (outList.size >= MAX_STREAM_LINES) outList.removeAt(0) // 🛡️ 丢弃旧数据
+                            outList.add(l)
+                        }
                         runCatching { onLine(l, false) }
                     }
                 }
-            }
-        }.apply { isDaemon = true; name = "huijui-stream-out" }
+            } catch (_: Exception) {}
+        }.apply { isDaemon = true }
 
         val errThread = Thread {
-            runCatching {
-                BufferedReader(InputStreamReader(process.errorStream)).use { reader ->
+            try {
+                BufferedReader(InputStreamReader(p.errorStream)).use { reader ->
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
                         val l = line ?: break
-                        synchronized(errList) { errList.add(l) }
+                        synchronized(errList) {
+                            if (errList.size >= MAX_STREAM_LINES) errList.removeAt(0)
+                            errList.add(l)
+                        }
                         runCatching { onLine(l, true) }
                     }
                 }
-            }
-        }.apply { isDaemon = true; name = "huijui-stream-err" }
+            } catch (_: Exception) {}
+        }.apply { isDaemon = true }
 
         outThread.start()
         errThread.start()
 
         val completed = withTimeoutOrNull(timeoutMs) {
-            runCatching { process.waitFor() }.getOrNull()
+            runCatching { p.waitFor() }.getOrNull()
         }
 
         if (completed == null) {
             timedOut = true
-            runCatching { process.destroy() }
+            // 🚀 核心修复：强杀 + 资源打断
+            runCatching { p.destroyForcibly() }
+            runCatching { outThread.interrupt() }
+            runCatching { errThread.interrupt() }
+        } else {
+            exitCode = completed
         }
-        exitCode = completed ?: -1
 
-        runCatching { outThread.join(2_000) }
-        runCatching { errThread.join(2_000) }
+        // 给子线程一点时间收尾，但绝不无限等待
+        runCatching { outThread.join(1000) }
+        runCatching { errThread.join(1000) }
 
         val duration = System.currentTimeMillis() - start
-        val success = !timedOut && exitCode == 0
-
         if (timedOut) {
-            synchronized(errList) { errList.add("命令执行超时（${timeoutMs}ms）") }
+            synchronized(errList) { errList.add("执行超时 (${timeoutMs}ms)，已强杀") }
         }
 
         CommandResult(
-            isSuccess = success,
+            isSuccess = !timedOut && exitCode == 0,
             out = synchronized(outList) { outList.toList() },
             err = synchronized(errList) { errList.toList() },
             durationMs = duration
@@ -127,7 +140,6 @@ object HuijuiShell {
 
     suspend fun warmup() = withContext(Dispatchers.IO) {
         runCatching { PersistentShellSession.exec("echo ready", 5_000L) }
-        Unit
     }
 
     fun release() {
