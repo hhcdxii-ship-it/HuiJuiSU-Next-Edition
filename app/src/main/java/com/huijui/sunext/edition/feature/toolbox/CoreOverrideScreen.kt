@@ -103,13 +103,13 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = if (customKoName == null) "塞点你自己的底层模块啦，杂鱼~" else "已选: $customKoName (能跑就行)",
+                                text = if (customKoName == null) "塞点你的幻影内核吧，杂鱼~" else "已选: $customKoName (能跑就行)",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
                             Text(
-                                text = "老机型没有我内置的模块？自己动手编一个啊！",
+                                text = "老机型没有我内置的幻影模块？自己编一个塞进去啊！",
                                 color = Color.White.copy(alpha = 0.6f),
                                 fontSize = 12.sp
                             )
