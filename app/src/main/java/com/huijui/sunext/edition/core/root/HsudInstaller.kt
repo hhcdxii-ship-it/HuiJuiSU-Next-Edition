@@ -134,7 +134,7 @@ object HsudInstaller {
             scriptCmd += "cp ${cacheSud.absolutePath} huijui_files/huijuisud\n"
 
             // 🚀 双路架构判断：Android 13 及以下 vs Android 14+
-            if (isAndroid14Plus) {
+            // 仅支持 Android 14+
                 // 路线二：GKI 时代 (A14+)，注入 .rc 文件，绝不碰 init
                 scriptCmd += """
                     # 塞入核心文件
@@ -153,23 +153,7 @@ object HsudInstaller {
                     ./$daemonName cpio ramdisk.cpio "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc"
                 """.trimIndent()
             } else {
-                // 路线一：传统时代 (A13-)，用最稳的 overlay 方式注入
-                scriptCmd += """
-                    # 塞入核心文件到 sbin
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
-
-                    # 修改原厂的 init.rc
-                    ./$daemonName cpio ramdisk.cpio "extract init.rc init.rc.orig"
-                    if [ -f init.rc.orig ]; then
-                        echo 'on post-fs-data' >> init.rc.orig
-                        echo '    exec - root -- /sbin/huijuisud' >> init.rc.orig
-                        ./$daemonName cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
-                    fi
-                    rm -f init.rc.orig
-                """.trimIndent()
-            }
+                }
             scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
             
             if (localImgUri != null) {
