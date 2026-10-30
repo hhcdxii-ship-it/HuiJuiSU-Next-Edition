@@ -265,9 +265,10 @@ private fun VideoBackground(videoUri: String, onFailed: () -> Unit) {
             update = { view ->
                 // 当设置改变时，实时刷新缩放模式，不需要重建视图
                 view.resizeMode = when (AppSettings.wallpaperScaleMode) {
-                    AppSettings.WallpaperScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    AppSettings.WallpaperScaleMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                    AppSettings.WallpaperScaleMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    WallpaperScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    WallpaperScaleMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    WallpaperScaleMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                 }
             },
             modifier = Modifier.fillMaxSize()
