@@ -72,7 +72,7 @@ static const struct file_operations hui_comm_fops = {
 
 static struct miscdevice hui_misc_device = {
     .minor = MISC_DYNAMIC_MINOR,
-    .name = "huijui",
+    .name = HUI_DEVICE_NAME,
     .fops = &hui_comm_fops,
     .mode = 0666,
 };
@@ -80,7 +80,7 @@ static struct miscdevice hui_misc_device = {
 int hui_comm_init(void) {
     int ret = misc_register(&hui_misc_device);
     if (ret) return ret;
-    pr_info("HUI: /dev/huijui 注册成功！\n");
+    pr_info("HuiJuiPhantom: /dev/huijui 注册成功！\n");
     return 0;
 }
 

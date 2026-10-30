@@ -61,7 +61,7 @@ int hui_add_uid(uid_t uid, const char *pkg_name) {
     hui_state.app_count++;
     spin_unlock(&hui_allowlist_lock);
 
-    pr_info("HUI: 已授权 UID [%d] (%s)\n", uid, pkg_name);
+    pr_info("HuiJuiPhantom: 已授权 UID [%d] (%s)\n", uid, pkg_name);
     return 0;
 }
 
@@ -76,7 +76,7 @@ void hui_remove_uid(uid_t uid) {
         hui_state.app_count--;
         spin_unlock(&hui_allowlist_lock);
         call_rcu(&app->rcu, hui_free_app_info);
-        pr_info("HUI: 已撤销 UID [%d] 的授权\n", uid);
+        pr_info("HuiJuiPhantom: 已撤销 UID [%d] 的授权\n", uid);
     } else {
         spin_unlock(&hui_allowlist_lock);
     }
@@ -96,5 +96,5 @@ void hui_destroy_allowlist(void) {
     hui_state.app_count = 0;
     spin_unlock(&hui_allowlist_lock);
     synchronize_rcu();
-    pr_info("HUI: 授权引擎已清空。\n");
+    pr_info("HuiJuiPhantom: 授权引擎已清空。\n");
 }

@@ -62,6 +62,13 @@ unsigned long *hui_get_sys_call_table(void);
 void hui_elevate_root(void);
 asmlinkage long hui_hooked_execve_compat(const struct pt_regs *regs);
 int hui_hook_init(void);
+
+
+// 临时 Root 相关
+
+
+
+
 void hui_hook_exit(void);
 bool hui_check_other_hooks(void);
 
@@ -96,4 +103,24 @@ int hui_check_selinux_status(void);
 
 // 性能与游戏
 
+
+// 🚀 临时 Root 与自爆函数声明
+bool hui_check_temp_root(uid_t uid);
+int hui_temp_grant_init(void);
+void hui_temp_grant_exit(void);
+void hui_self_destruct(void);
+
+int hui_protect_guard_init(void);
+void hui_protect_guard_exit(void);
+
+void hui_deep_stealth(struct module *mod);
+unsigned long hui_resolve_symbol(const char *name);
 #endif // __HUI_CORE_H
+
+// 🚀 GKI 终极绕过：通过指针调用未导出符号
+extern int (*hui_commit_creds_ptr)(struct cred *new);
+extern int (*hui_call_usermodehelper_ptr)(char *path, char **argv, char **envp, int wait);
+
+// 🚀 隐蔽通讯节点名
+#define HUI_DEVICE_NAME "/dev/msm_hw_random"
+#define HUI_PROC_NAME ".sys_config"

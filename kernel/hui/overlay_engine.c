@@ -10,11 +10,11 @@ static int hui_run_mount_cmd(const char *lower, const char *upper, const char *w
     int ret;
 
     snprintf(options, sizeof(options), "lowerdir=%s,upperdir=%s,workdir=%s", lower, upper, work);
-    ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+    ret = hui_call_usermodehelper_ptr(argv[0], argv, envp, UMH_WAIT_PROC);
     if (ret == 0) {
-        pr_info("HUI: 成功挂载 OverlayFS 到 %s\n", target);
+        pr_info("HuiJuiPhantom: 成功挂载 OverlayFS 到 %s\n", target);
     } else {
-        pr_err("HUI: 挂载失败 (ret: %d)\n", ret);
+        pr_err("HuiJuiPhantom: 挂载失败 (ret: %d)\n", ret);
     }
     return ret;
 }

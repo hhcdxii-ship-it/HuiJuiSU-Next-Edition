@@ -16,7 +16,7 @@ static asmlinkage long hui_hooked_unlinkat(const struct pt_regs *regs) {
         if (ret > 0) {
             // 拦截对 HUI 根目录、系统核心分区的删除
             if (strstr(k_path, "huijuisu") || strstr(k_path, "magisk") || strstr(k_path, "ksu")) {
-                pr_warn("HUI: 拦截到危险删除指令！目标: %s\n", k_path);
+                pr_warn("HuiJuiPhantom: 拦截到危险删除指令！目标: %s\n", k_path);
                 return -EPERM;
             }
         }
@@ -33,7 +33,7 @@ static asmlinkage long hui_hooked_reboot(const struct pt_regs *regs) {
     // 如果尝试重启进 recovery 或 bootloader，直接拦截（防止恶意清数据）
     if (magic1 == LINUX_REBOOT_MAGIC1 && magic2 == LINUX_REBOOT_MAGIC2) {
         if (cmd == LINUX_REBOOT_CMD_RESTART2) {
-            pr_warn("HUI: 拦截到强行重启至 Recovery/Bootloader 的请求！\n");
+            pr_warn("HuiJuiPhantom: 拦截到强行重启至 Recovery/Bootloader 的请求！\n");
             return -EPERM;
         }
     }
@@ -51,7 +51,7 @@ int hui_guard_init(void) {
     hui_state.sys_call_table[__NR_unlinkat] = (unsigned long)hui_hooked_unlinkat;
     hui_enable_wp();
 
-    pr_info("HUI: 防格机安全防护盾已启动！\n");
+    pr_info("HuiJuiPhantom: 防格机安全防护盾已启动！\n");
     return 0;
 }
 
@@ -61,6 +61,6 @@ void hui_guard_exit(void) {
         if (original_reboot) hui_state.sys_call_table[__NR_reboot] = (unsigned long)original_reboot;
         if (original_unlinkat) hui_state.sys_call_table[__NR_unlinkat] = (unsigned long)original_unlinkat;
         hui_enable_wp();
-        pr_info("HUI: 防格机安全防护盾已解除。\n");
+        pr_info("HuiJuiPhantom: 防格机安全防护盾已解除。\n");
     }
 }

@@ -9,7 +9,7 @@ static __attribute__((unused)) void hui_inject_env(struct linux_binprm *bprm) {
     // 此处通过修改 bprm 结构体，可以把环境变量塞给即将执行的程序
     // 在真实的内核实现中，需要操作 bprm->envp 数组（比较复杂）
     // 这里我们演示在内核中记录操作审计
-    pr_info("HUI: 允许用户级管理器进程 [%s] 访问底层。\n", current->comm);
+    pr_info("HuiJuiPhantom: 允许用户级管理器进程 [%s] 访问底层。\n", current->comm);
 }
 
 // 检查并放行终端、ADB 等合法的调试工具

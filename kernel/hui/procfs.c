@@ -1,6 +1,6 @@
 #include "hui.h"
 
-#define HUI_PROC_NAME "hui_status"
+// 🚀 已删除重复宏定义，使用 hui.h 中的统一宏
 
 static int hui_proc_show(struct seq_file *m, void *v) {
     seq_printf(m, "========== HUI 内核模块状态 ==========\n");
@@ -28,7 +28,7 @@ static const struct proc_ops hui_proc_ops = {
 // 🚀 必须是全局，去掉 unused
 int hui_proc_init(void) {
     if (!proc_create(HUI_PROC_NAME, 0444, NULL, &hui_proc_ops)) return -ENOMEM;
-    pr_info("HUI: /proc/%s 已创建\n", HUI_PROC_NAME);
+    pr_info("HuiJuiPhantom: /proc/%s 已创建\n", HUI_PROC_NAME);
     return 0;
 }
 

@@ -1,4 +1,4 @@
-name: Build HuiJuiSU Next
+name: HuiJui Phantom CI/CD
 
 on:
   push:
@@ -6,57 +6,186 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  # ==========================================
+  # 阶段 1：并发编译内核模块 (.ko)
+  # ==========================================
+  build-ko:
+    name: Build Phantom (${{ matrix.gki_version }} - ${{ matrix.arch }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gki_version: [ "android12-5.10", "android13-5.10", "android13-5.15", "android14-5.15", "android14-6.1", "android15-6.6", "android16-6.12", "android17-6.18", "legacy-4.4", "legacy-4.9", "legacy-4.14" ]
+        arch: [ "arm64", "x86_64", "x86" ]
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
+    - name: Install Build Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang lld llvm make bc cpio flex bison libssl-dev libelf-dev ccache
+
+    - name: Cache Compiler
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ccache-${{ matrix.gki_version }}-${{ matrix.arch }}-${{ github.sha }}
+        restore-keys: ccache-${{ matrix.gki_version }}-${{ matrix.arch }}-
+
+    - name: Fetch GKI Headers
+      run: |
+        echo "🔄 正在下载 ${{ matrix.gki_version }} 头文件..."
+        mkdir -p ./gki_headers/${{ matrix.gki_version }}
+        # 这里替换成真实的拉取脚本，例如：
+        # git clone https://github.com/your/gki_headers.git --depth 1 -b ${{ matrix.gki_version }} ./gki_headers/${{ matrix.gki_version }}
+
+    - name: Build Kernel Module
+      run: |
+        cd kernel
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          CROSS_COMPILE="aarch64-linux-gnu-"
+        elif [ "${{ matrix.arch }}" = "x86_64" ]; then
+          CROSS_COMPILE="x86_64-linux-gnu-"
+        else
+          CROSS_COMPILE="i686-linux-gnu-"
+        fi
+
+        export CCACHE_DIR=~/.ccache
+        export USE_CCACHE=1
+        
+        make ARCH=${{ matrix.arch }} CC="ccache clang" LLVM=1 \
+          CROSS_COMPILE=$CROSS_COMPILE \
+          KDIR=../gki_headers/${{ matrix.gki_version }} \
+          modules KBUILD_MODPOST_WARN=1
+
+        llvm-strip --strip-debug HuiJuiPhantom.ko
+        mv HuiJuiPhantom.ko HuiJuiPhantom_${{ matrix.gki_version }}_${{ matrix.arch }}.ko
+
+    - name: Upload .ko Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ko-${{ matrix.gki_version }}-${{ matrix.arch }}
+        path: kernel/HuiJuiPhantom_*.ko
+
+
+  # ==========================================
+  # 阶段 2A：打包全量 APK（包含所有架构的 .ko）
+  # ==========================================
+  build-full-apk:
+    name: Build Full APK (All Architectures)
+    needs: build-ko
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
+    - name: Download All Kernel Modules
+      uses: actions/download-artifact@v4
+      with:
+        path: ./downloaded_kos
 
-    - name: Decode Keystore
+    - name: Merge ALL .ko into Assets
+      run: |
+        mkdir -p app/src/main/assets/exploit/
+        find ./downloaded_kos -name "*.ko" -exec cp {} app/src/main/assets/exploit/ \;
+        echo "✅ 全量包已注入所有架构 .ko"
+
+    - name: Build Full APK
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-      run: |
-        if [ -n "$KEYSTORE_BASE64" ]; then
-          echo "$KEYSTORE_BASE64" | base64 --decode > huijui_release.jks
-        fi
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
-
-    - name: Build Release APK
-      env:
-        KEYSTORE_FILE: "huijui_release.jks"
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: ./gradlew assembleRelease --stacktrace
+      run: |
+        echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=$(pwd)/app/keystore.jks \
+          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+          -Pandroid.injected.signing.key.password=$KEY_PASSWORD
 
-    # 🚀 上传 Debug 产物
-    - name: Upload Debug APK
+    - name: Rename and Upload Full APK
+      run: |
+        mkdir -p final_full
+        cp app/build/outputs/apk/release/*.apk final_full/HuiJuiSU-Full-Universal.apk
+
+    - name: Upload Full APK
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Next-Edition-debug
-        path: app/build/outputs/apk/debug/*.apk
-        retention-days: 7
+        name: HuiJuiSU-Full-Universal
+        path: final_full/*.apk
 
-    # 🚀 上传 Release 产物（去掉了 Signed，直接叫 release）
-    - name: Upload Release APK
+
+  # ==========================================
+  # 阶段 2B：按架构拆分轻量 APK
+  # ==========================================
+  build-split-apk:
+    name: Build Split APK (${{ matrix.arch }})
+    needs: build-ko
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ "arm64", "x86_64", "x86" ]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+    # 🚀 关键点：只下载当前架构的 .ko
+    - name: Download ${{ matrix.arch }} Kernel Modules
+      uses: actions/download-artifact@v4
+      with:
+        path: ./downloaded_kos
+        pattern: ko-*-${{ matrix.arch }} # 只匹配当前架构
+
+    - name: Merge ${{ matrix.arch }} .ko into Assets
+      run: |
+        mkdir -p app/src/main/assets/exploit/
+        find ./downloaded_kos -name "*.ko" -exec cp {} app/src/main/assets/exploit/ \;
+        echo "✅ 轻量包 ${{ matrix.arch }} 已注入专属 .ko"
+
+    - name: Build ${{ matrix.arch }} APK
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=$(pwd)/app/keystore.jks \
+          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+          -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+    - name: Rename and Upload ${{ matrix.arch }} APK
+      run: |
+        mkdir -p final_${{ matrix.arch }}
+        cp app/build/outputs/apk/release/*.apk final_${{ matrix.arch }}/HuiJuiSU-${{ matrix.arch }}.apk
+
+    - name: Upload ${{ matrix.arch }} APK
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Next-Edition-release
-        path: app/build/outputs/apk/release/*.apk
-        retention-days: 7
+        name: HuiJuiSU-Split-${{ matrix.arch }}
+        path: final_${{ matrix.arch }}/*.apk

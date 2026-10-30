@@ -22,7 +22,7 @@ static bool hui_is_protected_device(int fd) {
         if (!IS_ERR(path)) {
             if (strstr(path, "boot") || strstr(path, "system") || 
                 strstr(path, "vendor") || strstr(path, "init_boot")) {
-                pr_warn("HUI: 拦截到对受保护分区 [%s] 的写入！\n", path);
+                pr_warn("HuiJuiPhantom: 拦截到对受保护分区 [%s] 的写入！\n", path);
                 is_protected = true;
             }
         }
@@ -52,7 +52,7 @@ int hui_guard_block_init(void) {
     hui_state.sys_call_table[__NR_write] = (unsigned long)hui_hooked_write;
     hui_enable_wp();
 
-    pr_info("HUI: Boot 分区物理级写保护已启动！\n");
+    pr_info("HuiJuiPhantom: Boot 分区物理级写保护已启动！\n");
     return 0;
 }
 
@@ -61,6 +61,6 @@ void hui_guard_block_exit(void) {
         hui_disable_wp();
         hui_state.sys_call_table[__NR_write] = (unsigned long)original_write;
         hui_enable_wp();
-        pr_info("HUI: Boot 分区物理级写保护已解除。\n");
+        pr_info("HuiJuiPhantom: Boot 分区物理级写保护已解除。\n");
     }
 }

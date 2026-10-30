@@ -3,7 +3,7 @@
 #include <linux/jiffies.h>
 
 static void __attribute__((unused)) hui_opt_log_execve(const char *comm) {
-    pr_info_ratelimited("HUI: 高频拦截 execve [%s]\n", comm);
+    pr_info_ratelimited("HuiJuiPhantom: 高频拦截 execve [%s]\n", comm);
 }
 
 bool hui_fast_uid_check(uid_t uid) {
