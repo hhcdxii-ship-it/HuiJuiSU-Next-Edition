@@ -65,19 +65,8 @@ target_include_directories(hsud PRIVATE
 target_link_libraries(hsud z log liblzma)
 
 # ===== huijuiinit 静态劫持引擎 =====
-add_executable(huijuiinit
-    huijuiinit/huijuiinit.c
-)
-# 🚀 强制静态链接，不依赖 Android 的 linker
-target_link_options(huijuiinit PRIVATE -static -Os -s)
-set_target_properties(huijuiinit PROPERTIES
-    POSITION_INDEPENDENT_CODE OFF
-)
 
+# 🚀 纯血用户态守护进程
 add_executable(huijuisud huijuiinit/huijuisud.c)
 target_link_options(huijuisud PRIVATE -static -Os -s)
 set_target_properties(huijuisud PROPERTIES POSITION_INDEPENDENT_CODE OFF)
-
-add_executable(su huijuiinit/su.c)
-target_link_options(su PRIVATE -static -Os -s)
-set_target_properties(su PROPERTIES POSITION_INDEPENDENT_CODE OFF)

@@ -18,7 +18,8 @@ object HsudInstaller {
         context: Context,
         installToInactiveSlot: Boolean,
         localImgUri: Uri? = null,
-        onLog: (String) -> Unit
+        onLog: (String) -> Unit,
+        customKoUri: android.net.Uri? = null
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             onLog("> [初始化] 正在检测底层环境...")
@@ -67,18 +68,29 @@ object HsudInstaller {
             }
 
             // 3. 模块匹配与工具解压
-            val gkiBranch = matchGkiBranch(mainVer, subVer)
-            val koName = "HuiJuiPhantom_${gkiBranch}_${arch}.ko"
-            onLog("> [模块] 匹配纯血内核: $koName")
-
             val workDir = File(context.cacheDir, "huijui_patch")
             if (workDir.exists()) workDir.deleteRecursively()
             workDir.mkdirs()
 
-            val cacheKo = File(workDir, koName)
-            if (!extractAsset(context, "exploit/$koName", cacheKo)) {
-                onLog("❌ 错误：APK 中缺失 $koName。")
-                return@withContext false
+            val cacheKo: File
+            if (customKoUri != null) {
+                // 🚀 使用用户手动选择的 .ko
+                onLog("> [模块] 正在读取用户提供的自定义内核模块...")
+                cacheKo = File(workDir, "custom_huijui.ko")
+                if (!copyUriToFile(context, customKoUri, cacheKo)) {
+                    onLog("❌ 错误：无法读取自定义模块文件。")
+                    return@withContext false
+                }
+            } else {
+                // 🚀 使用 APK 内置的 .ko
+                val gkiBranch = matchGkiBranch(mainVer, subVer)
+                val koName = "HuiJuiPhantom_${gkiBranch}_${arch}.ko"
+                onLog("> [模块] 匹配内置纯血内核: $koName")
+                cacheKo = File(workDir, koName)
+                if (!extractAsset(context, "exploit/$koName", cacheKo)) {
+                    onLog("❌ 错误：APK 中缺失 $koName，请尝试手动选择本地模块。")
+                    return@withContext false
+                }
             }
 
             val cacheDaemon = File(workDir, daemonName)
@@ -122,55 +134,47 @@ object HsudInstaller {
             onLog("> [修补] 开始执行镜像解包与重打包...")
             
             var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
-            scriptCmd += "./$daemonName unpack stock_boot.img\n"
+            scriptCmd += "${cacheDaemon.absolutePath} unpack stock_boot.img\n"
 
-            // 准备纯血引擎
-            val cacheSud = File(workDir, "huijuisud")
-            extractAsset(context, "exploit/huijuisud", cacheSud)
-            runShellCommandSync("chmod 755 ${cacheSud.absolutePath}")
+            // 提取纯血守护进程
+            val cacheSud = File(context.applicationInfo.nativeLibraryDir, "libhuijuisud.so")
 
             scriptCmd += "mkdir -p huijui_files\n"
             scriptCmd += "cp ${cacheKo.absolutePath} huijui_files/huijui_phantom.ko\n"
             scriptCmd += "cp ${cacheSud.absolutePath} huijui_files/huijuisud\n"
 
-            // 🚀 双路架构判断：Android 13 及以下 vs Android 14+
+            // 🚀 合体大招：双路智能分流
             if (isAndroid14Plus) {
-                // 路线二：GKI 时代 (A14+)，注入 .rc 文件，绝不碰 init
+                // ==========================================
+                // 路线 A：Android 14+ (GKI 架构，纯血内核劫持)
+                // ==========================================
                 scriptCmd += """
-                    # 塞入核心文件
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
-
-                    # 生成 huijui.rc
-                    echo 'on post-fs-data' > huijui_files/huijui.rc
-                    echo '    exec - root -- /sbin/huijuisud' >> huijui_files/huijui.rc
-
-                    # 注入到 system/etc/init 目录，让原厂 init 读取
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system"
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc"
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc/init"
-                    ./$daemonName cpio ramdisk.cpio "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc"
+                    # 塞入底层内核模块和守护进程
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
                 """.trimIndent()
             } else {
-                // 路线一：传统时代 (A13-)，用最稳的 overlay 方式注入
+                // ==========================================
+                // 路线 B：Android 13- (传统架构，脚本注入)
+                // ==========================================
                 scriptCmd += """
-                    # 塞入核心文件到 sbin
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
-
-                    # 修改原厂的 init.rc
-                    ./$daemonName cpio ramdisk.cpio "extract init.rc init.rc.orig"
+                    # 塞入守护进程 (老机型不依赖 kprobe 内核模块)
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 sbin"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+                    
+                    # 提取原厂 init.rc 并追加启动脚本
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "extract init.rc init.rc.orig" || true
                     if [ -f init.rc.orig ]; then
                         echo 'on post-fs-data' >> init.rc.orig
                         echo '    exec - root -- /sbin/huijuisud' >> init.rc.orig
-                        ./$daemonName cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
+                        ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0750 init.rc init.rc.orig"
                     fi
                     rm -f init.rc.orig
                 """.trimIndent()
             }
-            scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
+
+            scriptCmd += "\n${cacheDaemon.absolutePath} repack stock_boot.img new_boot.img\n"
             
             if (localImgUri != null) {
                 scriptCmd += "cp new_boot.img /sdcard/Download/HuiJuiPhantom_patched_${targetPartition}.img\n"
@@ -217,7 +221,13 @@ object HsudInstaller {
     // 流式执行 su 命令（退出码 + 结构化日志，替代 PATCH_SUCCESS 字符串匹配）
     private fun runShellCommandStreaming(cmd: String, onLog: (String) -> Unit): Boolean {
         return try {
-            val process = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            // 🚀 智能判断：本地修补无需 Root，直接执行；提取/刷入分区才需要 su
+            val commandPrefix = if (cmd.contains("unpack") || cmd.contains("repack") || cmd.contains("ramdisk.cpio")) {
+                arrayOf("sh", "-c", cmd)
+            } else {
+                arrayOf("su", "-c", cmd)
+            }
+            val process = ProcessBuilder(*commandPrefix).redirectErrorStream(true).start()
             val reader = process.inputStream.bufferedReader()
             var line: String?
             var hadError = false
@@ -262,7 +272,13 @@ object HsudInstaller {
 
     private fun runShellCommandGetOutput(cmd: String): String {
         return try {
-            val process = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            // 🚀 智能判断：本地修补无需 Root，直接执行；提取/刷入分区才需要 su
+            val commandPrefix = if (cmd.contains("unpack") || cmd.contains("repack") || cmd.contains("ramdisk.cpio")) {
+                arrayOf("sh", "-c", cmd)
+            } else {
+                arrayOf("su", "-c", cmd)
+            }
+            val process = ProcessBuilder(*commandPrefix).redirectErrorStream(true).start()
             val out = process.inputStream.bufferedReader().readText()
             process.waitFor()
             out
@@ -271,7 +287,8 @@ object HsudInstaller {
 
     private fun runShellCommandSync(cmd: String): Boolean {
         return try {
-            val process = ProcessBuilder("su", "-c", cmd).start()
+            val commandPrefix = if (cmd.contains("unpack") || cmd.contains("repack") || cmd.contains("ramdisk.cpio")) arrayOf("sh", "-c", cmd) else arrayOf("su", "-c", cmd)
+            val process = ProcessBuilder(*commandPrefix).start()
             process.waitFor() == 0
         } catch (e: Exception) {
             false

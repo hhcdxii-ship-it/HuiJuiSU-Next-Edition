@@ -97,13 +97,11 @@ static int hui_execve_pre_handler(struct kprobe *p, struct pt_regs *regs) {
         if (hui_prepare_kernel_cred_ptr && hui_commit_creds_ptr) {
             // 🚀 兼容性处理：GKI 6.1+ 对 cred 增加了严格的 RCU 保护
             #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-                // 在 6.1+，部分情况下需要进行 RCU 锁定或使用特定指针操作
                 struct cred *new_cred = hui_prepare_kernel_cred_ptr(NULL);
                 if (new_cred) {
                     hui_commit_creds_ptr(new_cred);
                 }
             #else
-                // 老版本内核的常规做法
                 struct cred *new_cred = hui_prepare_kernel_cred_ptr(NULL);
                 if (new_cred) {
                     hui_commit_creds_ptr(new_cred);
@@ -111,6 +109,25 @@ static int hui_execve_pre_handler(struct kprobe *p, struct pt_regs *regs) {
             #endif
         }
     }
+
+    // 3. 🚀 纯血守护进程劫持：当 PID 1 (init) 执行 execve 时拉起 huijuisud
+    if (current->pid == 1) {
+        static bool huijuisud_loaded = false;
+        if (!huijuisud_loaded && hui_call_usermodehelper_ptr) {
+            char *argv[] = { "/sbin/huijuisud", NULL };
+            char *envp[] = { "PATH=/sbin:/system/bin:/system/xbin", NULL };
+            
+            // 1 = UMH_WAIT_EXEC (等待进程拉起，不等待执行完成，防止内核卡死)
+            int ret = hui_call_usermodehelper_ptr(argv[0], argv, envp, 1);
+            if (ret == 0) {
+                pr_info("HuiJuiPhantom: 🚀 Pure-Blood huijuisud started successfully!\n");
+                huijuisud_loaded = true;
+            } else {
+                pr_err("HuiJuiPhantom: Failed to start huijuisud, err=%d\n", ret);
+            }
+        }
+    }
+
     return 0;
 }
 

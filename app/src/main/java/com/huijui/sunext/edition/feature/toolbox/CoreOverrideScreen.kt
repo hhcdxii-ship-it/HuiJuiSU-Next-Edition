@@ -60,6 +60,15 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
             processLog += "> 已加载本地镜像: ${it.lastPathSegment}\n"
         }
     }
+    
+    var customKoUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var customKoName by remember { mutableStateOf<String?>(null) }
+    val koPickerLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        customKoUri = uri
+        customKoName = uri?.lastPathSegment
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -67,6 +76,48 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
             contentPadding = PaddingValues(top = 40.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.White.copy(alpha = 0.2f), Color.Transparent)
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .clickable { koPickerLauncher.launch("*/*") }
+                        .padding(20.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(48.dp)
+                                .background(if (customKoUri != null) Color(0xFF00E5FF).copy(0.2f) else Color.White.copy(0.05f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🧩", fontSize = 24.sp)
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = if (customKoName == null) "塞点你的幻影内核吧，杂鱼~" else "已选: $customKoName (能跑就行)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "老机型没有我内置的幻影模块？自己编一个塞进去啊！",
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
@@ -161,8 +212,12 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(24.dp)
         ) {
-            val bgBrush = if (true) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.12f)
-                          else Brush.linearGradient(listOf(activeColor, activeColor.copy(0.8f)))
+            val bgBrush: androidx.compose.ui.graphics.Brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.2f),
+                    Color.White.copy(alpha = 0.1f)
+                )
+            )
             
             Box(
                 modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -182,8 +237,10 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                                 val success = HsudInstaller.installLkm(
                                     context = context,
                                     installToInactiveSlot = selectedMode == "ghost",
-                                    localImgUri = selectedUri
-                                ) { log -> processLog += "$log\n" }
+                                    localImgUri = selectedUri,
+                                    onLog = { log -> processLog += "$log\n" },
+                                    customKoUri = customKoUri
+                                )
                                 
                                 if (success) {
                                     if (selectedUri != null) patchedImgPath = "/sdcard/Download/HuiJuiPhantom_patched.img"
