@@ -135,24 +135,7 @@ object HsudInstaller {
 
             // 🚀 双路架构判断：Android 13 及以下 vs Android 14+
             if (isAndroid14Plus) {
-                // 路线二：GKI 时代 (A14+)，注入 .rc 文件，绝不碰 init
-                scriptCmd += """
-                    # 塞入核心文件
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 sbin"
-                    ./$daemonName cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
-                    ./$daemonName cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
-
-                    # 生成 huijui.rc
-                    echo 'on post-fs-data' > huijui_files/huijui.rc
-                    echo '    exec - root -- /sbin/huijuisud' >> huijui_files/huijui.rc
-
-                    # 注入到 system/etc/init 目录，让原厂 init 读取
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system"
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc"
-                    ./$daemonName cpio ramdisk.cpio "mkdir 0755 system/etc/init"
-                    ./$daemonName cpio ramdisk.cpio "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc"
-                """.trimIndent()
-            } else {
+                // 仅支持 Android 13-
                 // 路线一：传统时代 (A13-)，用最稳的 overlay 方式注入
                 scriptCmd += """
                     # 塞入核心文件到 sbin
