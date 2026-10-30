@@ -134,7 +134,7 @@ Supported actions:
     exit(1);
 }
 
-int main(int argc, char *argv[]) {
+extern "C" int hsud_main(int argc, char *argv[]) {
     cmdline_logging();
     umask(0);
 

@@ -134,8 +134,13 @@ void clone_dir(int src, int dest);
 
 /* ===== crc32_z compatibility for Android NDK ===== */
 #include <zlib.h>
+#ifdef __GNUC__
+// GCC 下 zlib.h 已经声明了 extern，这里直接用宏替换，避免 static 冲突
+#define crc32_z(crc, buf, len) crc32(crc, buf, (uInt)len)
+#else
 #ifndef crc32_z
 static inline uLong crc32_z(uLong crc, const Bytef *buf, z_size_t len) {
     return crc32(crc, buf, (uInt)len);
 }
+#endif
 #endif

@@ -88,7 +88,7 @@ void cpio::extract_entry(const entry_map::value_type &e, const char *file) {
         close(fd);
     } else if (S_ISLNK(e.second->mode)) {
         auto target = strndup((char *) e.second->data, e.second->filesize);
-        symlink(target, file);
+        (void)symlink(target, file);
         free(target);
     }
 }

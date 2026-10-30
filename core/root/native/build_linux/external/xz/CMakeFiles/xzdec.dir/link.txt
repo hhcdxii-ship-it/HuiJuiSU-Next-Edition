@@ -1,0 +1,1 @@
+/usr/bin/cc -Wl,--dependency-file=CMakeFiles/xzdec.dir/link.d CMakeFiles/xzdec.dir/src/common/tuklib_exit.c.o CMakeFiles/xzdec.dir/src/common/tuklib_progname.c.o CMakeFiles/xzdec.dir/src/xzdec/xzdec.c.o -o xzdec  liblzma.a

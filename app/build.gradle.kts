@@ -7,6 +7,7 @@ plugins {
 }
 
 android {
+    ndkVersion = "26.1.10909125"
     namespace = "com.huijui.sunext.edition"
     compileSdk = 36
 
@@ -47,6 +48,11 @@ android {
     }
     androidResources {
         noCompress += "mp4"
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("../core/root/native/CMakeLists.txt")
+        }
     }
     buildFeatures {
         buildConfig = true

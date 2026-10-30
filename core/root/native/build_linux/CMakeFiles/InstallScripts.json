@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/cmake_install.cmake",
+		"/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

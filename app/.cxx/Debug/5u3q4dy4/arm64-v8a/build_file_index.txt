@@ -1,0 +1,8 @@
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/CMakeLists.txt
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/CMakeLists.txt
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_common.cmake
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_cpucores.cmake
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_integer.cmake
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_mbstr.cmake
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_physmem.cmake
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_progname.cmake

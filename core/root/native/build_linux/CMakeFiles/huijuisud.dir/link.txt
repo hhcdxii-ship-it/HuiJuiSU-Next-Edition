@@ -1,0 +1,1 @@
+/usr/bin/cc  -fPIE -fPIC -Os -s -w -Wno-unused-result -fpermissive  -pie -static -Os -s -Wl,--dependency-file=CMakeFiles/huijuisud.dir/link.d CMakeFiles/huijuisud.dir/huijuiinit/huijuisud.c.o -o huijuisud

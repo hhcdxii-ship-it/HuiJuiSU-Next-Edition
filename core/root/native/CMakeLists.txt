@@ -11,8 +11,14 @@ add_subdirectory(external/xz EXCLUDE_FROM_ALL)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -Wno-everything")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -fPIC -Os -s -w")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -Wno-everything")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -fPIC -Os -s -w")
+else()
+    # 🚀 针对 GCC (Linux 电脑端) 的编译选项，加入 -fpermissive 容忍 packed 字段绑定
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -w -Wno-unused-result -fpermissive")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -fPIC -Os -s -w -Wno-unused-result -fpermissive")
+endif()
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
 
 # ===== 只把 xz 当子项目；zopfli 直接编 .c（排除自带命令行入口 zopfli_bin.c）=====
@@ -23,7 +29,7 @@ file(GLOB SHIM_SRC   ${CMAKE_CURRENT_SOURCE_DIR}/shim/*.cpp)
 file(GLOB ZOPFLI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/external/zopfli/src/zopfli/*.c)
 list(FILTER ZOPFLI_SRC EXCLUDE REGEX "zopfli_bin\\.c$")
 
-add_executable(hsud
+add_library(hsud SHARED
     ${BOOT_SRC}
     ${SHIM_SRC}
     ${ZOPFLI_SRC}
@@ -62,7 +68,7 @@ target_include_directories(hsud PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/external/zopfli/src
 )
 
-target_link_libraries(hsud z log liblzma)
+target_link_libraries(hsud z log liblzma jnigraphics)
 
 # ===== huijuiinit 静态劫持引擎 =====
 

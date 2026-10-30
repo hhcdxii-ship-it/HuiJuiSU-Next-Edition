@@ -1,0 +1,17 @@
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/hsud.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/huijuisud.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/edit_cache.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/rebuild_cache.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/list_install_components.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/install.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/install/local.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/CMakeFiles/install/strip.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/liblzma.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/xzdec.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/xz.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/edit_cache.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/rebuild_cache.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/list_install_components.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/install.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/install/local.dir
+/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/build_linux/external/xz/CMakeFiles/install/strip.dir

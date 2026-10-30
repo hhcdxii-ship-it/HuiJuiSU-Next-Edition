@@ -1,0 +1,74 @@
+{
+  "buildFiles": [
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/CMakeLists.txt",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/CMakeLists.txt",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_common.cmake",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_cpucores.cmake",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_integer.cmake",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_mbstr.cmake",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_physmem.cmake",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native/external/xz/cmake/tuklib_progname.cmake"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/xiaomi/android-sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/xiaomi/HuiJuiSU-Next-Edition/app/.cxx/Debug/5u3q4dy4/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/xiaomi/android-sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/xiaomi/HuiJuiSU-Next-Edition/app/.cxx/Debug/5u3q4dy4/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "hsud::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "hsud",
+      "output": "/home/xiaomi/HuiJuiSU-Next-Edition/app/build/intermediates/cxx/Debug/5u3q4dy4/obj/x86/libhsud.so",
+      "runtimeFiles": []
+    },
+    "huijuisud::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "huijuisud",
+      "output": "/home/xiaomi/HuiJuiSU-Next-Edition/app/build/intermediates/cxx/Debug/5u3q4dy4/obj/x86/huijuisud",
+      "runtimeFiles": []
+    },
+    "liblzma::@a7d297b92e2e1addc18b": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "liblzma",
+      "output": "/home/xiaomi/HuiJuiSU-Next-Edition/app/.cxx/Debug/5u3q4dy4/x86/external/xz/liblzma.a"
+    },
+    "xz::@a7d297b92e2e1addc18b": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "xz",
+      "output": "/home/xiaomi/HuiJuiSU-Next-Edition/app/build/intermediates/cxx/Debug/5u3q4dy4/obj/x86/xz",
+      "runtimeFiles": []
+    },
+    "xzdec::@a7d297b92e2e1addc18b": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "xzdec",
+      "output": "/home/xiaomi/HuiJuiSU-Next-Edition/app/build/intermediates/cxx/Debug/5u3q4dy4/obj/x86/xzdec",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/home/xiaomi/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/home/xiaomi/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [
+    "c"
+  ],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

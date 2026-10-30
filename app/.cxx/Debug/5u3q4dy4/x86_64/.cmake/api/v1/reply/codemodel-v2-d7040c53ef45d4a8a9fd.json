@@ -1,0 +1,131 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.6.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				},
+				{
+					"build" : "external/xz",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-external.xz-Debug-fe74bfec4289f9194c42.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "external/xz",
+					"targetIndexes" : 
+					[
+						2,
+						3,
+						4
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "hsud",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "xz",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						2,
+						3,
+						4
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "hsud::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-hsud-Debug-5c9f042fead04021925b.json",
+					"name" : "hsud",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "huijuisud::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-huijuisud-Debug-6099c92d3af668158646.json",
+					"name" : "huijuisud",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "liblzma::@a7d297b92e2e1addc18b",
+					"jsonFile" : "target-liblzma-Debug-858cfefb8880d1d8a702.json",
+					"name" : "liblzma",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "xz::@a7d297b92e2e1addc18b",
+					"jsonFile" : "target-xz-Debug-18f739d01381142774bd.json",
+					"name" : "xz",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "xzdec::@a7d297b92e2e1addc18b",
+					"jsonFile" : "target-xzdec-Debug-552cfb300d836a733345.json",
+					"name" : "xzdec",
+					"projectIndex" : 1
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/xiaomi/HuiJuiSU-Next-Edition/app/.cxx/Debug/5u3q4dy4/x86_64",
+		"source" : "/home/xiaomi/HuiJuiSU-Next-Edition/core/root/native"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}
