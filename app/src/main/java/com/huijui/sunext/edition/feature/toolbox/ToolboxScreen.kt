@@ -156,7 +156,7 @@ fun ToolboxScreen(
                             Text(
                                 text = currentTime,
                                 style = androidx.compose.ui.text.TextStyle(
-                                    brush = Brush.linearGradient(
+                                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
                                         colors = listOf(Color.White, Color(0xFFE0E0E0), Color.White.copy(alpha = 0.7f))
                                     ),
                                     fontSize = 76.sp,
