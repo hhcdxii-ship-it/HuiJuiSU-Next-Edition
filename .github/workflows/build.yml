@@ -32,11 +32,10 @@ jobs:
         
         # 把编译好的引擎塞进 assets
         mkdir -p ../../../app/src/main/assets/exploit
-        cp build/hsud ../../../app/src/main/assets/exploit/hsud
-        cp build/hsud ../../../app/src/main/assets/exploit/hud
         cp build/huijuisud ../../../app/src/main/assets/exploit/huijuisud
         
-        chmod 755 ../../../app/src/main/assets/exploit/hsud ../../../app/src/main/assets/exploit/hud ../../../app/src/main/assets/exploit/huijuisud
+        chmod 755 ../../../app/src/main/assets/exploit/huijuisud
+        # ../../../app/src/main/assets/exploit/huijuisud
 
     - name: Setup Gradle Cache
       uses: actions/cache@v4
