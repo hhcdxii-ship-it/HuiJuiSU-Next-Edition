@@ -142,10 +142,21 @@ object HsudInstaller {
                 // 路线 A：Android 14+ (GKI 架构，纯血内核劫持)
                 // ==========================================
                 scriptCmd += """
-                    # 塞入底层内核模块和守护进程
+                    # 1. 塞入底层内核模块和守护进程
                     ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 sbin"
                     ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko"
                     ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0755 sbin/huijuisud huijui_files/huijuisud"
+
+                    # 2. 🚀 生成开机启动脚本（真正让模块生效的关键！）
+                    echo 'on post-fs-data' > huijui_files/huijui.rc
+                    echo '    insmod /sbin/huijui_phantom.ko' >> huijui_files/huijui.rc
+                    echo '    exec - root -- /sbin/huijuisud' >> huijui_files/huijui.rc
+
+                    # 3. 将脚本注入到原厂 init 会自动读取的目录
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 system"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 system/etc"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "mkdir 0755 system/etc/init"
+                    ${cacheDaemon.absolutePath} cpio ramdisk.cpio "add 0750 system/etc/init/huijui.rc huijui_files/huijui.rc"
                 """.trimIndent()
             } else {
                 // ==========================================
