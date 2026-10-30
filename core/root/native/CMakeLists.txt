@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.18)
 project(hsud CXX C)
 
+
+# ===== 强制关闭 xz 命令行工具编译，只编 liblzma =====
+set(XZ_TOOL_XZ OFF CACHE BOOL "" FORCE)
+set(XZ_TOOL_XZDEC OFF CACHE BOOL "" FORCE)
+set(XZ_TOOL_LZMAINFO OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/xz EXCLUDE_FROM_ALL)
 
 set(CMAKE_CXX_STANDARD 17)
