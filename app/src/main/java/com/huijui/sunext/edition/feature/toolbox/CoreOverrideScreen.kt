@@ -41,6 +41,7 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     var selectedFileName by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
+    var isPatched by remember { mutableStateOf(false) }
     var processLog by remember { mutableStateOf("") }
 
     // 🚀 核心：动态检测是否有 Root 权限
@@ -141,20 +142,32 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                                         return@clickable
                                     }
                                     
-                                    isProcessing = true
-                                    processLog = "> 正在请求临时 Root 权限...\n"
-                                    scope.launch {
-                                        delay(1000); processLog += "> 正在解包并注入 HUI 驱动...\n"
-                                        delay(1500)
-                                        if (selectedMode == "live") processLog += "> 活动分区修补完成，请重启设备。\n"
-                                        else if (selectedMode == "ghost") processLog += "> 备用槽位修补完成，等待下次OTA。\n"
-                                        else processLog += "> $selectedFileName 重写完成，请重启设备。\n"
-                                        isProcessing = false
+                                    if (isPatched) {
+                                        // 🚀 终极闭环：点击直接下发重启指令
+                                        scope.launch {
+                                            processLog += "> 正在下发重启指令...\n"
+                                            HuijuiShell.exec("su -c reboot")
+                                        }
+                                    } else if (!isProcessing) {
+                                        isProcessing = true
+                                        processLog = "> 正在请求临时 Root 权限...\n"
+                                        scope.launch {
+                                            // 真正调用底层安装器
+                                            val success = HuijuiInstaller.installLkm(context, selectedMode == "ghost") { log ->
+                                                processLog += "${log}\n"
+                                            }
+                                            if (success) {
+                                                processLog += "> 镜像修补完成！请点击下方按钮重启。\n"
+                                                isPatched = true
+                                            }
+                                            isProcessing = false
+                                        }
+                                    }
                                     }
                                 }, contentAlignment = Alignment.Center
                         ) {
                             if (isProcessing) CircularProgressIndicator(color = activeColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            else ZakoText(if (hasRoot == false) "请求权限" else "执行重载", color = activeColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                            else ZakoText(if (isPatched) "立即重启设备" else if (hasRoot == false) "请求权限" else "执行重载", color = if(isPatched) Color.Black else activeColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                         }
                     }
                 }
