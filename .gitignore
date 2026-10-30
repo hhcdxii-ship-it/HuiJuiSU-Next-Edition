@@ -1,20 +1,22 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-*.apk
-*.zip
-*.bak
-*.py
-ultimate_get_apk.py
-
-# 忽略编译产物
-app/build/
+# Android 构建产物
 build/
-.gradle/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# 内核编译产物
+kernel/*.o
+kernel/*.ko
+kernel/*.mod
+kernel/*.mod.c
+kernel/*.cmd
+kernel/*.symvers
+kernel/*.order
+kernel/.tmp_versions/
+kernel/hui/*.o
+kernel/hui/*.cmd
+
+# 系统文件
+.DS_Store
+*.log
