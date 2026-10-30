@@ -7,152 +7,256 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object HsudInstaller {
 
     suspend fun installLkm(
         context: Context,
         installToInactiveSlot: Boolean,
-        localImgUri: Uri? = null, // 🚀 如果用户选了本地镜像，就传进来
+        localImgUri: Uri? = null,
         onLog: (String) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            val kernelVer = Runtime.getRuntime().exec("uname -r").inputStream.bufferedReader().readText().trim()
+            onLog("> [初始化] 正在检测底层环境...")
+            
+            // 1. 获取环境信息
+            val kernelVer = getKernelVersion()
             val androidVer = Build.VERSION.RELEASE.toIntOrNull() ?: 0
-            val abis = Build.SUPPORTED_ABIS
-            val arch = if (abis.contains("arm64-v8a")) "arm64" else "x86_64"
-
-            val versionMatch = Regex("""(\d+)\.(\d+)""").find(kernelVer)
-            val mainVer = versionMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val subVer = versionMatch?.groupValues?.get(2)?.toIntOrNull() ?: 0
-
+            val arch = getArchitecture()
+            
+            val (mainVer, subVer) = parseKernelVersion(kernelVer)
             if (mainVer < 5 || (mainVer == 5 && subVer < 10)) {
-                onLog("❌ 非 GKI 老内核，拒绝操作。")
+                onLog("❌ 致命拦截：非 GKI 老内核 (${mainVer}.${subVer})，拒绝操作。")
                 return@withContext false
             }
 
-            // 1. 判断是否是本地镜像模式
-            val isLocalImg = localImgUri != null
-            var targetPartition = if (androidVer >= 14) "init_boot" else "boot"
-            val slotSuffix = Runtime.getRuntime().exec("getprop ro.boot.slot_suffix").inputStream.bufferedReader().readText().trim()
-            val isAbDevice = slotSuffix.isNotEmpty()
+            val isAndroid14Plus = androidVer >= 14
+            val daemonName = if (isAndroid14Plus) "hsud" else "hud"
+            val targetPartitionBase = if (isAndroid14Plus) "init_boot" else "boot"
+            
+            onLog("> [环境] Android $androidVer | 内核 $kernelVer | 架构 $arch")
+            onLog("> [引擎] 激活纯血 $daemonName 引擎，接管 $targetPartitionBase")
 
-            if (!isLocalImg) {
-                if (isAbDevice) {
-                    if (installToInactiveSlot) {
-                        val inactiveSlot = if (slotSuffix == "_a") "_b" else "_a"
-                        targetPartition += inactiveSlot
-                        onLog("📱 A/B 设备：注入未使用槽位 $targetPartition")
-                    } else {
-                        targetPartition += slotSuffix
-                        onLog("📱 A/B 设备：注入活动槽位 $targetPartition")
-                    }
+            // 🚀 工业级防护：电量检测
+            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+            val batteryLevel = batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            if (batteryLevel in 0..20) {
+                onLog("❌ 致命拦截：当前电量 $batteryLevel% 过低，刷机途中断电会导致设备变砖，请充电至 30% 以上。")
+                return@withContext false
+            }
+            onLog("> [环境] 当前电量 $batteryLevel%，满足刷机安全要求。")
+
+            // 2. A/B 槽位判定
+            var targetPartition = targetPartitionBase
+            val slotSuffix = getSlotSuffix()
+            if (slotSuffix.isNotEmpty() && localImgUri == null) {
+                if (installToInactiveSlot) {
+                    val inactiveSlot = if (slotSuffix == "_a") "_b" else "_a"
+                    targetPartition += inactiveSlot
+                    onLog("> [目标] A/B 设备，注入未使用槽位: $targetPartition")
                 } else {
-                    onLog("📱 非 A/B 设备：注入分区 $targetPartition")
+                    targetPartition += slotSuffix
+                    onLog("> [目标] A/B 设备，注入当前活动槽位: $targetPartition")
                 }
-            } else {
-                onLog("📂 本地镜像模式：准备处理用户提供的镜像...")
+            } else if (localImgUri == null) {
+                onLog("> [目标] 非 A/B 设备，注入分区: $targetPartition")
             }
 
-            // 2. 匹配内核模块
-            val gkiBranch = when {
-                mainVer >= 6 && subVer >= 18 -> "android17-6.18"
-                mainVer >= 6 && subVer >= 12 -> "android16-6.12"
-                mainVer >= 6 && subVer >= 6  -> "android15-6.6"
-                mainVer >= 6 && subVer >= 1  -> "android14-6.1"
-                mainVer == 5 && subVer >= 15 -> "android14-5.15"
-                mainVer == 5 && subVer >= 10 -> "android12-5.10"
-                else -> "android12-5.10"
-            }
+            // 3. 模块匹配与工具解压
+            val gkiBranch = matchGkiBranch(mainVer, subVer)
             val koName = "HuiJuiPhantom_${gkiBranch}_${arch}.ko"
-            onLog("🎯 模块匹配: $koName")
+            onLog("> [模块] 匹配纯血内核: $koName")
 
-            // 3. 释放工具与模块
             val workDir = File(context.cacheDir, "huijui_patch")
+            if (workDir.exists()) workDir.deleteRecursively()
             workDir.mkdirs()
+
             val cacheKo = File(workDir, koName)
-            context.assets.open("exploit/$koName").use { input -> FileOutputStream(cacheKo).use { input.copyTo(it) } }
-            
-            val cacheMagiskboot = File(workDir, "magiskboot")
-            try {
-                context.assets.open("exploit/magiskboot").use { input -> FileOutputStream(cacheMagiskboot).use { input.copyTo(it) } }
-                Runtime.getRuntime().exec("chmod 755 ${cacheMagiskboot.absolutePath}").waitFor()
-            } catch (e: Exception) {
-                onLog("❌ 致命错误：assets 中没有 magiskboot！")
+            if (!extractAsset(context, "exploit/$koName", cacheKo)) {
+                onLog("❌ 错误：APK 中缺失 $koName。")
                 return@withContext false
             }
 
-            // 4. 构建 Shell 脚本逻辑
-            onLog("> hsud 正在接管底层镜像修补...")
-            val targetImgFile = File(workDir, "stock_boot.img")
+            val cacheDaemon = File(workDir, daemonName)
+            if (!extractAsset(context, "exploit/$daemonName", cacheDaemon)) {
+                onLog("❌ 错误：APK 中缺失 $daemonName 引擎。")
+                return@withContext false
+            }
             
-            var scriptCmd = "cd ${workDir.absolutePath}\n"
+            // 赋予执行权限
+            runShellCommandSync("chmod 755 ${cacheDaemon.absolutePath}")
 
-            if (isLocalImg) {
-                // 把用户选的文件拷贝到工作目录
-                context.contentResolver.openInputStream(localImgUri!!).use { input ->
-                    FileOutputStream(targetImgFile).use { output -> input?.copyTo(output) }
+            // 4. 准备原始镜像 (核心：加入原厂备份机制)
+            val targetImgFile = File(workDir, "stock_boot.img")
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val backupDir = File("/sdcard/Download/HuiJui_Backup")
+            val backupFilePath = File(backupDir, "原厂_${targetPartition}_$timeStamp.img")
+
+            if (localImgUri != null) {
+                onLog("> [读取] 正在读取用户提供的本地镜像...")
+                if (!copyUriToFile(context, localImgUri, targetImgFile)) {
+                    onLog("❌ 错误：无法读取本地镜像文件。")
+                    return@withContext false
                 }
-                onLog("✅ 本地镜像已读取")
             } else {
-                // 从分区提取
-                scriptCmd += "dd if=/dev/block/by-name/$targetPartition of=stock_boot.img\n"
+                onLog("> [提取] 正在提取底层分区 $targetPartition ...")
+                // 提取原厂镜像
+                val ddExtractCmd = "dd if=/dev/block/by-name/$targetPartition of=${targetImgFile.absolutePath}"
+                if (!runShellCommandSync(ddExtractCmd)) {
+                    onLog("❌ 错误：提取分区失败，请检查 Root 权限。")
+                    return@withContext false
+                }
+                
+                // 备份原厂镜像到 Download 目录
+                onLog("> [防砖] 正在将原厂镜像备份到 Download/HuiJui_Backup ...")
+                backupDir.mkdirs()
+                runShellCommandSync("cp ${targetImgFile.absolutePath} ${backupFilePath.absolutePath}")
+                onLog("> [防砖] 备份成功: ${backupFilePath.name}")
             }
 
-            scriptCmd += """
-                ./magiskboot unpack stock_boot.img
-                
-                # 注入模块
-                mkdir -p ramdisk/overlay.d/sbin
-                cp ${cacheKo.absolutePath} ramdisk/overlay.d/sbin/huijui_phantom.ko
-                echo '#!/system/bin/sh' > ramdisk/overlay.d/sbin/huijui.rc
-                echo 'insmod /sbin/huijui_phantom.ko' >> ramdisk/overlay.d/sbin/huijui.rc
-                chmod 755 ramdisk/overlay.d/sbin/huijui.rc
-                
-                if [ -f ramdisk/init.rc ]; then
-                    echo 'import /sbin/huijui.rc' >> ramdisk/init.rc
-                fi
-                
-                ./magiskboot repack stock_boot.img new_boot.img
-            """.trimIndent()
-
-            if (isLocalImg) {
-                // 本地模式：把修补好的镜像放到用户能访问的目录
-                scriptCmd += "\ncp new_boot.img /sdcard/Download/HuiJuiPhantom_patched_${targetPartition}.img\n"
+            // 5. 流式执行修补流程
+            onLog("> [修补] 开始执行镜像解包与重打包...")
+            
+            var scriptCmd = "set -e\ncd ${workDir.absolutePath}\n"
+            scriptCmd += "./$daemonName unpack stock_boot.img\n"
+            
+            if (isAndroid14Plus) {
+                scriptCmd += """
+                    mkdir -p ramdisk/overlay.d/sbin
+                    cp ${cacheKo.absolutePath} ramdisk/overlay.d/sbin/huijui_phantom.ko
+                    echo 'on post-fs-data' > ramdisk/overlay.d/huijui.rc
+                    echo '    insmod /sbin/huijui_phantom.ko' >> ramdisk/overlay.d/huijui.rc
+                    if [ -f ramdisk/init.rc ]; then echo 'import /overlay.d/huijui.rc' >> ramdisk/init.rc; fi
+                """.trimIndent()
+            } else {
+                scriptCmd += """
+                    mkdir -p ramdisk/sbin
+                    cp ${cacheKo.absolutePath} ramdisk/sbin/huijui_phantom.ko
+                    if [ -f ramdisk/init.rc ]; then 
+                        echo 'on post-fs-data' >> ramdisk/init.rc
+                        echo '    insmod /sbin/huijui_phantom.ko' >> ramdisk/init.rc
+                    fi
+                """.trimIndent()
+            }
+            
+            scriptCmd += "\n./$daemonName repack stock_boot.img new_boot.img\n"
+            
+            if (localImgUri != null) {
+                scriptCmd += "cp new_boot.img /sdcard/Download/HuiJuiPhantom_patched_${targetPartition}.img\n"
                 scriptCmd += "echo 'PATCH_SUCCESS_LOCAL'\n"
             } else {
-                // 自动模式：直接写回分区
-                scriptCmd += "\ndd if=new_boot.img of=/dev/block/by-name/$targetPartition\n"
+                onLog("> [写入] 正在写回分区 $targetPartition ...")
+                scriptCmd += "dd if=new_boot.img of=/dev/block/by-name/$targetPartition\n"
                 scriptCmd += "echo 'PATCH_SUCCESS_LIVE'\n"
             }
 
-            // 5. 执行
-            val process = ProcessBuilder("su", "-c", scriptCmd).redirectErrorStream(true).start()
-            val result = process.inputStream.bufferedReader().readText()
-            val exitCode = process.waitFor()
-            
-            onLog(result.trim())
-            
-            if (exitCode == 0 && (result.contains("PATCH_SUCCESS_LIVE") || result.contains("PATCH_SUCCESS_LOCAL"))) {
-                if (isLocalImg) {
-                    onLog("✅ 本地镜像修补完成！")
-                    onLog("📁 已保存至 /sdcard/Download/HuiJuiPhantom_patched_${targetPartition}.img")
-                    onLog("👉 请使用 fastboot flash ${targetPartition} 刷入该镜像。")
+            // 🚀 使用流式读取执行命令，实时更新到 UI
+            val isSuccess = runShellCommandStreaming(scriptCmd, onLog)
+
+            // 额外兜底：repack 是 void 函数，失败时可能静默返回（退出码仍为 0），
+            // 检查输出镜像是否存在且非空，防止误判成功
+            if (isSuccess) {
+                val newBootFile = File(workDir, "new_boot.img")
+                if (!newBootFile.exists() || newBootFile.length() == 0L) {
+                    onLog("❌ [失败] repack 未生成有效镜像（文件不存在或为空）")
+                    return@withContext false
+                }
+            }
+
+            if (isSuccess) {
+                if (localImgUri != null) {
+                    onLog("✅ [成功] 本地镜像修补完成！")
                 } else {
-                    if (installToInactiveSlot) {
-                        onLog("✅ 未使用槽位修补完成！请勿立即重启，等待下次 OTA。")
-                    } else {
-                        onLog("✅ 活动分区修补完成！请立即重启。")
-                    }
+                    onLog("✅ [成功] 纯血内核注入完成！请立即重启设备。")
                 }
                 true
             } else {
-                onLog("❌ 镜像修补失败，请检查日志。")
+                onLog("❌ [失败] 修补进程异常退出，请检查上方日志。")
                 false
             }
+
         } catch (e: Exception) {
-            onLog("❌ 异常: ${e.message}")
+            onLog("❌ 系统异常: ${e.message}")
             false
         }
     }
+
+    // --- 核心底层函数 ---
+
+    // 流式执行 su 命令（退出码 + 结构化日志，替代 PATCH_SUCCESS 字符串匹配）
+    private fun runShellCommandStreaming(cmd: String, onLog: (String) -> Unit): Boolean {
+        return try {
+            val process = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            val reader = process.inputStream.bufferedReader()
+            var line: String?
+            var hadError = false
+
+            while (reader.readLine().also { line = it } != null) {
+                val text = line ?: continue
+                if (text.contains("[HSUD:error]") || text.contains("result=err")) {
+                    hadError = true
+                }
+                if (text.isNotBlank() && !text.startsWith("Unpacking") && !text.startsWith("Repacking")) {
+                    onLog("  [hsud] $text")
+                }
+            }
+
+            val exit = process.waitFor()
+            if (exit != 0) {
+                onLog("  [hsud] ⚠️ 引擎退出码 $exit：${hsudErrorText(exit)}")
+                return false
+            }
+            if (hadError) {
+                onLog("  [hsud] ⚠️ 引擎报告错误但退出码为 0，判定失败")
+                return false
+            }
+            true
+        } catch (e: Exception) {
+            onLog("  [hsud] ⚠️ 执行异常: ${e.message}")
+            false
+        }
+    }
+
+    // 错误码映射（与 hsud 侧 HSUD_E_* 对齐，后续 hsud 侧细化时同步更新）
+    private fun hsudErrorText(code: Int): String = when (code) {
+        1 -> "镜像格式无法识别"
+        2 -> "boot header 字段非法"
+        3 -> "压缩/解压失败"
+        4 -> "cpio 归档解析失败"
+        5 -> "AVB 校验失败"
+        6 -> "文件读写失败"
+        7 -> "参数错误"
+        else -> "未知错误 (exit=$code)"
+    }
+
+    private fun runShellCommandGetOutput(cmd: String): String {
+        return try {
+            val process = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            val out = process.inputStream.bufferedReader().readText()
+            process.waitFor()
+            out
+        } catch (e: Exception) { "" }
+    }
+
+    private fun runShellCommandSync(cmd: String): Boolean {
+        return try {
+            val process = ProcessBuilder("su", "-c", cmd).start()
+            process.waitFor() == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // 以下辅助函数保持不变
+    private fun getKernelVersion(): String = try { Runtime.getRuntime().exec("uname -r").inputStream.bufferedReader().readText().trim() } catch (e: Exception) { "" }
+    private fun getArchitecture(): String { val abis = Build.SUPPORTED_ABIS; return if (abis.contains("arm64-v8a")) "arm64" else "x86_64" }
+    private fun parseKernelVersion(version: String): Pair<Int, Int> { val match = Regex("""(\d+)\.(\d+)""").find(version); return Pair(match?.groupValues?.get(1)?.toIntOrNull() ?: 0, match?.groupValues?.get(2)?.toIntOrNull() ?: 0) }
+    private fun getSlotSuffix(): String = try { Runtime.getRuntime().exec("getprop ro.boot.slot_suffix").inputStream.bufferedReader().readText().trim() } catch (e: Exception) { "" }
+    private fun matchGkiBranch(main: Int, sub: Int): String = when { main >= 6 && sub >= 18 -> "android17-6.18"; main >= 6 && sub >= 12 -> "android16-6.12"; main >= 6 && sub >= 6 -> "android15-6.6"; main >= 6 && sub >= 1 -> "android14-6.1"; main == 5 && sub >= 15 -> "android14-5.15"; main == 5 && sub >= 10 -> "android12-5.10"; else -> "android12-5.10" }
+    private fun extractAsset(context: Context, assetPath: String, destFile: File): Boolean = try { context.assets.open(assetPath).use { input -> FileOutputStream(destFile).use { input.copyTo(it) } }; true } catch (e: Exception) { false }
+    private fun copyUriToFile(context: Context, uri: Uri, destFile: File): Boolean = try { val input: InputStream? = context.contentResolver.openInputStream(uri); input?.use { FileOutputStream(destFile).use { out -> it.copyTo(out) } }; true } catch (e: Exception) { false }
 }
