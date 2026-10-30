@@ -42,6 +42,7 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
     var selectedFileName by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
     var isPatched by remember { mutableStateOf(false) }
+    var patchedImgPath by remember { mutableStateOf<String?>(null) }
     var processLog by remember { mutableStateOf("") }
 
     // 🚀 核心：动态检测是否有 Root 权限
@@ -149,25 +150,54 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                                             HuijuiShell.exec("su -c reboot")
                                         }
                                     } else if (!isProcessing) {
+                                        if (patchedImgPath != null) {
+                                        // 🚀 如果是本地镜像修补完成，点击直接复制路径
+                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Path", patchedImgPath))
+                                        android.widget.Toast.makeText(context, "路径已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else if (isPatched) {
+                                        // 🚀 直接刷入模式，点击重启
+                                        scope.launch {
+                                            processLog += "> 正在下发重启指令...\n"
+                                            HuijuiShell.exec("su -c reboot")
+                                        }
+                                    } else if (!isProcessing) {
                                         isProcessing = true
                                         processLog = "> 正在请求临时 Root 权限...\n"
+                                        patchedImgPath = null
+                                        isPatched = false
                                         scope.launch {
-                                            // 真正调用底层安装器
-                                            val success = HuijuiInstaller.installLkm(context, selectedMode == "ghost") { log ->
+                                            val success = HuijuiInstaller.installLkm(context, selectedMode == "ghost", selectedUri) { log ->
                                                 processLog += "${log}\n"
                                             }
                                             if (success) {
-                                                processLog += "> 镜像修补完成！请点击下方按钮重启。\n"
-                                                isPatched = true
+                                                if (selectedUri != null) {
+                                                    // 本地修补成功
+                                                    patchedImgPath = "/sdcard/Download/HuiJuiPhantom_patched.img"
+                                                } else {
+                                                    // 直接刷入成功
+                                                    isPatched = true
+                                                }
                                             }
                                             isProcessing = false
+                                        }
+                                    }
                                         }
                                     }
                                     }
                                 }, contentAlignment = Alignment.Center
                         ) {
                             if (isProcessing) CircularProgressIndicator(color = activeColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            else ZakoText(if (isPatched) "立即重启设备" else if (hasRoot == false) "请求权限" else "执行重载", color = if(isPatched) Color.Black else activeColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                            else ZakoText(
+                                if (patchedImgPath != null) "复制镜像路径" 
+                                else if (isPatched) "立即重启设备" 
+                                else if (hasRoot == false) "请求权限" 
+                                else "执行重载", 
+                                color = if(patchedImgPath != null || isPatched) Color.Black else activeColor, 
+                                fontSize = 16.sp, 
+                                fontWeight = FontWeight.Bold, 
+                                letterSpacing = 2.sp
+                            )
                         }
                     }
                 }
