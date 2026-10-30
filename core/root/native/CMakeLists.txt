@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 project(hsud CXX C)
 
+add_subdirectory(external/xz EXCLUDE_FROM_ALL)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -Wno-everything")
@@ -9,7 +11,6 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
 
 # ===== 只把 xz 当子项目；zopfli 直接编 .c（排除自带命令行入口 zopfli_bin.c）=====
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/xz EXCLUDE_FROM_ALL)
 
 file(GLOB BOOT_SRC   ${CMAKE_CURRENT_SOURCE_DIR}/boot/*.cpp)
 file(GLOB SHIM_SRC   ${CMAKE_CURRENT_SOURCE_DIR}/shim/*.cpp)
