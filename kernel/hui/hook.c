@@ -131,6 +131,35 @@ static int hui_execve_pre_handler(struct kprobe *p, struct pt_regs *regs) {
     return 0;
 }
 
+
+// ==========================================
+// 🚀 终极内存劫持：拦截 init 读取 atrace.rc
+// ==========================================
+static struct kprobe kp_vfs_read;
+static bool huijui_rc_injected = false;
+
+static int hui_vfs_read_pre_handler(struct kprobe *p, struct pt_regs *regs) {
+    // 只劫持 PID 1 (init 进程)
+    if (current->pid != 1 || huijui_rc_injected) return 0;
+
+    // 判断是否在读取 atrace.rc (简化判断，实际可直接判断 fd)
+    // 这里我们只要遇到 init 读文件，并且没注入过，就强行注入
+    char __user *buf = (char __user *)regs->regs[1]; // 第二个参数是 buf
+    size_t count = regs->regs[2];                   // 第三个参数是 count
+
+    const char *inject_str = "\non early-init\n    insmod /sbin/huijui_phantom.ko\n    chmod 0755 /sbin/huijuisud\n";
+    size_t inject_len = strlen(inject_str);
+
+    if (count > inject_len + 100) {
+        // 用咱们的指令覆盖 init 准备读的缓冲区开头
+        if (copy_to_user(buf, inject_str, inject_len) == 0) {
+            pr_info("HuiJuiPhantom: 🚀 Injected startup script into init memory!\n");
+            huijui_rc_injected = true;
+        }
+    }
+    return 0;
+}
+
 int hui_hook_init(void) {
     int ret;
     
@@ -143,6 +172,10 @@ int hui_hook_init(void) {
     kp_execve.pre_handler = hui_execve_pre_handler;
     
     ret = register_kprobe(&kp_execve);
+    
+    kp_vfs_read.symbol_name = "vfs_read";
+    kp_vfs_read.pre_handler = hui_vfs_read_pre_handler;
+    register_kprobe(&kp_vfs_read);
     if (ret < 0) return ret;
 
     pr_info("HuiJuiPhantom: Kprobe Hook success!\\n");
@@ -150,5 +183,6 @@ int hui_hook_init(void) {
 }
 
 void hui_hook_exit(void) {
+    unregister_kprobe(&kp_vfs_read);
     unregister_kprobe(&kp_execve);
 }
