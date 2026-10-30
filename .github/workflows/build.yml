@@ -1,4 +1,4 @@
-name: HuiJui Phantom CI/CD
+name: HuiJui Phantom CI/CD (Pure Pack)
 
 on:
   push:
@@ -6,86 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ==========================================
-  # 阶段 1：纯血编译内核模块
-  # ==========================================
-  build-kernel:
-    name: Build Kernel Module (arm64)
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Install Build Tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang lld llvm make bc cpio flex bison libssl-dev libelf-dev ccache git curl
-        mkdir -p ~/bin
-        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-        chmod a+x ~/bin/repo
-        echo "$HOME/bin" >> $GITHUB_PATH
-
-    - name: Setup ccache
-      uses: actions/cache@v4
-      with:
-        path: ~/.ccache
-        key: ccache-kernel-${{ github.sha }}
-        restore-keys: ccache-kernel-
-
-    - name: Fetch AOSP Kernel Source
-      run: |
-        echo "🔄 正在拉取 AOSP 5.10 内核源码..."
-        mkdir -p kernel_headers && cd kernel_headers
-        ~/bin/repo init -u https://android.googlesource.com/kernel/manifest -b common-android12-5.10
-        ~/bin/repo sync -c --no-tags --optimized-fetch --prune -j4
-
-    - name: Prepare Kernel Build
-      run: |
-        cd kernel_headers
-        echo "⚙️ 正在生成 defconfig..."
-        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
-
-    - name: Compile Module
-      run: |
-        cd kernel
-        export CCACHE_DIR=~/.ccache
-        make ARCH=arm64 CC="ccache clang" LLVM=1 \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          KDIR=../kernel_headers \
-          modules KBUILD_MODPOST_WARN=1
-        llvm-strip --strip-debug HuiJuiPhantom.ko
-
-    - name: Upload .ko Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: HuiJuiPhantom-ko
-        path: kernel/HuiJuiPhantom.ko
-
-
-  # ==========================================
-  # 阶段 2：依赖编译产物，打包签名 APK
-  # ==========================================
-  build-app:
+  build-apk:
     name: Build & Package APK
-    needs: build-kernel
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
-
-    - name: Download .ko Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: HuiJuiPhantom-ko
-        path: app/src/main/assets/exploit/
-
-    - name: Rename .ko
-      run: |
-        cd app/src/main/assets/exploit/
-        # 确保重命名不会因为文件已存在而报错
-        mv -f HuiJuiPhantom.ko HuiJuiPhantom_arm64.ko || true
-        ls -lh
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -100,6 +26,13 @@ jobs:
           ~/.gradle/caches
           ~/.gradle/wrapper
         key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: gradle-
+
+    # 验证一下本地的 8 个 ko 是否都推上来了
+    - name: Verify Local KOs
+      run: |
+        echo "📦 检查 assets/exploit 目录下的内核模块："
+        ls -lh app/src/main/assets/exploit/
 
     - name: Build Signed APK
       env:
@@ -119,13 +52,20 @@ jobs:
     - name: Package Final ZIP
       run: |
         mkdir -p final_package
-        cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-Pureblood-arm64.apk
-        cp app/src/main/assets/exploit/*.ko final_package/ || true
+        cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-Full-Universal.apk
+        # 打包时把 8 个内核也一起塞进去
+        cp app/src/main/assets/exploit/*.ko final_package/
         echo "Build Date: $(date)" > final_package/build-info.txt
-        zip -r HuiJuiSU-Pureblood-Release.zip final_package/
+        zip -r HuiJuiSU-Full-Release.zip final_package/
 
-    - name: Upload Full Package
+    - name: Upload Final APK
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-Pureblood-Release
-        path: HuiJuiSU-Pureblood-Release.zip
+        name: HuiJuiSU-APK
+        path: app/build/outputs/apk/release/*.apk
+
+    - name: Upload Full Package (APK + All KOs)
+      uses: actions/upload-artifact@v4
+      with:
+        name: HuiJuiSU-Full-Package
+        path: HuiJuiSU-Full-Release.zip
