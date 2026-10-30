@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.huijui.sunext.edition.core.root.HuijuiInstaller
+import com.huijui.sunext.edition.core.root.HsudInstaller
 import com.huijui.sunext.edition.core.root.HuijuiShell
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.ui.language.zakoString
@@ -151,9 +151,9 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                             scope.launch { HuijuiShell.exec("su -c reboot") }
                         } else if (!isProcessing) {
                             isProcessing = true
-                            processLog = "> 正在请求 Root 权限...\n"
+                            processLog = "> 正在唤醒 hsud 守护进程...\n"
                             scope.launch {
-                                val success = HuijuiInstaller.installLkm(
+                                val success = HsudInstaller.installLkm(
                                     context = context,
                                     installToInactiveSlot = selectedMode == "ghost",
                                     localImgUri = selectedUri
