@@ -28,3 +28,15 @@ core/root/native/external/**/tests/
 core/root/native/external/**/*.pdf
 core/root/native/external/**/*.bz2
 core/root/native/external/bzip2/manual.*
+
+# 🚀 编译产物与临时缓存
+app/.cxx/
+core/root/native/build_linux/
+pc_patch/
+A
+Compilation
+Get
+Run
+*.o
+*.a
+*.so
