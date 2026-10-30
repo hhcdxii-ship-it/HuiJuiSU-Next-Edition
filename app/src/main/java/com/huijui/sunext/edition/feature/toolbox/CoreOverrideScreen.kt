@@ -212,8 +212,12 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(24.dp)
         ) {
-            val bgBrush = if (true) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.12f)
-                          else Brush.linearGradient(listOf(activeColor, activeColor.copy(0.8f)))
+            val bgBrush: androidx.compose.ui.graphics.Brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.2f),
+                    Color.White.copy(alpha = 0.1f)
+                )
+            )
             
             Box(
                 modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -234,8 +238,9 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                                     context = context,
                                     installToInactiveSlot = selectedMode == "ghost",
                                     localImgUri = selectedUri,
+                                    onLog = { log -> processLog += "$log\n" },
                                     customKoUri = customKoUri
-                                ) { log -> processLog += "$log\n" }
+                                )
                                 
                                 if (success) {
                                     if (selectedUri != null) patchedImgPath = "/sdcard/Download/HuiJuiPhantom_patched.img"
