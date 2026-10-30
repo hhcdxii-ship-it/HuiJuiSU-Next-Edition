@@ -13,6 +13,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import android.util.Log
+
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.huijui.sunext.edition.core.utils.AppSettings
@@ -34,6 +36,11 @@ fun SmartBackground() {
             repeatMode = Player.REPEAT_MODE_ALL
             playWhenReady = true
             volume = 0f // 背景视频必须静音
+            addListener(object : Player.Listener {
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.e("SmartBackground", "ExoPlayer 播放失败: ${error.message}", error)
+                }
+            })
             prepare()
         }
     }
