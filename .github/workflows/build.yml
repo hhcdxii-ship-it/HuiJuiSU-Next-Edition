@@ -6,64 +6,69 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ko:
-    name: Build Phantom (${{ matrix.gki_version }} - ${{ matrix.arch }})
+  build-apk:
+    name: Build and Package (APK + KOs)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # 先跑通一个，等下再全开
-        gki_version: [ "android12-5.10" ]
-        arch: [ "arm64" ]
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Install Build Tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang lld llvm make bc cpio flex bison libssl-dev libelf-dev ccache git
-        # 安装交叉编译工具链
-        sudo apt-get install -y gcc-aarch64-linux-gnu
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-    - name: Setup ccache
+    - name: Setup Gradle Cache
       uses: actions/cache@v4
       with:
-        path: ~/.ccache
-        key: ccache-${{ matrix.gki_version }}-${{ matrix.arch }}-${{ github.sha }}
-        restore-keys: ccache-${{ matrix.gki_version }}-${{ matrix.arch }}-
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: gradle-
 
-    - name: Fetch GKI Source (${{ matrix.gki_version }})
+    - name: Build Signed APK
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        echo "🔄 正在克隆 AOSP 内核源码 (${{ matrix.gki_version }})，这可能需要几分钟..."
-        # 🚀 使用 AOSP 官方源，浅克隆对应分支
-        git clone --depth=1 https://android.googlesource.com/kernel/common -b ${{ matrix.gki_version }} ./gki_headers/${{ matrix.gki_version }}
+        echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=$(pwd)/app/keystore.jks \
+          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+          -Pandroid.injected.signing.key.password=$KEY_PASSWORD
 
-    - name: Prepare Kernel Modules Build
+    - name: Package All Artifacts
       run: |
-        cd ./gki_headers/${{ matrix.gki_version }}
-        echo "⚙️ 正在配置内核编译环境 (gki_defconfig + modules_prepare)..."
-        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
-
-    - name: Build Kernel Module
-      run: |
-        cd kernel
-        export CCACHE_DIR=~/.ccache
-        export USE_CCACHE=1
+        mkdir -p final_package
+        # 把编译出的 APK 放进去
+        cp app/build/outputs/apk/release/*.apk final_package/ || true
         
-        echo "🚀 开始编译 HuiJuiPhantom.ko..."
-        make ARCH=arm64 CC="ccache clang" LLVM=1 \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          KDIR=../gki_headers/${{ matrix.gki_version }} \
-          modules KBUILD_MODPOST_WARN=1
+        # 把仓库里 assets/exploit/ 下所有的 .ko（不管几个架构）全放进去
+        cp -r app/src/main/assets/exploit/*.ko final_package/ || true
+        
+        # 生成一份构建信息
+        echo "Build Date: $(date)" > final_package/build-info.txt
+        echo "Commit: ${{ github.sha }}" >> final_package/build-info.txt
+        
+        # 打包成一个 ZIP 压缩包
+        zip -r HuiJuiSU-Full-Release.zip final_package/
+        ls -lh HuiJuiSU-Full-Release.zip
 
-        llvm-strip --strip-debug HuiJuiPhantom.ko
-        mv HuiJuiPhantom.ko HuiJuiPhantom_${{ matrix.gki_version }}_${{ matrix.arch }}.ko
-
-    - name: Upload .ko Artifact
+    - name: Upload Final APK (Standalone)
       uses: actions/upload-artifact@v4
       with:
-        name: ko-${{ matrix.gki_version }}-${{ matrix.arch }}
-        path: kernel/HuiJuiPhantom_*.ko
+        name: HuiJuiSU-APK
+        path: app/build/outputs/apk/release/*.apk
+
+    - name: Upload Full ZIP Package (APK + All KOs)
+      uses: actions/upload-artifact@v4
+      with:
+        name: HuiJuiSU-Full-Package
+        path: HuiJuiSU-Full-Release.zip
