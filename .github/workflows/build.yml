@@ -6,9 +6,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-apk:
-    name: Build and Package (APK + KOs)
+  # ==========================================
+  # 任务 1：按架构拆分，打出专属轻量 APK
+  # ==========================================
+  build-split-apk:
+    name: Build Split APK (${{ matrix.arch }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ "arm64", "x86_64", "x86" ]
 
     steps:
     - name: Checkout Code
@@ -29,6 +36,14 @@ jobs:
         key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: gradle-
 
+    # 🚀 核心逻辑：只保留当前架构的 .ko，删掉其他的
+    - name: Prepare Assets for ${{ matrix.arch }}
+      run: |
+        mkdir -p app/src/main/assets/exploit/
+        find app/src/main/assets/exploit/ -name "*.ko" ! -name "*_${{ matrix.arch }}.ko" -exec rm {} \;
+        echo "✅ 当前 ${{ matrix.arch }} 架构包内包含的 .ko："
+        ls -lh app/src/main/assets/exploit/
+
     - name: Build Signed APK
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -44,30 +59,62 @@ jobs:
           -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
           -Pandroid.injected.signing.key.password=$KEY_PASSWORD
 
-    - name: Package All Artifacts
+    - name: Rename and Upload ${{ matrix.arch }} APK
       run: |
         mkdir -p final_package
-        # 把编译出的 APK 放进去
-        cp app/build/outputs/apk/release/*.apk final_package/ || true
-        
-        # 把仓库里 assets/exploit/ 下所有的 .ko（不管几个架构）全放进去
-        cp -r app/src/main/assets/exploit/*.ko final_package/ || true
-        
-        # 生成一份构建信息
-        echo "Build Date: $(date)" > final_package/build-info.txt
-        echo "Commit: ${{ github.sha }}" >> final_package/build-info.txt
-        
-        # 打包成一个 ZIP 压缩包
-        zip -r HuiJuiSU-Full-Release.zip final_package/
-        ls -lh HuiJuiSU-Full-Release.zip
+        cp app/build/outputs/apk/release/*.apk final_package/HuiJuiSU-${{ matrix.arch }}.apk
 
-    - name: Upload Final APK (Standalone)
+    - name: Upload ${{ matrix.arch }} APK
       uses: actions/upload-artifact@v4
       with:
-        name: HuiJuiSU-APK
-        path: app/build/outputs/apk/release/*.apk
+        name: HuiJuiSU-Split-${{ matrix.arch }}
+        path: final_package/*.apk
 
-    - name: Upload Full ZIP Package (APK + All KOs)
+
+  # ==========================================
+  # 任务 2：打全量 APK + ZIP
+  # ==========================================
+  build-full-package:
+    name: Build Full Package (APK + All KOs)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+    - name: Build Signed APK (Full)
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=$(pwd)/app/keystore.jks \
+          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+          -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+    - name: Package ZIP
+      run: |
+        mkdir -p full_package
+        cp app/build/outputs/apk/release/*.apk full_package/HuiJuiSU-Full-Universal.apk
+        cp -r app/src/main/assets/exploit/*.ko full_package/ || true
+        echo "Build Date: $(date)" > full_package/build-info.txt
+        echo "Commit: ${{ github.sha }}" >> full_package/build-info.txt
+        zip -r HuiJuiSU-Full-Release.zip full_package/
+
+    - name: Upload Full Package
       uses: actions/upload-artifact@v4
       with:
         name: HuiJuiSU-Full-Package
