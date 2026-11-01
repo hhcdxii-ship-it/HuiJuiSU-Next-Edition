@@ -72,6 +72,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         com.huijui.sunext.edition.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
+        // 崩溃捕获：此前 CrashHandler 全项目零引用，等于一次都没装上，
+        // 线上崩了不会有任何本地日志可查。
+        com.huijui.sunext.edition.core.utils.CrashHandler.init(this)
         setContent {
             HuijuiTheme {
                 MainApp()
@@ -87,6 +90,16 @@ fun MainApp() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val scope = rememberCoroutineScope()
+
+    // 系统守护：只在用户真的开了对应开关时才跑，关掉就停，
+    // 避免一个空转的 10 秒轮询白白耗电。
+    DisposableEffect(Unit) {
+        val wanted = AppSettings.isAntiDevOptionsEnabled || AppSettings.isAntiRootLossEnabled
+        if (wanted) {
+            com.huijui.sunext.edition.core.utils.SystemGuardian.startGuardian(scope)
+        }
+        onDispose { com.huijui.sunext.edition.core.utils.SystemGuardian.stopGuardian() }
+    }
 
     // 生命期感知：切回前台强制重新探测一次（走统一状态源，不再各自起 su）
     val lifecycleOwner = LocalLifecycleOwner.current

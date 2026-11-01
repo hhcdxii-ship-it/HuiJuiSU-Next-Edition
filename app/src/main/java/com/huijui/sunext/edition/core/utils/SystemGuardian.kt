@@ -16,6 +16,12 @@ object SystemGuardian {
         
         guardianJob = scope.launch(Dispatchers.IO) {
             while (isGuardianRunning) {
+                // 两个开关都关着就直接长睡，不做任何 shell 调用
+                if (!AppSettings.isAntiDevOptionsEnabled && !AppSettings.isAntiRootLossEnabled) {
+                    kotlinx.coroutines.delay(60_000)
+                    continue
+                }
+
                 if (AppSettings.isAntiDevOptionsEnabled) {
                     // 🚀 针对 HyperOS OS1/OS2/OS3/OS4，强制重写开关
                     HuijuiShell.exec("settings put global development_settings_enabled 1")
@@ -34,7 +40,8 @@ object SystemGuardian {
                     }
                 }
 
-                kotlinx.coroutines.delay(10000) // 守护频率提高至 10 秒，更快响应系统重置
+                // 10 秒一次 shell 太费电；系统设置被重置不是秒级事件，30 秒足够
+                kotlinx.coroutines.delay(30_000)
             }
         }
     }

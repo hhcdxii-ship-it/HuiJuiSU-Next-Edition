@@ -24,11 +24,16 @@ object CrashHandler : Thread.UncaughtExceptionHandler {
             val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
             val log = "=== HUI Crash at $timestamp ===\n${sw}\n"
             
-            val logFile = File(appContext.filesDir, "hui_crash.log")
-            logFile.appendText(log)
-            
-            // 也可以尝试写入 /data/adb/huijuisu/crash.log
-            File("/data/adb/huijuisu/crash.log").appendText(log)
+            // 应用私有目录一定可写，这是主日志
+            runCatching {
+                File(appContext.filesDir, "hui_crash.log").appendText(log)
+            }
+
+            // /data/adb 只有 root 能写，普通进程必然失败；
+            // 单独包一层 runCatching，避免它把上面的主日志一起带崩
+            runCatching {
+                File("/data/adb/huijuisu/crash.log").appendText(log)
+            }
         } catch (_: Exception) { }
         
         defaultHandler?.uncaughtException(t, e)
