@@ -29,6 +29,7 @@ import com.huijui.sunext.edition.core.ui.component.GlassCard
 import com.huijui.sunext.edition.core.ui.design.HuiAlpha
 import com.huijui.sunext.edition.core.ui.design.HuiLoading
 import com.huijui.sunext.edition.core.ui.design.HuiSpace
+import com.huijui.sunext.edition.core.ui.design.HuiTopBar
 import com.huijui.sunext.edition.core.ui.design.huiSecondary
 import com.huijui.sunext.edition.core.ui.design.huiTertiary
 import com.huijui.sunext.edition.core.ui.language.ZakoText
@@ -50,32 +51,8 @@ fun KernelModulesScreen(onBack: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 返回栏
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = HuiSpace.s, vertical = HuiSpace.s),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.KeyboardArrowLeft, "返回", tint = Color.White.huiSecondary)
-            }
-            Spacer(Modifier.width(HuiSpace.xs))
-            Column {
-                ZakoText("内核模块", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
-                ZakoText(
-                    "KERNEL MODULES",
-                    color = Color.White.huiTertiary,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 1.sp
-                )
-            }
+        Box(modifier = Modifier.padding(horizontal = HuiSpace.s)) {
+            HuiTopBar(title = "内核模块", subtitle = "KERNEL MODULES", onBack = onBack)
         }
 
         val snap = snapshot

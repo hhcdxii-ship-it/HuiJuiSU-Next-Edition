@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.ui.component.GlassCard
 import com.huijui.sunext.edition.core.ui.design.HuiAlpha
 import com.huijui.sunext.edition.core.ui.design.HuiSpace
+import com.huijui.sunext.edition.core.ui.design.HuiTopBar
 import com.huijui.sunext.edition.core.ui.design.huiSecondary
 import com.huijui.sunext.edition.core.ui.design.huiTertiary
 import com.huijui.sunext.edition.core.ui.language.HuiStrings
@@ -51,27 +52,8 @@ fun LanguageSettingsScreen(onBack: () -> Unit) {
     val current = HuiStrings.modeOf(AppSettings.currentLanguage)
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = HuiSpace.s, vertical = HuiSpace.s),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(40.dp).clickable(onClick = onBack),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.KeyboardArrowLeft, "Back", tint = Color.White.huiSecondary)
-            }
-            Spacer(Modifier.width(HuiSpace.xs))
-            Column {
-                ZakoText("语言设置", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
-                ZakoText(
-                    "LANGUAGE",
-                    color = Color.White.huiTertiary,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 1.sp
-                )
-            }
+        Box(modifier = Modifier.padding(horizontal = HuiSpace.s)) {
+            HuiTopBar(title = "语言设置", subtitle = "LANGUAGE", onBack = onBack)
         }
 
         LazyColumn(

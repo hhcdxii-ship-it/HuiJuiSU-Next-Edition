@@ -1,6 +1,7 @@
 package com.huijui.sunext.edition.core.ui.design
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -21,6 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
@@ -67,6 +70,55 @@ object HuiAlpha {
 /** 次级文字的统一入口，避免每个屏幕自己调 alpha。 */
 val Color.huiSecondary: Color get() = copy(alpha = HuiAlpha.SECONDARY)
 val Color.huiTertiary: Color get() = copy(alpha = HuiAlpha.TERTIARY)
+
+/**
+ * 统一顶栏。
+ *
+ * 各页面以前各写一套「返回箭头 + 28sp 粗体标题 + 副标题」，字号、间距、返回热区
+ * 全都不一样。这里收成一个组件，高度和热区固定，改一处全局生效。
+ */
+@Composable
+fun HuiTopBar(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = HuiSpace.s),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onBack != null) {
+            Box(
+                modifier = Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowLeft,
+                    contentDescription = "Back",
+                    tint = Color.White.huiSecondary,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            Spacer(Modifier.width(HuiSpace.xs))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            ZakoText(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
+            if (subtitle != null) {
+                Spacer(Modifier.height(1.dp))
+                ZakoText(
+                    subtitle,
+                    color = Color.White.huiTertiary,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp
+                )
+            }
+        }
+        trailing?.invoke()
+    }
+}
 
 @Composable
 fun HuiSectionHeader(

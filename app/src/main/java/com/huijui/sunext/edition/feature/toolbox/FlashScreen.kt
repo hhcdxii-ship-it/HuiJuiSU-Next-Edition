@@ -34,6 +34,8 @@ import com.huijui.sunext.edition.core.root.FlashGuard
 import com.huijui.sunext.edition.core.root.FlashLogTranslator
 import com.huijui.sunext.edition.core.root.HuijuiFlashManager
 import com.huijui.sunext.edition.core.root.HuijuiShell
+import com.huijui.sunext.edition.core.ui.design.HuiSpace
+import com.huijui.sunext.edition.core.ui.design.HuiTopBar
 import com.huijui.sunext.edition.core.ui.component.GlassCard
 import com.huijui.sunext.edition.core.ui.component.rememberPausableInfiniteTransition
 import com.huijui.sunext.edition.core.ui.language.ZakoText
@@ -104,15 +106,13 @@ fun FlashScreen(onBack: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            Spacer(modifier = Modifier.height(60.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onBack() }) {
-                Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White)
-                ZakoText("返回", color = Color.White, fontSize = 16.sp)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            ZakoText("分区刷入", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            ZakoText("选择 IMG · 智能识别 · 三层防护防变砖", color = Color.White.copy(0.6f), fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(HuiSpace.s))
+            HuiTopBar(
+                title = "分区刷入",
+                subtitle = "FLASH · 智能识别 · 三层防护",
+                onBack = onBack
+            )
+            Spacer(modifier = Modifier.height(HuiSpace.s))
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 20.dp, bottom = 40.dp)) {
                 item {
