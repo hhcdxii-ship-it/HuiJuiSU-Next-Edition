@@ -162,6 +162,29 @@ fun MainApp() {
                     }
                     composable("core_override") { CoreOverrideScreen(onBack = { navController.popBackStack() }) }
                     composable("kernel_modules") { KernelModulesScreen(onBack = { navController.popBackStack() }) }
+
+                    // ============================================================
+                    // ⚠️ 以下 14 个目的地此前**从未注册**，但 ToolScreen / ToolboxScreen
+                    //    一直在 navigate("toolbox_xxx")。Navigation 找不到目的地会抛
+                    //    IllegalArgumentException，也就是说整个工具箱子页面
+                    //    （分区备份 / CPU 调度 / App 管理 / 方舟 / 隐藏 / 权限审计…）
+                    //    从这里点进去一律进不去。
+                    // ============================================================
+                    composable("toolbox_flash") { FlashScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_console") { HuijuiConsoleScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_backup") { BackupScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_cpu") { CpuControlScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_tweaks") { SystemTweaksScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_audit") { RootAuditScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_apps") { AppManagerScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_hardware") { HardwareInfoScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_sensors") { SensorTestScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_screentest") { ScreenTestScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_quickaction") { QuickActionScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_permissions") { PermissionAuditScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_ark") { ArkScreen(onBack = { navController.popBackStack() }) }
+                    composable("toolbox_hiding") { HidingDashboardScreen(onBack = { navController.popBackStack() }) }
+
                     composable("tool") {
                         ToolScreen(
                             onNavigateToConsole = { navController.navigate("toolbox_console") },
