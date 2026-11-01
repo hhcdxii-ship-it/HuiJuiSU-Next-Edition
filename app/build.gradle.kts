@@ -21,6 +21,11 @@ android {
         
         // 🚀 核心改动：定义编译出来的 APK 基础文件名
         setProperty("archivesBaseName", "HuiJuiSU-Next-Edition-$versionName")
+
+        // App 自己有整套语言系统（HuiStrings），系统资源只用于 AndroidX 组件，
+        // 因此不需要把 AndroidX 里几十种语言的字符串全打进包。
+        // 只保留简中 / 繁中 / 英文，能省掉一部分体积。
+        resourceConfigurations += listOf("zh", "zh-rTW", "en")
     }
 
     // 动态配置签名
@@ -82,11 +87,8 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.navigation:navigation-compose:2.8.4")
 
-    implementation("dev.chrisbanes.haze:haze:1.2.2")
-    implementation("dev.chrisbanes.haze:haze-materials:1.2.2")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-gif:2.6.0")
 
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
