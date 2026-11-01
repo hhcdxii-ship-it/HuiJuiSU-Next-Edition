@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.ui.component.GlassCard
+import com.huijui.sunext.edition.core.ui.design.HuiSpace
+import com.huijui.sunext.edition.core.ui.design.HuiTopBar
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.utils.*
 import kotlinx.coroutines.Dispatchers
@@ -98,20 +100,13 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
         )
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            Spacer(modifier = Modifier.height(60.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onBack() }
-            ) {
-                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
-                ZakoText("返回", color = Color.White, fontSize = 16.sp)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            ZakoText("主题设置", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-            ZakoText("自定义你的纯血管理器外观", color = Color.White.copy(0.85f), fontSize = 14.sp)
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(HuiSpace.s))
+            HuiTopBar(
+                title = "主题设置",
+                subtitle = "THEME · 外观与材质",
+                onBack = onBack
+            )
+            Spacer(modifier = Modifier.height(HuiSpace.m))
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -148,7 +143,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                             AppSettings.save()
                         }
 
-                        Divider(
+                        HorizontalDivider(
                             color = Color.White.copy(0.1f),
                             thickness = 1.dp,
                             modifier = Modifier.padding(vertical = 8.dp)
