@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.huijui.sunext.edition.core.ui.effect.huiEntrance
 import com.huijui.sunext.edition.core.ui.theme.HuiTheme
 import com.huijui.sunext.edition.core.utils.AnimationStyle
 import com.huijui.sunext.edition.core.utils.AppSettings
@@ -83,6 +84,9 @@ fun GlassCard(
 
     Box(
         modifier = modifier
+            // 入场：淡入 + 轻微上浮。所有卡片共用同一条曲线，
+            // 列表滚动时逐张浮现，不会出现「有的卡有动画、有的没有」。
+            .huiEntrance()
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(cornerRadius)
             .then(if (fill != null) Modifier.background(fill) else Modifier)

@@ -55,7 +55,8 @@ fun SettingsScreen(
     onNavigateToTheme: () -> Unit = {},
     onNavigateToLanguage: () -> Unit = {},
     onResetComplete: () -> Unit = {},
-    onNavigateToKernelModules: () -> Unit = {}
+    onNavigateToKernelModules: () -> Unit = {},
+    onNavigateToEffects: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -104,6 +105,14 @@ fun SettingsScreen(
                 title = "内核模块",
                 subtitle = "查看内置 8 档模块与当前内核匹配情况",
                 onClick = onNavigateToKernelModules
+            )
+        }
+        item {
+            SettingsRow(
+                icon = Icons.Default.Bolt,
+                title = "动效实验室",
+                subtitle = "1128 种动效组合 · 实时预览",
+                onClick = onNavigateToEffects
             )
         }
 

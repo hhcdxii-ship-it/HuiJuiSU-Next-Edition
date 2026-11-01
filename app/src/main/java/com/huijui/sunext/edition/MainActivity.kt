@@ -119,6 +119,7 @@ fun MainApp() {
         currentRoute?.startsWith("toolbox_") == true ||
         currentRoute == "core_override" ||
         currentRoute == "kernel_modules" ||
+        currentRoute == "effects_gallery" ||
         currentRoute == "module_webui" ||
         currentRoute == "language_settings"
     val forceStrongGlass = currentRoute?.startsWith("toolbox_") == true || currentRoute == "module_webui"
@@ -175,6 +176,7 @@ fun MainApp() {
                     }
                     composable("core_override") { CoreOverrideScreen(onBack = { navController.popBackStack() }) }
                     composable("kernel_modules") { KernelModulesScreen(onBack = { navController.popBackStack() }) }
+                    composable("effects_gallery") { EffectsGalleryScreen(onBack = { navController.popBackStack() }) }
 
                     // ============================================================
                     // ⚠️ 以下 14 个目的地此前**从未注册**，但 ToolScreen / ToolboxScreen
@@ -247,6 +249,7 @@ fun MainApp() {
                             onNavigateToTheme = { navController.navigate("themesettings") },
                             onNavigateToLanguage = { navController.navigate("language_settings") },
                             onNavigateToKernelModules = { navController.navigate("kernel_modules") },
+                            onNavigateToEffects = { navController.navigate("effects_gallery") },
                             onResetComplete = {
                                 navController.navigate("onboarding") {
                                     popUpTo(navController.graph.id) { inclusive = true }
