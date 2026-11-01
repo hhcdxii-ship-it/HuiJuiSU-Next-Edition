@@ -113,8 +113,10 @@ object FlashGuard {
         }
 
         // 2. 备份目录可写（段 B 建备份用）
+        //    注意：HuijuiShell 本身跑在常驻的 su 会话里，再套一层 `su -c` 就是嵌套提权，
+        //    某些管理器的 su 策略会直接拒绝，导致这里误报「备份目录不可写」。
         val mkdirRes = HuijuiShell.exec(
-            "su -c 'mkdir -p $BACKUP_DIR && test -w $BACKUP_DIR && echo ok || echo fail'"
+            "mkdir -p $BACKUP_DIR && test -w $BACKUP_DIR && echo ok || echo fail"
         )
         if (!mkdirRes.out.joinToString("").contains("ok")) {
             warnings.add("备份目录 $BACKUP_DIR 不可写，无法在刷入前备份")
@@ -160,20 +162,12 @@ object FlashGuard {
     /**
      * 🚨 文件大小校验（刷入前调）
      */
-    fun validateFileSize(filePath: String, partition: String): Boolean {
-        val p = partition.lowercase().trim()
-        val limit = SIZE_LIMITS[p] ?: return false
-        
-        // 🚀 修复：用 su -c stat 算出文件大小，防止 Java File API 在安卓 11+ 读不到大小
-        return try {
-            val process = ProcessBuilder("su", "-c", "stat -c %s \"$filePath\"").start()
-            val sizeStr = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
-            val size = sizeStr.toLongOrNull() ?: 0L
-            size in 1..limit
-        } catch (e: Exception) {
-            false
-        }
+    suspend fun validateFileSize(filePath: String, partition: String): Boolean {
+        val limit = SIZE_LIMITS[partition.lowercase().trim()] ?: return false
+        // 走常驻 shell 统计，不再每个文件 ProcessBuilder 起一个 su（那会在批量刷入时
+        // 每个文件都卡一次授权/进程创建，而且 waitFor 没有超时）
+        val size = InstallIo.size(filePath)
+        return size in 1..limit
     }
 
     /** 允许备份但禁止刷入的分区（段 B 备份 / 段 C 恢复时用） */
@@ -192,7 +186,42 @@ object FlashGuard {
     }
 
     private suspend fun readSlotSuffix(): String {
-        val r = HuijuiShell.exec("su -c 'getprop ro.boot.slot_suffix'")
+        // 同上：不要再套 su
+        val r = HuijuiShell.exec("getprop ro.boot.slot_suffix")
         return r.out.firstOrNull()?.trim() ?: ""
+    }
+
+    /**
+     * 给 UI 用的实时快照 —— 让用户在**选镜像之前**就看到能不能刷，
+     * 而不是点了确认、对话框关掉之后才发现预检没过。
+     */
+    data class GuardSnapshot(
+        val batteryPercent: Int,
+        val slotSuffix: String,
+        val backupWritable: Boolean,
+        val canFlash: Boolean,
+        val blockReason: String?
+    )
+
+    suspend fun snapshot(context: Context): GuardSnapshot = withContext(Dispatchers.IO) {
+        val battery = readBatteryPercent(context)
+        val slot = readSlotSuffix()
+        val backupOk = HuijuiShell.exec(
+            "mkdir -p $BACKUP_DIR && test -w $BACKUP_DIR && echo ok || echo fail"
+        ).out.joinToString("").contains("ok")
+
+        val reason = when {
+            battery in 0..(MIN_BATTERY_PERCENT - 1) ->
+                "电量 $battery% 低于 $MIN_BATTERY_PERCENT%，刷入中断会损坏分区"
+            else -> null
+        }
+
+        GuardSnapshot(
+            batteryPercent = battery,
+            slotSuffix = slot,
+            backupWritable = backupOk,
+            canFlash = reason == null,
+            blockReason = reason
+        )
     }
 }

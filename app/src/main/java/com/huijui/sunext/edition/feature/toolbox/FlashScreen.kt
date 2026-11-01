@@ -66,6 +66,12 @@ fun FlashScreen(onBack: () -> Unit) {
     var showConfirmDialog by remember { mutableStateOf(false) }
     var overallStage by remember { mutableStateOf("") }
     var isDetecting by remember { mutableStateOf(false) }
+    var guard by remember { mutableStateOf<FlashGuard.GuardSnapshot?>(null) }
+
+    // 进入页面就取一次实时护栏快照；刷入前后各刷新一次
+    LaunchedEffect(isFlashing) {
+        guard = withContext(Dispatchers.IO) { FlashGuard.snapshot(context) }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -139,6 +145,7 @@ fun FlashScreen(onBack: () -> Unit) {
                         }
                     }
                 }
+                item { GuardCard(guard) }
                 if (isFlashing && totalCount > 0) item { TotalProgressCard(completed = completedCount, total = totalCount, stage = overallStage) }
                 item { AddImageCard(enabled = !isFlashing, onClick = { imagePicker.launch(arrayOf("application/octet-stream", "application/x-raw-disk-image", "*/*")) }) }
                 if (pendingImages.isNotEmpty()) {
@@ -230,6 +237,57 @@ fun FlashScreen(onBack: () -> Unit) {
                 dismissButton = { TextButton(onClick = { showConfirmDialog = false }) { ZakoText("取消", color = Color.White.copy(0.6f)) } },
                 containerColor = Color(0xFF1E1E1E)
             )
+        }
+    }
+}
+
+/** 实时护栏：用户选镜像之前就知道「现在能不能刷」。 */
+@Composable
+private fun GuardCard(snapshot: FlashGuard.GuardSnapshot?) {
+    val ok = snapshot?.canFlash == true
+    val tint = if (ok) Color(0xFF81C784) else Color(0xFFEF4444)
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tint.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (ok) Icons.Default.Security else Icons.Default.Warning,
+                    null,
+                    tint = tint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                ZakoText(
+                    if (ok) "环境检查通过" else "当前不可刷入",
+                    color = if (ok) Color.White else tint,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                val s = snapshot
+                val detail = if (s == null) {
+                    "正在读取设备状态…"
+                } else {
+                    buildString {
+                        append("电量 ${s.batteryPercent}%")
+                        if (s.slotSuffix.isNotBlank()) append(" · 槽位 ${s.slotSuffix}")
+                        append(if (s.backupWritable) " · 备份可写" else " · 备份目录不可写")
+                    }
+                }
+                ZakoText(detail, color = Color.White.copy(0.55f), fontSize = 12.sp)
+                if (snapshot?.blockReason != null) {
+                    Spacer(modifier = Modifier.height(3.dp))
+                    ZakoText(snapshot.blockReason, color = tint, fontSize = 11.5.sp)
+                }
+            }
         }
     }
 }
