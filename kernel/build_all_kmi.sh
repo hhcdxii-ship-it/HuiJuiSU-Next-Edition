@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 # =============================================================================
-# 按 KMI 分支构建 HUI 内核模块，并校验 vermagic 与分支一致
+# 分 KMI 构建 HUI 内核模块
 #
-# 背景：仓库里 8 个 .ko 是分版本构建出来的，但整条链路没有脚本化，
-#       曾经出现过「8 个文件里 7 个是同一个 5.10 二进制改名」的回归，
-#       运行期的表现是「刷入成功但状态一直未工作」，极难排查。
+# 这条链路是**实测跑通**的（2026-11-01，本地 6.12.96 树），步骤不能省：
+#
+#   1. 准备内核树（只需一次，之后复用 O= 目录）
+#        make -C <tree> O=<out> ARCH=arm64 LLVM=1 CC=clang gki_defconfig
+#        make -C <tree> O=<out> ARCH=arm64 LLVM=1 CC=clang modules_prepare -j8
+#
+#   2. 编出 vmlinux —— 这一步才是关键。
+#      没有 vmlinux 就没有 vmlinux.symvers，模块的 MODVERSIONS CRC 会全部缺失，
+#      产物看着正常、insmod 却必然报 "disagrees about version of symbol"。
+#        make -C <tree> O=<out> ARCH=arm64 LLVM=1 CC=clang vmlinux -j8
+#
+#   3. 带 symvers 编外部模块
+#        make -C <tree> M=<repo>/kernel/src O=<out> ARCH=arm64 LLVM=1 CC=clang \
+#             KBUILD_EXTRA_SYMBOLS=<out>/vmlinux.symvers modules -j8
+#
+# 产物只有两个：huijui_phantom.ko（引擎，装进 ramdisk）与 temp_root.ko（幽灵模式）。
 #
 # 用法：
-#   KMI_510_TREE=~/kernels/5.10/common \
-#   KMI_515_TREE=~/kernels/5.15/common \
-#   KMI_61_TREE=~/kernels/6.1/common   \
-#   KMI_66_TREE=~/kernels/6.6/common   \
-#   KMI_612_TREE=~/kernels/6.12/common \
-#   KMI_618_TREE=~/kernels/6.18/common \
-#   ./kernel/build_all_kmi.sh
-#
-#   未提供树的分支会被跳过（不会误产物）。
-#   每棵树必须提前 prepare 过：存在 include/generated/autoconf.h。
-#
-# ⚠️ 本脚本只负责「编译 + 校验 + 报告」，不负责把多个 obj-m 合成单个 .ko ——
-#    内核模块不能靠 cat 拼接，合成方式必须沿用你们现有的打包步骤。
+#   KMI_612_TREE=~/android-kernel/common KMI_612_OUT=/tmp/gki_out ./kernel/build_all_kmi.sh
+#   未提供的分支会被跳过。
 # =============================================================================
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO/kernel/src"
+DEST="$REPO/kernel/outputs_built"
 
 declare -A TREES=(
     ["android12-5.10"]="${KMI_510_TREE:-}"
@@ -40,6 +43,7 @@ declare -A TREES=(
 built=0
 skipped=0
 failed=0
+mkdir -p "$DEST"
 
 for branch in "${!TREES[@]}"; do
     tree="${TREES[$branch]}"
@@ -51,27 +55,31 @@ for branch in "${!TREES[@]}"; do
         continue
     fi
     if [ ! -f "$tree/include/generated/autoconf.h" ]; then
-        echo "[skip]  $branch：$tree 尚未 prepare（缺 include/generated/autoconf.h）"
+        echo "[skip]  $branch：$tree 尚未 prepare"
         skipped=$((skipped + 1))
         continue
     fi
 
     echo "[build] $branch  ←  $tree"
 
+    rm -f "$SRC"/*.ko "$SRC"/*.o "$SRC"/.*.cmd "$SRC/Module.symvers" "$SRC/modules.order" 2>/dev/null || true
+
     if ! make -C "$tree" M="$SRC" ARCH=arm64 LLVM=1 CC=clang \
-             CROSS_COMPILE=aarch64-linux-gnu- modules >/tmp/kbuild_"$branch".log 2>&1; then
+             KBUILD_EXTRA_SYMBOLS="$tree/vmlinux.symvers" modules -j8 \
+             >/tmp/kbuild_"$branch".log 2>&1; then
         echo "  ✗ 编译失败，日志：/tmp/kbuild_$branch.log"
         failed=$((failed + 1))
         continue
     fi
 
-    for ko in "$SRC"/*.ko; do
+    for ko in "$SRC"/huijui_phantom.ko; do
         [ -f "$ko" ] || continue
-        name="$(basename "$ko")"
         if strings -a "$ko" | grep -q "^vermagic=$kernel_ver\."; then
-            printf '  ✓ %-22s %8s B\n' "$name" "$(stat -c %s "$ko")"
+            out="$DEST/HuiJuiPhantom_${branch}_arm64.ko"
+            cp "$ko" "$out"
+            printf '  ✓ %-46s %8s B\n' "$(basename "$out")" "$(stat -c %s "$out")"
         else
-            printf '  ✗ %-22s vermagic 与 %s 不符\n' "$name" "$kernel_ver"
+            echo "  ✗ vermagic 与 $kernel_ver 不符，拒绝落位"
             failed=$((failed + 1))
         fi
     done
@@ -81,4 +89,6 @@ done
 
 echo
 echo "构建分支 $built 个 / 跳过 $skipped 个 / 异常 $failed 处"
-echo "产物落位后请跑：./gradlew :app:verifyKoAssets"
+echo "产物目录：$DEST"
+echo "⚠️ 落位到 assets 前请先在真机验证可加载，再："
+echo "   cp $DEST/HuiJuiPhantom_<branch>_arm64.ko $REPO/app/src/main/assets/exploit/"

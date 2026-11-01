@@ -1,1 +1,0 @@
-savedcmd_/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_phantom.mod := printf '%s\n'   huijui_main.o huijui_init.o huijui_hook.o huijui_syscall.o huijui_hide.o huijui_guard.o huijui_proc.o huijui_mem.o huijui_selinux.o | awk '!x[$$0]++ { print("/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/"$$0) }' > /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_phantom.mod

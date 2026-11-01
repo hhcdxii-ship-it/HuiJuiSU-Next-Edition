@@ -1,1 +1,0 @@
-savedcmd_/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/modules.order := {   echo /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/temp_root.o;   echo /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_phantom.o; :; } > /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/modules.order

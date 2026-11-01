@@ -1,0 +1,10 @@
+src/*.o
+src/.*.cmd
+src/*.mod
+src/*.mod.c
+src/*.ko
+src/Module.symvers
+src/modules.order
+src/.*.ko.cmd
+src/.*.o.d
+outputs_built/
