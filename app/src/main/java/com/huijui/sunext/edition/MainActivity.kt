@@ -76,6 +76,17 @@ data class NavItem(val route: String, val title: String, val icon: ImageVector)
 private val BOTTOM_BAR_RESERVED = 124.dp
 
 class MainActivity : ComponentActivity() {
+    private fun requestNotificationPermissionIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT < 33) return
+        val granted = checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            runCatching {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.huijui.sunext.edition.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
@@ -83,6 +94,11 @@ class MainActivity : ComponentActivity() {
         // 崩溃捕获：此前 CrashHandler 全项目零引用，等于一次都没装上，
         // 线上崩了不会有任何本地日志可查。
         com.huijui.sunext.edition.core.utils.CrashHandler.init(this)
+
+        // 通知权限：Manifest 里声明了 POST_NOTIFICATIONS，但全项目**从来没有申请过**。
+        // Android 13+ 上没这个权限，系统监控 / Root 审计那两个前台服务的通知不会显示，
+        // 用户看不到、也点不到「停止」，某些 OEM 还会因为"无通知的前台服务"直接杀进程。
+        requestNotificationPermissionIfNeeded()
 
         // 跟随系统的「移除动画」：动画缩放为 0 时关掉我们所有动效
         runCatching {

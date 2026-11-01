@@ -563,6 +563,13 @@ private fun DeviceInfoCard(deviceInfo: DeviceInfo) {
                 Column(modifier = Modifier.padding(top = 10.dp)) {
                     DeviceInfoRow("设备型号", "${deviceInfo.brand} ${deviceInfo.model}")
                     DeviceInfoRow("系统版本", "Android ${deviceInfo.androidVer}")
+                    // osMajorVersion / isHyperOs 这两个字段之前只写不读，设备信息里正好展示出来
+                    if (AppSettings.osMajorVersion.isNotBlank() && AppSettings.osMajorVersion != "Android") {
+                        DeviceInfoRow(
+                            "ROM",
+                            AppSettings.osMajorVersion + if (AppSettings.isXiaomiDevice) " (小米系)" else ""
+                        )
+                    }
                     DeviceInfoRow("内核版本", deviceInfo.kernelVer)
                     DeviceInfoRow("SELinux", deviceInfo.selinux)
                     DeviceInfoRow("系统指纹", deviceInfo.fingerprint)
