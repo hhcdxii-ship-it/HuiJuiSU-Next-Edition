@@ -37,6 +37,7 @@ import com.huijui.sunext.edition.core.ui.design.huiSecondary
 import com.huijui.sunext.edition.core.ui.design.huiTertiary
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.utils.AppResetManager
+import com.huijui.sunext.edition.core.utils.SystemGuardian
 import com.huijui.sunext.edition.core.utils.AppSettings
 import kotlinx.coroutines.launch
 
@@ -175,6 +176,42 @@ fun SettingsScreen(
             }
         }
 
+        // ── 系统守护 ────────────────────────────────────────────────
+        item { SectionLabel("系统守护", modifier = Modifier.padding(top = HuiSpace.m)) }
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    // 这两个开关此前只写不读、也没有任何 UI ——
+                    // SystemGuardian 里写着对应的守护逻辑，但用户永远开不了。
+                    ToggleRow(
+                        icon = Icons.Default.DeveloperMode,
+                        title = "防开发者选项被重置",
+                        subtitle = "定期把开发者选项开关改回来（30 秒一次）",
+                        checked = AppSettings.isAntiDevOptionsEnabled,
+                        accent = accent
+                    ) { on ->
+                        AppSettings.isAntiDevOptionsEnabled = on
+                        AppSettings.save()
+                        if (on) SystemGuardian.startGuardian(scope)
+                        else if (!AppSettings.isAntiRootLossEnabled) SystemGuardian.stopGuardian()
+                    }
+                    Spacer(Modifier.height(HuiSpace.m))
+                    ToggleRow(
+                        icon = Icons.Default.Shield,
+                        title = "Root 掉线守护",
+                        subtitle = "检测到 Root 丢失时保持环境不被系统回收",
+                        checked = AppSettings.isAntiRootLossEnabled,
+                        accent = accent
+                    ) { on ->
+                        AppSettings.isAntiRootLossEnabled = on
+                        AppSettings.save()
+                        if (on) SystemGuardian.startGuardian(scope)
+                        else if (!AppSettings.isAntiDevOptionsEnabled) SystemGuardian.stopGuardian()
+                    }
+                }
+            }
+        }
+
         // ── 危险操作 ────────────────────────────────────────────────
         item { SectionLabel("重置与危险操作", modifier = Modifier.padding(top = HuiSpace.m)) }
         item {
@@ -251,6 +288,37 @@ fun SettingsScreen(
                 }
             },
             containerColor = Color(0xFF1C1C21)
+        )
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    accent: Color,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        HuiIconBadge(icon = icon, tint = accent, size = 34.dp, iconSize = 17.dp, corner = 10.dp)
+        Spacer(Modifier.width(HuiSpace.m))
+        Column(modifier = Modifier.weight(1f)) {
+            ZakoText(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            ZakoText(subtitle, color = Color.White.huiTertiary, fontSize = 10.5.sp)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accent,
+                uncheckedThumbColor = Color.White.copy(alpha = 0.75f),
+                uncheckedTrackColor = Color.White.copy(alpha = 0.10f),
+                uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
+            )
         )
     }
 }
