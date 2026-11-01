@@ -46,10 +46,10 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { reload() }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = HuijuiLayout.ScreenHorizontal)) {
-        Spacer(modifier = Modifier.height(HuijuiLayout.DetailTopSpacer))
+        Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onBack() }) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
-            ZakoText("返回", color = Color.White, fontSize = 16.sp)
+            ZakoText("返回", color = Color.White.copy(alpha = 0.70f), fontSize = 13.sp)
         }
         Spacer(modifier = Modifier.height(16.dp))
         ZakoText("环境隔离防御", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)

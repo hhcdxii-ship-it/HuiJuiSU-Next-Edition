@@ -122,14 +122,14 @@ fun SensorTestScreen(onBack: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = HuijuiLayout.ScreenHorizontal)) {
-            Spacer(modifier = Modifier.height(HuijuiLayout.DetailTopSpacer))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onBack() }
             ) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
-                ZakoText("返回", color = Color.White, fontSize = 16.sp)
+                ZakoText("返回", color = Color.White.copy(alpha = 0.70f), fontSize = 13.sp)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
