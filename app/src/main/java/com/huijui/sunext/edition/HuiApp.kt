@@ -3,6 +3,7 @@ package com.huijui.sunext.edition
 import android.app.Application
 import com.huijui.sunext.edition.core.utils.AppSettings
 import com.huijui.sunext.edition.core.utils.CrashHandler
+import com.huijui.sunext.edition.core.utils.SystemGuardian
 
 /**
  * 进程级初始化。
@@ -21,5 +22,6 @@ class HuiApp : Application() {
         super.onCreate()
         AppSettings.init(this)
         CrashHandler.init(this)
+        SystemGuardian.init(this)
     }
 }

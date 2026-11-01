@@ -52,12 +52,6 @@ object HuijuiGodLoader {
     }
 
     // 🚀 降级方案：如果没有 Root，则走镜像修补
-    suspend fun fallbackToPatch(context: Context, bootImgPath: String): Boolean {
-        // 这里直接调用你之前写好的 ImagePatcher 或 DirectInstaller
-        // 因为那个过程比较长，我们只做状态返回
-        return false 
-    }
-
     // 统一入口
     suspend fun initGodMode(context: Context): String {
         if (isKernelRunning()) {
