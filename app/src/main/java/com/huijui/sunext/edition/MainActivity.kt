@@ -44,6 +44,7 @@ import androidx.navigation.compose.rememberNavController
 import com.huijui.sunext.edition.core.root.RootStatusRepository
 import com.huijui.sunext.edition.core.ui.component.LocalStrongGlass
 import com.huijui.sunext.edition.core.ui.component.SmartBackground
+import com.huijui.sunext.edition.core.ui.language.HuiStrings
 import com.huijui.sunext.edition.core.ui.language.LanguageMode
 import com.huijui.sunext.edition.core.ui.language.LocalLanguageMode
 import com.huijui.sunext.edition.core.ui.language.ZakoText
@@ -110,7 +111,7 @@ fun MainApp() {
     val forceStrongGlass = currentRoute?.startsWith("toolbox_") == true || currentRoute == "module_webui"
 
     val languageMode = remember(AppSettings.currentLanguage) {
-        try { LanguageMode.valueOf(AppSettings.currentLanguage) } catch (_: Exception) { LanguageMode.ZH_CN }
+        HuiStrings.modeOf(AppSettings.currentLanguage)
     }
 
     CompositionLocalProvider(

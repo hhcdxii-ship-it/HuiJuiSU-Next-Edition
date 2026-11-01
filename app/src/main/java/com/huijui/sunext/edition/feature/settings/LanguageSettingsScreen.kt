@@ -2,150 +2,197 @@ package com.huijui.sunext.edition.feature.settings
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.ui.component.GlassCard
+import com.huijui.sunext.edition.core.ui.design.HuiAlpha
+import com.huijui.sunext.edition.core.ui.design.HuiSpace
+import com.huijui.sunext.edition.core.ui.design.huiSecondary
+import com.huijui.sunext.edition.core.ui.design.huiTertiary
 import com.huijui.sunext.edition.core.ui.language.HuiStrings
 import com.huijui.sunext.edition.core.ui.language.LanguageMode
 import com.huijui.sunext.edition.core.ui.language.ZakoText
-import com.huijui.sunext.edition.core.ui.language.zakoString
 import com.huijui.sunext.edition.core.utils.AppSettings
 
+/**
+ * 语言设置。
+ *
+ * 重构前的三个问题：
+ *   1. 除了「简中 / 杂鱼」之外的 5 种语言**一律标成「施工中」且不可点** ——
+ *      等于语言列表里有 5 行纯装饰。
+ *   2. 选中判定用 `AppSettings.currentLanguage == mode.name`，而引导页写进去的是
+ *      字符串 "NORMAL"（不是合法枚举），所以走完引导的用户进来**一个都不高亮**。
+ *   3. 没有任何预览，用户点之前不知道会变成什么样。
+ *
+ * 现在：全部可选、实时预览、按覆盖率标注完成度，选择立即生效。
+ */
 @Composable
 fun LanguageSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val accent = AppSettings.accentColor.color
+    val current = HuiStrings.modeOf(AppSettings.currentLanguage)
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 顶栏
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = HuiSpace.s, vertical = HuiSpace.s),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .clickable { onBack() }
-            )
-            Spacer(modifier = Modifier.width(16.dp))
+            Box(
+                modifier = Modifier.size(40.dp).clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.KeyboardArrowLeft, "Back", tint = Color.White.huiSecondary)
+            }
+            Spacer(Modifier.width(HuiSpace.xs))
             Column {
-                ZakoText("语言设置", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                ZakoText("Language Settings", color = Color.White.copy(0.6f), fontSize = 12.sp)
+                ZakoText("语言设置", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                ZakoText(
+                    "LANGUAGE",
+                    color = Color.White.huiTertiary,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp
+                )
             }
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxSize().padding(horizontal = HuiSpace.screen),
+            contentPadding = PaddingValues(top = HuiSpace.s, bottom = HuiSpace.xxl),
+            verticalArrangement = Arrangement.spacedBy(HuiSpace.s)
         ) {
-            items(LanguageMode.values()) { mode ->
-                val isSelected = AppSettings.currentLanguage == mode.name
-                // 🚀 施工中判定：只有简中和杂鱼能用
-                val isUnderConstruction = mode != LanguageMode.ZH_CN && mode != LanguageMode.ZAKO
-
-                LanguageCard(
-                    mode = mode,
-                    isSelected = isSelected,
-                    isUnderConstruction = isUnderConstruction,
-                    onClick = {
-                        if (isUnderConstruction) {
-                            Toast.makeText(context, zakoString("这个语言还在施工中哦，笨蛋！"), Toast.LENGTH_SHORT).show()
-                        } else {
-                            AppSettings.currentLanguage = mode.name
-                            AppSettings.save()
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LanguageCard(
-    mode: LanguageMode,
-    isSelected: Boolean,
-    isUnderConstruction: Boolean,
-    onClick: () -> Unit
-) {
-    val accent = AppSettings.accentColor.color
-    val borderColor = if (isSelected) accent else Color.White.copy(0.08f)
-    
-    // 🚀 颜色控制：选中为主题色，施工中为半透明灰，普通为白
-    val textColor = when {
-        isSelected -> accent
-        isUnderConstruction -> Color.White.copy(0.3f)
-        else -> Color.White
-    }
-
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, borderColor, RoundedCornerShape(16.dp))
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ZakoText(
-                        text = mode.displayName,
-                        color = textColor,
-                        fontSize = 16.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
-                    // 🚀 施工中标签
-                    if (isUnderConstruction) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFFFF9800).copy(alpha = 0.2f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = zakoString("施工中"),
-                                color = Color(0xFFFF9800),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+            // 实时预览：用当前选中语言渲染同一句
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Translate,
+                                null,
+                                tint = accent,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(HuiSpace.s))
+                            ZakoText(
+                                "选择你的语言",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
+                        Spacer(Modifier.height(HuiSpace.s))
+                        ZakoText(
+                            HuiStrings.preview(current),
+                            color = accent,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
                     }
                 }
-                ZakoText(
-                    text = mode.code,
-                    color = if (isUnderConstruction) Color.White.copy(0.2f) else Color.White.copy(0.4f),
-                    fontSize = 11.sp
-                )
             }
-            if (isSelected) {
-                Icon(Icons.Default.CheckCircle, null, tint = accent, modifier = Modifier.size(24.dp))
+
+            items(items = LanguageMode.entries, key = { it.name }) { mode ->
+                val isSelected = mode == current
+                val covered = HuiStrings.coverage(mode)
+                val total = HuiStrings.totalKeys().coerceAtLeast(1)
+                val ratio = (covered.toFloat() / total).coerceIn(0f, 1f)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (isSelected) accent.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.04f)
+                        )
+                        .clickable {
+                            AppSettings.currentLanguage = mode.name
+                            AppSettings.save()
+                            Toast.makeText(
+                                context,
+                                HuiStrings.tr("语言设置", mode) + " · " + mode.nativeName,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ZakoText(
+                                mode.nativeName,
+                                color = if (isSelected) accent else Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                            Spacer(Modifier.width(HuiSpace.s))
+                            ZakoText(
+                                mode.code,
+                                color = Color.White.copy(alpha = HuiAlpha.TERTIARY),
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        // 覆盖率条：直观看出一档语言到底完成了多少
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Color.White.copy(alpha = 0.07f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(ratio)
+                                    .height(3.dp)
+                                    .background(if (isSelected) accent else Color.White.copy(alpha = 0.28f))
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        ZakoText(
+                            "$covered/$total",
+                            color = Color.White.copy(alpha = 0.24f),
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            null,
+                            tint = accent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            item {
+                ZakoText(
+                    "杂鱼模式对未收录的文案会做语气兜底（100% 覆盖）；其余语言缺词时回落英文。",
+                    color = Color.White.huiTertiary,
+                    fontSize = 10.5.sp,
+                    modifier = Modifier.padding(top = HuiSpace.s, start = 4.dp, end = 4.dp)
+                )
             }
         }
     }

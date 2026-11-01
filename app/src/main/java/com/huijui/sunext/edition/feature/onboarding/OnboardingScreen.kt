@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.huijui.sunext.edition.core.ui.adaptive.rememberAdaptiveLayoutInfo
 import com.huijui.sunext.edition.core.ui.component.rememberPausableInfiniteTransition
+import com.huijui.sunext.edition.core.ui.language.HuiStrings
+import com.huijui.sunext.edition.core.ui.language.LanguageMode
 import com.huijui.sunext.edition.core.utils.AccentColor
 import com.huijui.sunext.edition.core.utils.AppSettings
 import com.huijui.sunext.edition.core.utils.MaterialStyle
@@ -204,10 +206,26 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.End
             ) {
+                // 13 步太长，给一个明确出口；跳过落到最后一页，不直接完成，避免误触丢配置
+                if (!isLast) {
+                    Text(
+                        "跳过",
+                        color = Color.White.copy(alpha = 0.55f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                scope.launch { pagerState.animateScrollToPage(onboardingPages.lastIndex) }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
             }
 
             HorizontalPager(
-                userScrollEnabled = false,
+                userScrollEnabled = true,
                 state = pagerState,
                 modifier = Modifier.weight(1f),
             ) { page ->
@@ -592,7 +610,7 @@ private fun LanguageConfigContent(
     adaptiveInfo: com.huijui.sunext.edition.core.ui.adaptive.AdaptiveLayoutInfo
 ) {
     val deepAccent = lerp(data.accent, Color(0xFF1A1A1A), 0.25f)
-    var selected by remember { mutableStateOf(AppSettings.currentLanguage) }
+    val current = HuiStrings.modeOf(AppSettings.currentLanguage)
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -601,41 +619,80 @@ private fun LanguageConfigContent(
         verticalArrangement = Arrangement.Center
     ) {
         ConfigHeader(data)
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        if (adaptiveInfo.isMediumOrWider) {
+        // 实时预览：选之前就知道长什么样
+        Text(
+            HuiStrings.preview(current),
+            color = Color.White.copy(alpha = 0.80f),
+            fontSize = 13.sp,
+            fontFamily = FontFamily.Monospace,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(22.dp))
+
+        val rows = listOf(
+            listOf(LanguageMode.ZH_CN, LanguageMode.ZH_TW, LanguageMode.EN, LanguageMode.JA),
+            listOf(LanguageMode.KO, LanguageMode.RU, LanguageMode.ZAKO)
+        )
+        rows.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ChoiceCard(
-                    selected = selected == "ZAKO", accent = deepAccent,
-                    icon = Icons.Default.Favorite, title = "杂鱼模式",
-                    subtitle = "嘛，反正你也是杂鱼吧？♡",
-                    onClick = { selected = "ZAKO"; AppSettings.currentLanguage = "ZAKO" },
-                    modifier = Modifier.weight(1f)
-                )
-                ChoiceCard(
-                    selected = selected != "ZAKO", accent = deepAccent,
-                    icon = Icons.Default.Person, title = "正常模式",
-                    subtitle = "正经说话，认真干活",
-                    onClick = { selected = "NORMAL"; AppSettings.currentLanguage = "NORMAL" },
-                    modifier = Modifier.weight(1f)
-                )
+                row.forEach { mode ->
+                    LanguageChip(
+                        mode = mode,
+                        selected = mode == current,
+                        accent = deepAccent,
+                        modifier = Modifier.weight(1f),
+                        onClick = { AppSettings.currentLanguage = mode.name }
+                    )
+                }
+                // 第二行只有 3 个，补一个空位保持等宽
+                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
             }
-        } else {
-            ChoiceCard(selected = selected == "ZAKO", accent = deepAccent,
-                icon = Icons.Default.Favorite, title = "杂鱼模式",
-                subtitle = "嘛，反正你也是杂鱼吧？♡",
-                onClick = { selected = "ZAKO"; AppSettings.currentLanguage = "ZAKO" },
-                modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(14.dp))
-            ChoiceCard(selected = selected != "ZAKO", accent = deepAccent,
-                icon = Icons.Default.Person, title = "正常模式",
-                subtitle = "正经说话，认真干活",
-                onClick = { selected = "NORMAL"; AppSettings.currentLanguage = "NORMAL" },
-                modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(10.dp))
         }
+
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "选择后立即生效，后续步骤也会跟着换语言",
+            color = Color.White.copy(alpha = 0.45f),
+            fontSize = 11.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun LanguageChip(
+    mode: LanguageMode,
+    selected: Boolean,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) accent.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.06f))
+            .border(
+                1.dp,
+                if (selected) accent.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.08f),
+                RoundedCornerShape(14.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            mode.nativeName,
+            color = if (selected) Color.White else Color.White.copy(alpha = 0.70f),
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1
+        )
     }
 }
 
