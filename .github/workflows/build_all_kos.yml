@@ -1,16 +1,18 @@
-name: Build HUI Modules
+name: Build and Release HUI Modules
 
 on:
-  workflow_dispatch: # 允许手动点击触发
+  workflow_dispatch:
   push:
     branches: [ "main" ]
+
+permissions:
+  contents: write # 必须加上这个，否则无法自动发布 Release
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # A12 到 A17 的所有分支
         branch: ["android12-5.10", "android13-5.10", "android13-5.15", "android14-5.15", "android14-6.1", "android15-6.6", "android16-6.12", "android17-6.18"]
     steps:
     - uses: actions/checkout@v4
@@ -33,9 +35,12 @@ jobs:
         make clean
         make -C ../../common M=$PWD ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_EXTRA_SYMBOLS=../../common/vmlinux.symvers modules
         llvm-strip --strip-debug temp_root.ko || true
+        mv temp_root.ko HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
         
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: HUI_KO_${{ matrix.branch }}
-        path: kernel/src/temp_root.ko
+        tag_name: v1.0-build
+        name: "HUI 全版本内核模块"
+        body: "基于最新源码编译的全版本纯净版 .ko"
+        files: kernel/src/HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
