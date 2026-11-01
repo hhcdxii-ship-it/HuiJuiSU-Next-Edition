@@ -35,12 +35,16 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
     var isPerfMode by remember { mutableStateOf(false) }
     var currentGov by remember { mutableStateOf("schedutil") }
 
-    // 定时刷新日志
-    LaunchedEffect(Unit) {
+    // 定时刷新日志。
+    // 原来是无条件 3 秒轮询，每次两条 shell 往返 —— 屏幕开着就一直烧。
+    // 现在：① 只在生命周期 STARTED 时跑，切后台立刻停；② 间隔放宽到 5 秒。
+    val started = com.huijui.sunext.edition.core.ui.component.rememberIsLifecycleStarted()
+    LaunchedEffect(started) {
+        if (!started) return@LaunchedEffect
         while (true) {
             kernelLogs = HuijuiModuleBridge.getKernelLogs()
             modules = HuijuiModuleBridge.getMountedModules()
-            kotlinx.coroutines.delay(3000) // 每 3 秒刷新一次
+            kotlinx.coroutines.delay(5000)
         }
     }
 
