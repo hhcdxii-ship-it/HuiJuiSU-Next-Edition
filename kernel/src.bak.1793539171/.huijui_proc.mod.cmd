@@ -1,0 +1,1 @@
+savedcmd_/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_proc.mod := printf '%s\n'   huijui_proc.o | awk '!x[$$0]++ { print("/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/"$$0) }' > /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_proc.mod

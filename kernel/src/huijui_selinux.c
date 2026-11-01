@@ -15,14 +15,13 @@ static void __maybe_unused force_root_cred(void) {
     pr_info(TAG "Credential escalated.\n");
 }
 
-static int __init huijui_selinux_init(void) {
+int huijui_selinux_register(void) {
     pr_info(TAG "SELinux bypass loaded\n");
     return 0;
 }
 
-static void __exit huijui_selinux_exit(void) {
+void huijui_selinux_unregister(void) {
     pr_info(TAG "SELinux bypass unloaded\n");
 }
-module_init(huijui_selinux_init);
-module_exit(huijui_selinux_exit);
-MODULE_LICENSE("GPL");
+
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

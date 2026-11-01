@@ -23,13 +23,12 @@ static int __maybe_unused huijui_read_other_process(int pid, unsigned long addr,
     return ret;
 }
 
-static int __init huijui_mem_init(void) {
+int huijui_mem_register(void) {
     pr_info(TAG "Memory module loaded\n");
     return 0;
 }
-static void __exit huijui_mem_exit(void) {
+void huijui_mem_unregister(void) {
     pr_info(TAG "Memory module unloaded\n");
 }
-module_init(huijui_mem_init);
-module_exit(huijui_mem_exit);
-MODULE_LICENSE("GPL");
+
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

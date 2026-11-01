@@ -1,0 +1,16 @@
+on post-fs-data
+    # 利用 & 并行加载，把耗时降到最低
+    insmod /dev/huijui.ko &
+    wait
+    
+    chmod 0666 /dev/huijui
+    chcon u:object_r:device:s0 /dev/huijui
+
+    # 守护进程不用起太早，放到系统启动后
+    start huijui_daemon &
+
+service huijui_daemon /huijuisud
+    class late_start
+    user root
+    group root
+    seclabel u:r:su:s0

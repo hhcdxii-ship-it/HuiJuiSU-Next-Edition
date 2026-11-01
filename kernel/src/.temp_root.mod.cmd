@@ -1,0 +1,1 @@
+savedcmd_/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/temp_root.mod := printf '%s\n'   temp_root.o | awk '!x[$$0]++ { print("/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/"$$0) }' > /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/temp_root.mod

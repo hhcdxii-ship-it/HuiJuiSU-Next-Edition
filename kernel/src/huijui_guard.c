@@ -21,7 +21,7 @@ static int handler_pre_do_send_sig_info(struct kprobe *p, struct pt_regs *regs) 
     return 0;
 }
 
-static int __init huijui_guard_init(void) {
+int huijui_guard_register(void) {
     kp_sig.symbol_name = "do_send_sig_info";
     kp_sig.pre_handler = handler_pre_do_send_sig_info;
     int ret = register_kprobe(&kp_sig);
@@ -30,10 +30,8 @@ static int __init huijui_guard_init(void) {
     return 0;
 }
 
-static void __exit huijui_guard_exit(void) {
+void huijui_guard_unregister(void) {
     unregister_kprobe(&kp_sig);
 }
 
-module_init(huijui_guard_init);
-module_exit(huijui_guard_exit);
-MODULE_LICENSE("GPL");
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

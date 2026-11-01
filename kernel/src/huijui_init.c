@@ -13,18 +13,17 @@
  * init 注入是靠 ramdisk 里的 huijuiinit 换掉 /init 实现的，跟这个钩子无关。
  * 所以这里不再注册任何断点，模块只保留一个可被 /proc/modules 看见的载体。
  */
-static int __init huijui_init_mod_init(void)
+int huijui_init_register(void)
 {
 	pr_info(TAG "loaded (no hot-path hooks)\n");
 	return 0;
 }
 
-static void __exit huijui_init_mod_exit(void)
+void huijui_init_unregister(void)
 {
 	pr_info(TAG "unloaded\n");
 }
 
-module_init(huijui_init_mod_init);
-module_exit(huijui_init_mod_exit);
-MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("HuiJuiSU init marker (no kprobe)");
+
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

@@ -1,0 +1,1 @@
+savedcmd_/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_phantom.o := ld.lld -EL  -maarch64elf -z norelro --compress-debug-sections=zstd -z noexecstack   -r -o /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_phantom.o @/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_phantom.mod 

@@ -37,7 +37,7 @@ static int handler_pre_filldir(struct kprobe *p, struct pt_regs *regs)
 	return 0;
 }
 
-static int __init huijui_hide_init(void)
+int huijui_hide_register(void)
 {
 	int ret;
 
@@ -56,12 +56,9 @@ static int __init huijui_hide_init(void)
 	return 0;
 }
 
-static void __exit huijui_hide_exit(void)
+void huijui_hide_unregister(void)
 {
 	unregister_kprobe(&kp_filldir);
 }
 
-module_init(huijui_hide_init);
-module_exit(huijui_hide_exit);
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("HuiJuiSU dirent hiding with fast-path filter");
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

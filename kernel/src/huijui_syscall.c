@@ -12,18 +12,17 @@
  *
  * 路径隐藏的实际工作在 huijui_hide.c（filldir），这里不再注册断点。
  */
-static int __init huijui_syscall_init(void)
+int huijui_syscall_register(void)
 {
 	pr_info(TAG "loaded (openat hook removed for power)\n");
 	return 0;
 }
 
-static void __exit huijui_syscall_exit(void)
+void huijui_syscall_unregister(void)
 {
 	pr_info(TAG "unloaded\n");
 }
 
-module_init(huijui_syscall_init);
-module_exit(huijui_syscall_exit);
-MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("HuiJuiSU syscall carrier (no hot-path kprobe)");
+
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

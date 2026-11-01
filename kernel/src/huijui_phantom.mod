@@ -1,0 +1,9 @@
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_main.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_init.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_hook.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_syscall.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_hide.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_guard.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_proc.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_mem.o
+/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_selinux.o

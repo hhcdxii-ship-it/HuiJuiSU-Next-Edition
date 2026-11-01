@@ -21,14 +21,13 @@ static const struct proc_ops huijui_proc_ops = {
     .proc_release = single_release,
 };
 
-static int __init huijui_proc_init(void) {
+int huijui_proc_register(void) {
     proc_create(PROC_NAME, 0444, NULL, &huijui_proc_ops);
     return 0;
 }
 
-static void __exit huijui_proc_exit(void) {
+void huijui_proc_unregister(void) {
     remove_proc_entry(PROC_NAME, NULL);
 }
-module_init(huijui_proc_init);
-module_exit(huijui_proc_exit);
-MODULE_LICENSE("GPL");
+
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

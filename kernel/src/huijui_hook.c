@@ -19,18 +19,17 @@
  *
  * 所以这里不再注册任何断点。目录隐藏统一走 huijui_hide。
  */
-static int __init huijui_hook_init(void)
+int huijui_hook_register(void)
 {
 	pr_info(TAG "loaded (vfs_read hook removed for power)\n");
 	return 0;
 }
 
-static void __exit huijui_hook_exit(void)
+void huijui_hook_unregister(void)
 {
 	pr_info(TAG "unloaded\n");
 }
 
-module_init(huijui_hook_init);
-module_exit(huijui_hook_exit);
-MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("HuiJuiSU hook carrier (no hot-path kprobe)");
+
+/* 由 huijui_main.c 统一 module_init，本文件只提供 register/unregister */

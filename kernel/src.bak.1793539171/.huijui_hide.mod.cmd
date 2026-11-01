@@ -1,0 +1,1 @@
+savedcmd_/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_hide.mod := printf '%s\n'   huijui_hide.o | awk '!x[$$0]++ { print("/home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/"$$0) }' > /home/xiaomi/HuiJuiSU-Next-Edition/kernel/src/huijui_hide.mod
