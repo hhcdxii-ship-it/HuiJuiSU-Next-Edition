@@ -282,7 +282,7 @@ fun ModuleDetailDialog(module: ModuleRepoProvider.RemoteModule, onDismiss: () ->
                 ZakoText("历史版本", color = AppSettings.accentColor.color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                    items(module.releases) { rel ->
+                    items(module.releases, key = { it.version }) { rel ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                             ZakoText(rel.version, color = Color.White, fontSize = 13.sp)
                             ZakoText("${rel.size / 1024 / 1024} MB", color = Color.White.copy(0.5f), fontSize = 12.sp)

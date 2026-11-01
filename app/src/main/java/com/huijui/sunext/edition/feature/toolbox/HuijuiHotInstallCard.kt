@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.huijui.sunext.edition.core.root.HuijuiGodLoader
 import com.huijui.sunext.edition.core.root.HuijuiScriptRunner
 import com.huijui.sunext.edition.core.root.RootEngineVerifier
 import com.huijui.sunext.edition.core.ui.component.GlassCard
@@ -32,14 +33,23 @@ fun HuijuiHotInstallCard(onFinished: () -> Unit = {}) {
             isRunning = true
             lastResult = null
             scope.launch {
-                val result = HuijuiScriptRunner.runHotInstall(context)
-                
+                // 一级：走 ramdisk 注入脚本（huijui_hot_install.sh + huijuisud + ko）
+                val primary = HuijuiScriptRunner.runHotInstall(context)
+
+                // 二级回退：脚本失败时直接走 LKM 热加载（insmod 到 /data/local/tmp）
+                // HuijuiGodLoader 此前全项目零引用，等于这条备份路径从来没有存在过。
+                val fallbackOk = if (!primary.isSuccess) {
+                    runCatching { HuijuiGodLoader.loadLkmDirectly(context) }.getOrDefault(false)
+                } else {
+                    false
+                }
+
                 // 🚀 真实联动：不管成功还是失败，立刻重新查验内核状态
                 val verifyReport = RootEngineVerifier.verifyDetailed()
-                
-                val summary = if (result.isSuccess && verifyReport.isActive) {
+
+                val summary = if ((primary.isSuccess || fallbackOk) && verifyReport.isActive) {
                     AppSettings.hasRoot = true
-                    "✅ 热接管成功：HUI 已激活！"
+                    if (fallbackOk) "✅ 热接管成功（LKM 直载回退路径）" else "✅ 热接管成功：HUI 已激活！"
                 } else {
                     AppSettings.hasRoot = false
                     "❌ 接管失败：${verifyReport.detail}"
