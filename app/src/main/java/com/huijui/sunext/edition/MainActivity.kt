@@ -10,6 +10,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.huijui.sunext.edition.core.ui.theme.HuiTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -296,6 +304,16 @@ fun MainApp() {
  *   2. 选中态没有任何背景指示器，五个图标在一排里完全分不清当前在哪一页。
  * 现在：一枚随选中项滑动的胶囊高亮 + 图标/文字颜色插值 + 按压缩放。
  */
+/**
+ * 底部导航。
+ *
+ * 相比上一版的关键改动：**指示器从「各自淡入」改成「整块滑动」**。
+ * 旧实现是每个 item 里各放一枚胶囊、靠 alpha 淡入淡出 —— 切换时是「旧的一枚消失、
+ * 新的一枚出现」，中间没有位移，视觉上像闪了一下。
+ * 现在只画一枚胶囊，位置由 selectedIndex 插值驱动，切换时真正滑过去。
+ *
+ * 另外：背景材质跟随主题（HuiTheme.glass），按下有缩放与触感反馈。
+ */
 @Composable
 fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
     val navItems = remember {
@@ -308,6 +326,15 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
         )
     }
     val accent = AppSettings.accentColor.color
+    val glass = HuiTheme.glass
+    val haptic = LocalHapticFeedback.current
+
+    val selectedIndex = navItems.indexOfFirst { it.route == currentRoute }.let { if (it < 0) 0 else it }
+    val indicator by animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
+        label = "navIndicator"
+    )
 
     Box(
         modifier = modifier
@@ -316,7 +343,7 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
             .navigationBarsPadding()
             .height(72.dp)
             .clip(RoundedCornerShape(36.dp))
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(glass.fillTop.copy(alpha = 0.10f))
             .background(
                 Brush.verticalGradient(
                     listOf(
@@ -326,8 +353,35 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
                     )
                 )
             )
-            .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(36.dp))
+            .border(1.dp, glass.border.copy(alpha = 0.55f), RoundedCornerShape(36.dp))
     ) {
+        // 唯一的一枚滑动指示器
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cell = size.width / navItems.size
+            val cx = (indicator + 0.5f) * cell
+            val pillW = cell * 0.64f
+            val pillH = 30.dp.toPx()
+            drawRoundRect(
+                brush = Brush.horizontalGradient(
+                    listOf(accent.copy(alpha = 0.28f), accent.copy(alpha = 0.10f))
+                ),
+                topLeft = Offset(cx - pillW / 2f, (size.height - pillH) / 2f),
+                size = Size(pillW, pillH),
+                cornerRadius = CornerRadius(pillH / 2f)
+            )
+            // 胶囊顶部一道细高光，跟液态玻璃卡片呼应
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
+                    startY = (size.height - pillH) / 2f,
+                    endY = (size.height - pillH) / 2f + pillH / 2f
+                ),
+                topLeft = Offset(cx - pillW / 2f, (size.height - pillH) / 2f),
+                size = Size(pillW, pillH / 2f),
+                cornerRadius = CornerRadius(pillH / 2f)
+            )
+        }
+
         Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             navItems.forEach { item ->
                 val isSelected = currentRoute == item.route
@@ -335,21 +389,20 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
 
                 val interactionSource = remember { MutableInteractionSource() }
                 val isPressed by interactionSource.collectIsPressedAsState()
-                val scale by animateFloatAsState(
-                    targetValue = if (isPressed && !isRestricted) 0.86f else 1f,
+                val iconScale by animateFloatAsState(
+                    targetValue = if (isPressed && !isRestricted) 0.85f else if (isSelected) 1.06f else 1f,
                     animationSpec = spring(dampingRatio = 0.55f, stiffness = 420f),
-                    label = "navScale_${item.route}"
+                    label = "navScale_${'$'}{item.route}"
                 )
-                val highlight by animateFloatAsState(
-                    targetValue = if (isSelected && !isRestricted) 1f else 0f,
-                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f),
-                    label = "navHighlight_${item.route}"
+                val contentColor by animateColorAsState(
+                    targetValue = when {
+                        isRestricted -> Color.White.copy(alpha = 0.22f)
+                        isSelected -> accent
+                        else -> Color.White.copy(alpha = 0.62f)
+                    },
+                    animationSpec = tween(220),
+                    label = "navColor_${'$'}{item.route}"
                 )
-                val contentColor = when {
-                    isRestricted -> Color.White.copy(alpha = 0.22f)
-                    isSelected -> accent
-                    else -> Color.White.copy(alpha = 0.62f)
-                }
 
                 Box(
                     modifier = Modifier
@@ -359,24 +412,19 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
                             enabled = !isRestricted,
                             interactionSource = interactionSource,
                             indication = null
-                        ) { onNavigate(item.route) },
+                        ) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onNavigate(item.route)
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 38.dp, height = 26.dp)
-                                    .graphicsLayer { alpha = highlight * 0.9f }
-                                    .background(accent.copy(alpha = 0.18f), CircleShape)
-                            )
-                            Icon(
-                                item.icon,
-                                contentDescription = item.title,
-                                tint = contentColor,
-                                modifier = Modifier.size(21.dp).scale(scale)
-                            )
-                        }
+                        Icon(
+                            item.icon,
+                            contentDescription = item.title,
+                            tint = contentColor,
+                            modifier = Modifier.size(21.dp).scale(iconScale)
+                        )
                         Spacer(modifier = Modifier.height(3.dp))
                         ZakoText(
                             item.title,

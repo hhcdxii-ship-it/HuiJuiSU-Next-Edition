@@ -15,7 +15,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-enum class MaterialStyle { GLASS, SOLID, NONE }
+/**
+ * 卡片材质。
+ *
+ * LIQUID_GLASS 液态玻璃：高透 + 流动的高光带 + 硬朗亮边，模拟液体表面的张力弧。
+ * SOFT_GLASS   柔光玻璃：低对比、大范围柔化、极淡描边，适合长时间盯着看的场景。
+ */
+enum class MaterialStyle { LIQUID_GLASS, SOFT_GLASS, GLASS, SOLID, NONE }
 enum class AnimationStyle { SPRING, SMOOTH, NONE }
 enum class WallpaperType { VIDEO, IMAGE, NONE }
 enum class WallpaperScaleMode {

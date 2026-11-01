@@ -26,6 +26,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.huijui.sunext.edition.core.ui.effect.huiEntrance
+import com.huijui.sunext.edition.core.ui.effect.huiShimmer
 import com.huijui.sunext.edition.core.ui.theme.HuiTheme
 import com.huijui.sunext.edition.core.utils.AnimationStyle
 import com.huijui.sunext.edition.core.utils.AppSettings
@@ -70,8 +71,24 @@ fun GlassCard(
 
     val cornerRadius = RoundedCornerShape(AppSettings.cardCornerRadius.dp)
     val fillAlphaBoost = if (strong) 1.6f else 1f
+    val isGlassLike = style == MaterialStyle.GLASS ||
+        style == MaterialStyle.LIQUID_GLASS ||
+        style == MaterialStyle.SOFT_GLASS
 
     val fill = when (style) {
+        MaterialStyle.LIQUID_GLASS -> Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.20f * fillAlphaBoost),
+                glass.fillTop,
+                Color.White.copy(alpha = 0.05f),
+            )
+        )
+        MaterialStyle.SOFT_GLASS -> Brush.verticalGradient(
+            colors = listOf(
+                glass.fillTop.copy(alpha = (glass.fillTop.alpha * fillAlphaBoost).coerceAtMost(0.5f)),
+                glass.fillBottom.copy(alpha = (glass.fillBottom.alpha * fillAlphaBoost).coerceAtMost(0.5f)),
+            )
+        )
         MaterialStyle.GLASS -> Brush.verticalGradient(
             colors = listOf(
                 glass.fillTop.copy(alpha = (glass.fillTop.alpha * fillAlphaBoost).coerceAtMost(0.9f)),
@@ -93,7 +110,11 @@ fun GlassCard(
             .then(
                 if (style != MaterialStyle.NONE) {
                     Modifier.border(
-                        width = 1.dp,
+                        width = when (style) {
+                            MaterialStyle.LIQUID_GLASS -> 1.2.dp
+                            MaterialStyle.SOFT_GLASS -> 0.8.dp
+                            else -> 1.dp
+                        },
                         color = if (isPressed) glass.border.copy(alpha = 0.42f) else glass.border,
                         shape = cornerRadius
                     )
@@ -112,8 +133,14 @@ fun GlassCard(
                 } else Modifier
             )
     ) {
+        // 液态玻璃：一道持续流动的高光带，模拟液体表面的张力弧。
+        // 用 shimmer 而不是新写动画，保证它同样受「关闭动画」开关控制。
+        if (style == MaterialStyle.LIQUID_GLASS) {
+            Box(modifier = Modifier.matchParentSize().huiShimmer(Color.White))
+        }
+
         // 左上角斜向反光：真实玻璃最有辨识度的一笔，成本只有一个 draw call。
-        if (style == MaterialStyle.GLASS) {
+        if (isGlassLike && style != MaterialStyle.SOFT_GLASS) {
             Box(
                 modifier = Modifier
                     .matchParentSize()

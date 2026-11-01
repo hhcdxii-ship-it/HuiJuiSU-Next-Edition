@@ -551,6 +551,8 @@ private fun MaterialConfigContent(
     var selected by remember { mutableStateOf(AppSettings.materialStyle) }
 
     val items = listOf(
+        Triple(MaterialStyle.LIQUID_GLASS, "液态玻璃", "流动高光，最强质感"),
+        Triple(MaterialStyle.SOFT_GLASS, "柔光玻璃", "低对比，久看不累"),
         Triple(MaterialStyle.GLASS, "毛玻璃", "通透，有呼吸感"),
         Triple(MaterialStyle.SOLID, "实心", "沉稳，对比度高"),
         Triple(MaterialStyle.NONE, "无材质", "极简，纯色卡片")
@@ -574,6 +576,8 @@ private fun MaterialConfigContent(
                     ChoiceCard(
                         selected = selected == style, accent = deepAccent,
                         icon = when (style) {
+                            MaterialStyle.LIQUID_GLASS -> Icons.Default.BubbleChart
+                            MaterialStyle.SOFT_GLASS -> Icons.Default.WbSunny
                             MaterialStyle.GLASS -> Icons.Default.BlurOn
                             MaterialStyle.SOLID -> Icons.Default.Square
                             MaterialStyle.NONE -> Icons.Default.CropSquare
@@ -589,6 +593,8 @@ private fun MaterialConfigContent(
                 ChoiceCard(
                     selected = selected == style, accent = deepAccent,
                     icon = when (style) {
+                        MaterialStyle.LIQUID_GLASS -> Icons.Default.BubbleChart
+                        MaterialStyle.SOFT_GLASS -> Icons.Default.WbSunny
                         MaterialStyle.GLASS -> Icons.Default.BlurOn
                         MaterialStyle.SOLID -> Icons.Default.Square
                         MaterialStyle.NONE -> Icons.Default.CropSquare

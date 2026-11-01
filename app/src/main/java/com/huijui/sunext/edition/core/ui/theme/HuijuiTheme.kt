@@ -87,6 +87,24 @@ fun HuijuiTheme(content: @Composable () -> Unit) {
 }
 
 private fun paletteFor(accent: Color, style: MaterialStyle): HuiGlassPalette = when (style) {
+    // 液态玻璃：更透但对比更强，靠亮边和流动高光立起来
+    MaterialStyle.LIQUID_GLASS -> HuiGlassPalette(
+        fillTop = Color.White.copy(alpha = 0.18f),
+        fillBottom = Color.White.copy(alpha = 0.05f).compositeOver(accent.copy(alpha = 0.10f)),
+        sheen = Color.White.copy(alpha = 0.34f),
+        border = Color.White.copy(alpha = 0.30f),
+        solidContainer = Color(0xFF1B1B1F),
+        solidBorder = Color.White.copy(alpha = 0.12f),
+    )
+    // 柔光玻璃：整体压淡，边界几乎消失，只有一层很淡的漫反射
+    MaterialStyle.SOFT_GLASS -> HuiGlassPalette(
+        fillTop = Color.White.copy(alpha = 0.075f),
+        fillBottom = Color.White.copy(alpha = 0.028f).compositeOver(accent.copy(alpha = 0.04f)),
+        sheen = Color.White.copy(alpha = 0.08f),
+        border = Color.White.copy(alpha = 0.07f),
+        solidContainer = Color(0xFF1B1B1F),
+        solidBorder = Color.White.copy(alpha = 0.07f),
+    )
     MaterialStyle.GLASS -> HuiGlassPalette(
         fillTop = Color.White.copy(alpha = 0.115f),
         fillBottom = Color.White.copy(alpha = 0.045f).compositeOver(accent.copy(alpha = 0.06f)),

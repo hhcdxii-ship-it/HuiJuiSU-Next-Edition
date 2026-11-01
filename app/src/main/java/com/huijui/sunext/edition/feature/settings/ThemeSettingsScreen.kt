@@ -244,6 +244,24 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                 // ================= 材质风格 =================
                 item {
                     SettingsGroup(title = "材质风格") {
+                        ThemeOptionRow(
+                            "液态玻璃",
+                            "流动高光带 + 亮边，质感最强（持续动画，略耗电）",
+                            AppSettings.materialStyle == MaterialStyle.LIQUID_GLASS,
+                            true
+                        ) {
+                            AppSettings.materialStyle = MaterialStyle.LIQUID_GLASS
+                            AppSettings.save()
+                        }
+                        ThemeOptionRow(
+                            "柔光玻璃",
+                            "低对比漫反射，边界几乎消失，久看不累",
+                            AppSettings.materialStyle == MaterialStyle.SOFT_GLASS,
+                            true
+                        ) {
+                            AppSettings.materialStyle = MaterialStyle.SOFT_GLASS
+                            AppSettings.save()
+                        }
                         // 🚀 7.4 段：去掉 "Haze" 字样（我们根本没用 Haze）
                         //    无壁纸时不再静默强制改材质，改成提示，让用户自己决定
                         ThemeOptionRow(
