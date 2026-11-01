@@ -148,11 +148,8 @@ class SystemMonitorService : Service() {
 
     @Suppress("DEPRECATION")
     private fun stopForegroundCompat() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            stopForeground(true)
-        }
+        // minSdk 26，SDK_INT >= N 恒成立；旧的三参/布尔重载已在 API 33 废弃
+        stopForeground(STOP_FOREGROUND_REMOVE)
         // 🚀 闭环清理：强行撤掉通知，不留幽灵
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(NOTIFICATION_ID)
