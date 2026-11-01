@@ -68,9 +68,19 @@ object AppResetManager {
                 AppSettings.customVideoPath = null
                 AppSettings.customImagePath = null
 
-                AppSettings.currentLanguage = "ZAKO"
+                // 出厂默认是简体中文。
+                // 之前这里写的是 "ZAKO"（杂鱼模式），明显是调试时留下的 —— 用户点个
+                // 「恢复出厂设置」，界面突然开始骂人，体验很怪。
+                AppSettings.currentLanguage = "ZH_CN"
                 AppSettings.isLauncherLandscape = false
                 AppSettings.defaultLauncherMode = true
+
+                // 作弊哨兵的状态必须一并清除：
+                // 否则用户执行了恢复出厂设置，24 小时的环境锁还在（save() 会把内存里的
+                // cheatLockUntil 又写回磁盘），表现为「重置完了还是被锁着」，无从自救。
+                AppSettings.cheatSentinelEnabled = true
+                AppSettings.cheatLockUntil = 0L
+                AppSettings.cheatPurgeCount = 0
 
                 // 关键：重置后回引导页
                 AppSettings.onboardingCompleted = false
