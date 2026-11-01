@@ -50,13 +50,17 @@ object AppSettings {
     var isHyperOs by mutableStateOf(false); private set
     var osMajorVersion by mutableStateOf("Android"); private set
 
-    var isCheckManagerUpdateEnabled by mutableStateOf(true)
+    /**
+     * 模块更新检查开关。
+     *
+     * 注：这里原本还有 isCheckManagerUpdateEnabled / isHideSelinuxEnabled /
+     * isHideRootEnabled / isAntiWallpaperResetEnabled 四个字段，
+     * 它们全项目**只有写入没有读取**，对应的功能从来没实现过，已删除。
+     * 保留开关就要能生效，否则设置项就是在骗人。
+     */
     var isCheckModuleUpdateEnabled by mutableStateOf(true)
-    var isHideSelinuxEnabled by mutableStateOf(false)
-    var isHideRootEnabled by mutableStateOf(true)
     var isAntiRootLossEnabled by mutableStateOf(false)
     var isAntiDevOptionsEnabled by mutableStateOf(false)
-    var isAntiWallpaperResetEnabled by mutableStateOf(false)
 
     var materialStyle by mutableStateOf(MaterialStyle.GLASS)
     var animationStyle by mutableStateOf(AnimationStyle.SPRING)
@@ -99,15 +103,11 @@ object AppSettings {
         isHyperOs = RomUtils.isHyperOs()
         osMajorVersion = RomUtils.getOsMajorVersion()
 
-        isCheckManagerUpdateEnabled = prefs.getBoolean("check_manager", true)
         currentLanguage = prefs.getString("current_language", "ZH_CN") ?: "ZH_CN"
         isLauncherLandscape = prefs.getBoolean("launcher_landscape", false)
         isCheckModuleUpdateEnabled = prefs.getBoolean("check_module", true)
-        isHideSelinuxEnabled = prefs.getBoolean("hide_selinux", false)
-        isHideRootEnabled = prefs.getBoolean("hide_root", true)
         isAntiRootLossEnabled = prefs.getBoolean("anti_root_loss", false)
         isAntiDevOptionsEnabled = prefs.getBoolean("anti_dev_options", false)
-        isAntiWallpaperResetEnabled = prefs.getBoolean("anti_wallpaper_reset", false)
 
         materialStyle = try { MaterialStyle.valueOf(prefs.getString("material_style", MaterialStyle.GLASS.name) ?: MaterialStyle.GLASS.name) } catch (_: Exception) { MaterialStyle.GLASS }
         animationStyle = try { AnimationStyle.valueOf(prefs.getString("animation_style", AnimationStyle.SPRING.name) ?: AnimationStyle.SPRING.name) } catch (_: Exception) { AnimationStyle.SPRING }
@@ -161,15 +161,11 @@ object AppSettings {
 
     private fun writeSnapshot() {
         prefs.edit().apply {
-            putBoolean("check_manager", isCheckManagerUpdateEnabled)
             putString("current_language", currentLanguage)
             putBoolean("launcher_landscape", isLauncherLandscape)
             putBoolean("check_module", isCheckModuleUpdateEnabled)
-            putBoolean("hide_selinux", isHideSelinuxEnabled)
-            putBoolean("hide_root", isHideRootEnabled)
             putBoolean("anti_root_loss", isAntiRootLossEnabled)
             putBoolean("anti_dev_options", isAntiDevOptionsEnabled)
-            putBoolean("anti_wallpaper_reset", isAntiWallpaperResetEnabled)
             putString("material_style", materialStyle.name)
             putString("animation_style", animationStyle.name)
             putString("wallpaper_type", wallpaperType.name)

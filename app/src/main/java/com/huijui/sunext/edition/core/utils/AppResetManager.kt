@@ -48,13 +48,9 @@ object AppResetManager {
 
             // 4. 重置所有 AppSettings 字段到默认值
             withContext(Dispatchers.Main) {
-                AppSettings.isCheckManagerUpdateEnabled = true
                 AppSettings.isCheckModuleUpdateEnabled = true
-                AppSettings.isHideSelinuxEnabled = false
-                AppSettings.isHideRootEnabled = true
                 AppSettings.isAntiRootLossEnabled = false
                 AppSettings.isAntiDevOptionsEnabled = false
-                AppSettings.isAntiWallpaperResetEnabled = false
 
                 AppSettings.materialStyle = MaterialStyle.GLASS
                 AppSettings.animationStyle = AnimationStyle.SPRING

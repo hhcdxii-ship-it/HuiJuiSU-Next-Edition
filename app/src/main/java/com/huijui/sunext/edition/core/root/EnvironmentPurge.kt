@@ -55,12 +55,12 @@ object EnvironmentPurge {
             AppSettings.save()
             steps += "已撤销 $revoked 个应用的 Root 授权"
 
-            // 4. 关掉所有隐藏/伪装能力（自爆之后没什么可藏的了）
-            AppSettings.isHideRootEnabled = false
-            AppSettings.isHideSelinuxEnabled = false
+            // 4. 关掉 Root 掉线守护，并真的把挂载隐藏清掉
+            //    （原来这里是给两个"只写不读"的字段赋 false，等于什么都没做）
             AppSettings.isAntiRootLossEnabled = false
             AppSettings.save()
-            steps += "隐藏与伪装能力已全部关闭"
+            val cleared = HuiHidingManager.clearMountsGlobal()
+            steps += if (cleared) "已清除挂载隐藏并关闭 Root 掉线守护" else "关闭 Root 掉线守护（挂载接口不可用）"
 
             // 5. 上锁：24 小时内不接受重新启用
             val until = System.currentTimeMillis() + LOCK_HOURS * 3600_000L

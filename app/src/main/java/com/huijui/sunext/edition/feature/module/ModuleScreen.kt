@@ -88,7 +88,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
             // `InstalledModule.updateAvailable` 这个字段一直存在，但从来没有任何代码写过它 ——
             // 也就是说 App 里根本没有"检查更新"这个功能。
             // 这里拿仓库列表按 id 比对版本，标记出可更新的模块。
-            val marked = withContext(Dispatchers.IO) {
+            val marked = if (!AppSettings.isCheckModuleUpdateEnabled) result else withContext(Dispatchers.IO) {
                 runCatching {
                     val remote = ModuleRepoProvider.fetchModules().associateBy { it.id }
                     if (remote.isEmpty()) result

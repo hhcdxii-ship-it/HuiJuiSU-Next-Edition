@@ -121,6 +121,20 @@ fun SettingsScreen(
                 onClick = onNavigateToEffects
             )
         }
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                ToggleRow(
+                    icon = Icons.Default.CloudDownload,
+                    title = "检查模块更新",
+                    subtitle = "进入模块页时按仓库版本比对，标记可更新的模块",
+                    checked = AppSettings.isCheckModuleUpdateEnabled,
+                    accent = accent
+                ) { on ->
+                    AppSettings.isCheckModuleUpdateEnabled = on
+                    AppSettings.save()
+                }
+            }
+        }
 
         // ── 引擎特性 ────────────────────────────────────────────────
         item { SectionLabel("HUI 独有特性", modifier = Modifier.padding(top = HuiSpace.m)) }
