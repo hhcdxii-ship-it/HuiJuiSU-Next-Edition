@@ -89,10 +89,29 @@ target_link_options(hsud PRIVATE "-Wl,-z,max-page-size=16384" "-Wl,-z,common-pag
     target_link_libraries(hsud_cli z log liblzma)
     
     
-    # 把编译好的 hsud_cli 拷贝到 assets 目录下
-    add_custom_command(TARGET hsud_cli POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hsud_cli> ${CMAKE_CURRENT_SOURCE_DIR}/../../assets/exploit/hsud_cli
-    )
+    # ============================================================
+    # 产物同步到 App 的 assets
+    #
+    # 🔴 旧路径 ${CMAKE_CURRENT_SOURCE_DIR}/../../assets/exploit 是错的：
+    #    core/root/native 往上两级是 core/assets —— 那里不参与打包。
+    #    结果就是：所有 C 代码的改动都落进一个没人读的目录，
+    #    APK 里一直是手工拷进去的旧二进制（且已经和源码脱节）。
+    #    正确路径要往上三级到仓库根，再进 app/src/main/assets/exploit。
+    #
+    # 只同步 arm64-v8a：真机只有 arm64，把 x86/x86_64 产物写进同名文件
+    # 会造成「架构错配 → exec format error」，而构建顺序里最后编译的是 x86_64。
+    # ============================================================
+    set(HUIJUI_ASSET_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../app/src/main/assets/exploit)
+
+    if(ANDROID_ABI STREQUAL "arm64-v8a")
+        foreach(hui_tgt hsud_cli huijuiinit huijuisud)
+            add_custom_command(TARGET ${hui_tgt} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${HUIJUI_ASSET_DIR}
+                COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${hui_tgt}> ${HUIJUI_ASSET_DIR}/${hui_tgt}
+                COMMENT "同步 ${hui_tgt} 到 app assets"
+            )
+        endforeach()
+    endif()
 
 else()
     # --- Linux (WSL) 编译：生成独立可执行文件 hsud ---

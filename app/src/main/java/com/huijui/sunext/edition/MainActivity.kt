@@ -210,6 +210,7 @@ fun MainApp() {
                         SettingsScreen(
                             onNavigateToTheme = { navController.navigate("themesettings") },
                             onNavigateToLanguage = { navController.navigate("language_settings") },
+                            onNavigateToKernelModules = { navController.navigate("kernel_modules") },
                             onResetComplete = {
                                 navController.navigate("onboarding") {
                                     popUpTo(navController.graph.id) { inclusive = true }
