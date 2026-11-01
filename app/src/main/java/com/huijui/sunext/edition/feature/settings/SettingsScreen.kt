@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.settings
 
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -266,6 +267,32 @@ fun SettingsScreen(
 
         // ── 诊断 ────────────────────────────────────────────────────
         item { SectionLabel("诊断", modifier = Modifier.padding(top = HuiSpace.m)) }
+        item {
+            SettingsRow(
+                icon = Icons.Default.Share,
+                title = "导出诊断报告",
+                subtitle = "汇总版本 / Root 状态 / 模块 / 崩溃日志，用系统分享发出去",
+                onClick = {
+                    scope.launch {
+                        val report = runCatching {
+                            com.huijui.sunext.edition.core.utils.DiagnosticReporter.build(context)
+                        }.getOrElse { "诊断报告生成失败：${it.message}" }
+                        runCatching {
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "HuiJuiSU 诊断报告")
+                                putExtra(android.content.Intent.EXTRA_TEXT, report)
+                            }
+                            context.startActivity(
+                                android.content.Intent.createChooser(send, "分享诊断报告")
+                            )
+                        }.onFailure {
+                            Toast.makeText(context, "没有可用的分享应用", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            )
+        }
         item {
             SettingsRow(
                 icon = Icons.Default.BugReport,
