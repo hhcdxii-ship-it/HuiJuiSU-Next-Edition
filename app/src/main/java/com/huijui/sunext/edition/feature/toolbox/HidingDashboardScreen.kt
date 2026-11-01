@@ -51,7 +51,7 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
             ZakoText("返回", color = Color.White, fontSize = 16.sp)
         }
         Spacer(modifier = Modifier.height(16.dp))
-        ZakoText("环境隔离防御", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        ZakoText("环境隔离防御", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
         ZakoText("HUI 专有护城河 · 纯净且克制", color = Color.White.copy(0.6f), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(20.dp))
 

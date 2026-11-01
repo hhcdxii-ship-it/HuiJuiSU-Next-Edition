@@ -77,7 +77,7 @@ fun HardwareInfoScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    ZakoText("硬件信息", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    ZakoText("硬件信息", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     ZakoText("详细参数 · 一键复制", color = Color.White.copy(0.6f), fontSize = 12.sp)
                 }
                 Box(

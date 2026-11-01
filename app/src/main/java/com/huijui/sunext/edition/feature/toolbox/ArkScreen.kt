@@ -72,7 +72,7 @@ fun ArkScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    ZakoText("配置方舟", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    ZakoText("配置方舟", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     ZakoText("环境级快照 · 一键迁移与回滚", color = Color.White.copy(0.6f), fontSize = 12.sp)
                 }
                 Box(

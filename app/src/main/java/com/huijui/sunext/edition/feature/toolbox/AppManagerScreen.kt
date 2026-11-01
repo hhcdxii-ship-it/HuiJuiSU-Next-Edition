@@ -106,7 +106,7 @@ fun AppManagerScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    ZakoText("App 管理", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    ZakoText("App 管理", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     ZakoText(
                         "冻结毒瘤 · 卸载系统应用（可恢复）",
                         color = Color.White.copy(0.6f),

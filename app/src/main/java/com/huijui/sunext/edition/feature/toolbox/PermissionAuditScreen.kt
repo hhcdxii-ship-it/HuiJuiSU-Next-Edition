@@ -90,7 +90,7 @@ fun PermissionAuditScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    ZakoText("权限审计", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    ZakoText("权限审计", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     ZakoText("谁在用什么权限，一目了然", color = Color.White.copy(0.6f), fontSize = 12.sp)
                 }
                 Box(

@@ -71,7 +71,7 @@ fun QuickActionScreen(onBack: () -> Unit) {
                 ZakoText("返回", color = Color.White, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            ZakoText("快捷指令", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            ZakoText("快捷指令", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
             ZakoText("6 个安全预设 · 无需输入命令", color = Color.White.copy(0.6f), fontSize = 12.sp)
             Spacer(modifier = Modifier.height(16.dp))
 

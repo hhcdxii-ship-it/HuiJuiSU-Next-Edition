@@ -129,7 +129,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Spacer(modifier = Modifier.height(24.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ZakoText("模块拓展", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                ZakoText("模块拓展", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
                 
                 // 🛡️ 只有纯血 HUI 才显示导入按钮
                 if (currentTab == ModuleTab.LOCAL && isPureHui) {

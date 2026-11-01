@@ -132,7 +132,7 @@ fun SensorTestScreen(onBack: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            ZakoText("传感器测试", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            ZakoText("传感器测试", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
             ZakoText(
                 "实时采样 · 摇一摇 / 遮挡测试",
                 color = Color.White.copy(0.6f),
