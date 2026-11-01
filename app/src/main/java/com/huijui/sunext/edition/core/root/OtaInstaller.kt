@@ -134,36 +134,24 @@ object OtaInstaller {
             // ── 6. 投递 + 打补丁 ───────────────────────────────────
             emit(OtaState.Progress("[-] 正在投递底层工具…"))
             InstallIo.run("rm -rf $REMOTE_DIR && mkdir -p $REMOTE_DIR && chmod 755 $REMOTE_DIR")
-            val staged = listOf(
-                Triple("exploit/hsud_cli", "$REMOTE_DIR/hsud_cli", "0755"),
-                Triple("exploit/huijuiinit", "$REMOTE_DIR/huijuiinit", "0755"),
-                Triple("exploit/huijuisud", "$REMOTE_DIR/huijuisud", "0755"),
-                Triple("exploit/${koOk.assetName}", "$REMOTE_DIR/huijui.ko", "0644"),
-            )
-            for ((asset, remote, mode) in staged) {
-                if (!InstallIo.stageAsset(context, asset, remote, mode)) {
-                    emit(OtaState.Error("❌ 投递失败: $asset"))
-                    return@flow
-                }
+            val injectError = RamdiskInjector.stageAll(context, REMOTE_DIR, koOk.assetName)
+            if (injectError != null) {
+                emit(OtaState.Error("❌ 投递失败: $injectError"))
+                return@flow
             }
             InstallIo.run("cp '${stockImg.absolutePath}' $REMOTE_DIR/stock.img")
 
-            emit(OtaState.Progress("[-] 正在执行底层注入…"))
-            val script = buildString {
-                appendLine("#!/system/bin/sh")
-                appendLine("set -e")
-                appendLine("exec 2>&1")
-                appendLine("cd $REMOTE_DIR")
-                appendLine("./hsud_cli unpack stock.img")
-                appendLine("./hsud_cli cpio ramdisk.cpio mv init init.real")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0755 init huijuiinit")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0755 huijuisud huijuisud")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0644 huijui.ko huijui.ko")
-                appendLine("./hsud_cli repack stock.img patched.img")
-                appendLine("echo PATCH_OK")
-            }
-            File(workDir, "ota_patch.sh").writeText(script)
-            InstallIo.run("cp '${File(workDir, "ota_patch.sh").absolutePath}' $REMOTE_DIR/ota_patch.sh && chmod 755 $REMOTE_DIR/ota_patch.sh")
+            emit(OtaState.Progress("[-] 正在执行底层注入（劫持 init）…"))
+            val scriptFile = File(workDir, "ota_patch.sh")
+            scriptFile.writeText(
+                RamdiskInjector.buildScript(
+                    remoteDir = REMOTE_DIR,
+                    stockName = "stock.img",
+                    outputName = "patched.img",
+                    patchFstab = true
+                )
+            )
+            InstallIo.run("cp '${scriptFile.absolutePath}' $REMOTE_DIR/ota_patch.sh && chmod 755 $REMOTE_DIR/ota_patch.sh")
 
             val patchOut = InstallIo.run("sh $REMOTE_DIR/ota_patch.sh", 5 * 60_000L)
             if (!patchOut.output.contains("PATCH_OK")) {

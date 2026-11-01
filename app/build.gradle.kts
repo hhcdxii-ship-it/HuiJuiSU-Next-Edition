@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.security.MessageDigest
 
 plugins {
     id("com.android.application")
@@ -95,3 +96,82 @@ dependencies {
     implementation("androidx.compose.material3.adaptive:adaptive:1.2.0")
     implementation("androidx.window:window:1.3.0")
 }
+
+
+// ============================================================================
+// 构建期校验内置内核模块
+//
+// 起因：assets/exploit 曾经被回滚成「7 份同一个 5.10 二进制 + 1 份 6.12」，
+// 文件名写着 8 个内核分支，实际只有 2 个是真的。这种回归在运行期极难发现
+// （用户只看到"刷入成功但未工作"），所以把它挡在编译阶段。
+// ============================================================================
+val verifyKoAssets = tasks.register("verifyKoAssets") {
+    group = "verification"
+    description = "校验 assets/exploit 下的 8 个内核模块是否真实且互不相同"
+
+    val assetDir = layout.projectDirectory.dir("src/main/assets/exploit").asFile
+
+    doLast {
+        val expectedBranches = listOf(
+            "android12-5.10", "android13-5.10", "android13-5.15", "android14-5.15",
+            "android14-6.1", "android15-6.6", "android16-6.12", "android17-6.18",
+        )
+        val problems = mutableListOf<String>()
+        val digests = mutableMapOf<String, String>()
+
+        for (branch in expectedBranches) {
+            val name = "HuiJuiPhantom_${branch}_arm64.ko"
+            val file = assetDir.resolve(name)
+            if (!file.isFile) {
+                problems.add("缺少 $name")
+                continue
+            }
+            if (file.length() < 4096L) {
+                problems.add("$name 只有 ${file.length()} 字节，明显是占位文件")
+            }
+            val bytes = file.readBytes()
+            if (bytes.size < 4 ||
+                bytes[0] != 0x7F.toByte() ||
+                bytes[1] != 'E'.code.toByte() ||
+                bytes[2] != 'L'.code.toByte() ||
+                bytes[3] != 'F'.code.toByte()
+            ) {
+                problems.add("$name 不是 ELF 文件")
+                continue
+            }
+
+            val digest = MessageDigest.getInstance("MD5")
+                .digest(bytes)
+                .joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+            digests[name] = digest
+
+            val kernelVersion = branch.substringAfter('-')
+            val text = String(bytes, Charsets.ISO_8859_1)
+            val marker = "vermagic="
+            val at = text.indexOf(marker)
+            val vermagic = if (at >= 0) {
+                text.substring(at + marker.length).takeWhile { it != '\u0000' && it != '\n' }.trim()
+            } else {
+                ""
+            }
+            if (vermagic.isEmpty()) {
+                problems.add("$name 里找不到 vermagic")
+            } else if (!vermagic.startsWith(kernelVersion)) {
+                problems.add("$name 的 vermagic 是「$vermagic」，与文件名要求的内核 $kernelVersion 不符")
+            }
+        }
+
+        digests.entries.groupBy { it.value }.filterValues { it.size > 1 }.forEach { (_, group) ->
+            problems.add("以下模块内容完全相同（同一个二进制换名字）：${group.joinToString { it.key }}")
+        }
+
+        if (problems.isNotEmpty()) {
+            throw GradleException(
+                "内核模块校验失败：\n" + problems.joinToString("\n") { "  · $it" }
+            )
+        }
+        logger.lifecycle("✓ 8 个内核模块校验通过（互不相同 / ELF 合法 / vermagic 与命名一致）")
+    }
+}
+
+tasks.named("preBuild") { dependsOn(verifyKoAssets) }

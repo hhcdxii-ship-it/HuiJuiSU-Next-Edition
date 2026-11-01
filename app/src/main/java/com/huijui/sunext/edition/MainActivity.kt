@@ -104,6 +104,7 @@ fun MainApp() {
     val hideBottomBar = currentRoute == "onboarding" ||
         currentRoute?.startsWith("toolbox_") == true ||
         currentRoute == "core_override" ||
+        currentRoute == "kernel_modules" ||
         currentRoute == "module_webui" ||
         currentRoute == "language_settings"
     val forceStrongGlass = currentRoute?.startsWith("toolbox_") == true || currentRoute == "module_webui"
@@ -159,6 +160,7 @@ fun MainApp() {
                         )
                     }
                     composable("core_override") { CoreOverrideScreen(onBack = { navController.popBackStack() }) }
+                    composable("kernel_modules") { KernelModulesScreen(onBack = { navController.popBackStack() }) }
                     composable("tool") {
                         ToolScreen(
                             onNavigateToConsole = { navController.navigate("toolbox_console") },
@@ -173,7 +175,8 @@ fun MainApp() {
                             onNavigateToQuickAction = { navController.navigate("toolbox_quickaction") },
                             onNavigateToPermissions = { navController.navigate("toolbox_permissions") },
                             onNavigateToArk = { navController.navigate("toolbox_ark") },
-                            onNavigateToHiding = { navController.navigate("toolbox_hiding") }
+                            onNavigateToHiding = { navController.navigate("toolbox_hiding") },
+                            onNavigateToKernelModules = { navController.navigate("kernel_modules") }
                         )
                     }
                     composable("superuser") { SuperUserScreen() }

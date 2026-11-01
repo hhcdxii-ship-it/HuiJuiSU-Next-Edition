@@ -37,7 +37,8 @@ fun ToolScreen(
     onNavigateToTweaks: () -> Unit = {}, onNavigateToAudit: () -> Unit = {}, onNavigateToApps: () -> Unit = {},
     onNavigateToHardware: () -> Unit = {}, onNavigateToSensors: () -> Unit = {}, onNavigateToScreenTest: () -> Unit = {},
     onNavigateToQuickAction: () -> Unit = {}, onNavigateToPermissions: () -> Unit = {}, onNavigateToArk: () -> Unit = {},
-    onNavigateToHiding: () -> Unit = {}
+    onNavigateToHiding: () -> Unit = {},
+    onNavigateToKernelModules: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
@@ -65,7 +66,8 @@ fun ToolScreen(
                 ToolItem("CPU 调度", Icons.Default.Speed, onNavigateToCpu),
                 ToolItem("系统魔改", Icons.Default.Security, onNavigateToTweaks),
                 ToolItem("分区备份", Icons.Default.SaveAlt, onNavigateToBackup),
-                ToolItem("终端命令", Icons.Default.Terminal, onNavigateToConsole)
+                ToolItem("终端命令", Icons.Default.Terminal, onNavigateToConsole),
+                ToolItem("内核模块", Icons.Default.Memory, onNavigateToKernelModules)
             ))
         }
 

@@ -102,68 +102,24 @@ object DirectInstaller {
             emit(InstallState.Progress("[-] 正在投递底层工具…"))
             InstallIo.run("rm -rf $REMOTE_DIR && mkdir -p $REMOTE_DIR && chmod 755 $REMOTE_DIR")
 
-            val staged = listOf(
-                Triple("exploit/hsud_cli", "$REMOTE_DIR/hsud_cli", "0755"),
-                Triple("exploit/huijuiinit", "$REMOTE_DIR/huijuiinit", "0755"),
-                Triple("exploit/huijuisud", "$REMOTE_DIR/huijuisud", "0755"),
-                Triple("exploit/${koOk.assetName}", "$REMOTE_DIR/huijui.ko", "0644"),
-            )
-            for ((asset, remote, mode) in staged) {
-                if (!InstallIo.stageAsset(context, asset, remote, mode)) {
-                    emit(InstallState.Error("❌ 投递失败: $asset"))
-                    return@flow
-                }
+            val injectError = RamdiskInjector.stageAll(context, REMOTE_DIR, koOk.assetName)
+            if (injectError != null) {
+                emit(InstallState.Error("❌ 投递失败: $injectError"))
+                return@flow
             }
             InstallIo.run("cp '${stockImg.absolutePath}' $REMOTE_DIR/stock.img")
 
-            // ── 5. 打补丁 ─────────────────────────────────────────
-            val rcContent = buildString {
-                appendLine("on post-fs-data")
-                appendLine("    cp /huijui.ko /dev/huijui.ko")
-                appendLine("    chmod 0644 /dev/huijui.ko")
-                appendLine("    insmod /dev/huijui.ko")
-                appendLine("    chmod 0666 /dev/huijui")
-                appendLine("    chcon u:object_r:device:s0 /dev/huijui")
-                appendLine("    chmod 0755 /huijuisud")
-                appendLine("    start huijui_daemon")
-                appendLine("")
-                appendLine("service huijui_daemon /huijuisud")
-                appendLine("    class late_start")
-                appendLine("    user root")
-                appendLine("    group root")
-                appendLine("    seclabel u:r:su:s0")
-            }
-            File(workDir, "huijui.rc").writeText(rcContent)
-            InstallIo.run("cp '${File(workDir, "huijui.rc").absolutePath}' $REMOTE_DIR/huijui.rc")
-
-            emit(InstallState.Progress("[-] 正在注入 HUI 引擎（解包 / 改写 / 重打包）…"))
-            val script = buildString {
-                appendLine("#!/system/bin/sh")
-                appendLine("set -e")
-                appendLine("exec 2>&1")
-                appendLine("cd $REMOTE_DIR")
-                appendLine("./hsud_cli unpack stock.img")
-                // fstab：去掉校验与强制加密，按机型逐个尝试，找不到就跳过（不阻断）
-                appendLine("for f in fstab.qcom fstab.mt6899 fstab.mt6989 fstab.mtk; do")
-                appendLine("  if ./hsud_cli cpio ramdisk.cpio extract \$f 2>/dev/null; then")
-                appendLine("    sed -i 's/,avb=vbmeta_system//g; s/,avb_keys=[^ ]*//g; s/,verify//g; s/forceencrypt/encryptable/g' \$f")
-                appendLine("    ./hsud_cli cpio ramdisk.cpio add 0750 \$f \$f")
-                appendLine("  fi")
-                appendLine("done")
-                appendLine("./hsud_cli cpio ramdisk.cpio extract init.rc")
-                appendLine("echo '' >> init.rc")
-                appendLine("echo 'import /huijui.rc' >> init.rc")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0750 init.rc init.rc")
-                appendLine("./hsud_cli cpio ramdisk.cpio mv init init.real")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0755 init huijuiinit")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0755 huijuisud huijuisud")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0644 huijui.ko huijui.ko")
-                appendLine("./hsud_cli cpio ramdisk.cpio add 0644 huijui.rc huijui.rc")
-                appendLine("./hsud_cli repack stock.img patched.img")
-                appendLine("echo PATCH_OK")
-            }
+            // ── 5. 打补丁：劫持 init + 四件套 + 校验 + 重打包 ──────────
+            emit(InstallState.Progress("[-] 正在注入 HUI 引擎（劫持 init / 注入模块 / 重打包）…"))
             val scriptFile = File(workDir, "direct_patch.sh")
-            scriptFile.writeText(script)
+            scriptFile.writeText(
+                RamdiskInjector.buildScript(
+                    remoteDir = REMOTE_DIR,
+                    stockName = "stock.img",
+                    outputName = "patched.img",
+                    patchFstab = true
+                )
+            )
             InstallIo.run("cp '${scriptFile.absolutePath}' $REMOTE_DIR/direct_patch.sh && chmod 755 $REMOTE_DIR/direct_patch.sh")
 
             val patchOut = InstallIo.run("sh $REMOTE_DIR/direct_patch.sh", 5 * 60_000L)
