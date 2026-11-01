@@ -79,9 +79,22 @@ object SuperUserRepository {
         entries
     }
 
-    /** 授权 / 撤销。写穿到 AppSettings，主页计数、本页开关共用同一份数据。 */
-    fun setGranted(packageName: String, granted: Boolean) {
-        AppSettings.updateGrantedApp(packageName, granted)
+    /**
+     * 授权 / 撤销。
+     *
+     * ⚠️ 以前这里只是 `AppSettings.updateGrantedApp(...)`，也就是**只记了个名单**，
+     * 从来没通知底层 —— 开关拨了、名单里有了、主页计数 +1，但那个应用实际拿不到 Root。
+     * 现在走 HuijuiDeviceBridge 真正下发到 HUI / KernelSU / APatch / Magisk，
+     * 只有底层返回成功才更新本地名单；失败时开关会回弹，不会假装成功。
+     */
+    suspend fun setGranted(context: Context, packageName: String, granted: Boolean): Boolean {
+        val ok = runCatching {
+            if (granted) HuijuiDeviceBridge.grantRootToApp(context, packageName)
+            else HuijuiDeviceBridge.revokeRootFromApp(context, packageName)
+        }.getOrDefault(false)
+
+        if (ok) AppSettings.updateGrantedApp(packageName, granted)
+        return ok
     }
 
     fun grantedCount(): Int = AppSettings.grantedApps.size

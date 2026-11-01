@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.superuser
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -64,6 +66,7 @@ import com.huijui.sunext.edition.core.utils.AppSettings
 fun SuperUserScreen() {
     val context = LocalContext.current
     val accent = AppSettings.accentColor.color
+    val scope = rememberCoroutineScope()
     val grantedSet = AppSettings.grantedApps
 
     var query by rememberSaveable { mutableStateOf("") }
@@ -201,7 +204,16 @@ fun SuperUserScreen() {
                         app = app,
                         accent = accent,
                         onToggle = { granted ->
-                            SuperUserRepository.setGranted(app.packageName, granted)
+                            scope.launch {
+                                val ok = SuperUserRepository.setGranted(context, app.packageName, granted)
+                                if (!ok) {
+                                    Toast.makeText(
+                                        context,
+                                        if (granted) "底层拒绝授权：${app.label}" else "撤销失败：${app.label}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
                         }
                     )
                 }
