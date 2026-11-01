@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.toolbox
 
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 
 import android.content.Context
@@ -129,13 +130,7 @@ fun AppManagerScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoading || scanResult == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = AppSettings.accentColor.color)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ZakoText("扫描已安装应用…", color = Color.White.copy(0.6f), fontSize = 13.sp)
-                    }
-                }
+                HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp), rows = 8)
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(HuijuiLayout.CardSpacingDense),
