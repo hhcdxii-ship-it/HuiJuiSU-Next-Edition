@@ -231,7 +231,7 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Path", patchedImgPath))
                             Toast.makeText(context, "路径已复制到剪贴板", Toast.LENGTH_SHORT).show()
                         } else if (isPatched) {
-                            scope.launch { HuijuiShell.exec("su -c reboot") }
+                            scope.launch { HuijuiShell.exec("reboot") }
                         } else if (!isProcessing) {
                             isProcessing = true
                             processLog = "> 正在唤醒 hsud 守护进程...\n"

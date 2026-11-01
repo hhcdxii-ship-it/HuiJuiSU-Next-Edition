@@ -12,12 +12,12 @@ object KsuBridge {
     private val PKG_REGEX = Regex(PKG_REGEX_STR)
 
     suspend fun isKsuAvailable(): Boolean = withContext(Dispatchers.IO) {
-        val r = HuijuiShell.exec("su -c 'test -x $KSUD && echo yes || echo no'", useCache = true, timeoutMs = 3000L)
+        val r = HuijuiShell.exec("test -x $KSUD && echo yes || echo no", useCache = true, timeoutMs = 3000L)
         r.isSuccess && r.out.any { it.trim() == "yes" }
     }
 
     suspend fun listGranted(): Set<String> = withContext(Dispatchers.IO) {
-        val r = HuijuiShell.exec("su -c 'strings $ALLOWLIST'", useCache = false, timeoutMs = 5000L)
+        val r = HuijuiShell.exec("strings $ALLOWLIST", useCache = false, timeoutMs = 5000L)
         if (!r.isSuccess || r.out.isEmpty()) return@withContext emptySet()
         
         // 🛡️ 严格过滤，防长字符串撑爆
@@ -28,7 +28,7 @@ object KsuBridge {
 
     suspend fun listModules(): List<InstalledModule> = withContext(Dispatchers.IO) {
         try {
-            val r = HuijuiShell.exec("su -c '$KSUD module list'", useCache = false, timeoutMs = 10000L)
+            val r = HuijuiShell.exec("$KSUD module list", useCache = false, timeoutMs = 10000L)
             if (!r.isSuccess || r.out.isEmpty()) return@withContext emptyList()
             
             val result = mutableListOf<InstalledModule>()
@@ -68,15 +68,15 @@ object KsuBridge {
     }
 
     suspend fun install(zipPath: String): Boolean = withContext(Dispatchers.IO) {
-        HuijuiShell.exec("su -c '$KSUD module install \"$zipPath\"'", useCache = false, timeoutMs = 15_000L).isSuccess
+        HuijuiShell.exec("$KSUD module install \"$zipPath\"", useCache = false, timeoutMs = 15_000L).isSuccess
     }
 
     suspend fun toggle(id: String, enable: Boolean): Boolean = withContext(Dispatchers.IO) {
         val sub = if (enable) "enable" else "disable"
-        HuijuiShell.exec("su -c '$KSUD module $sub $id'", useCache = false, timeoutMs = 5_000L).isSuccess
+        HuijuiShell.exec("$KSUD module $sub $id", useCache = false, timeoutMs = 5_000L).isSuccess
     }
 
     suspend fun uninstall(id: String): Boolean = withContext(Dispatchers.IO) {
-        HuijuiShell.exec("su -c '$KSUD module uninstall $id'", useCache = false, timeoutMs = 5_000L).isSuccess
+        HuijuiShell.exec("$KSUD module uninstall $id", useCache = false, timeoutMs = 5_000L).isSuccess
     }
 }

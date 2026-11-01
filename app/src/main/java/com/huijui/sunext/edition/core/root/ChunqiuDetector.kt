@@ -47,7 +47,7 @@ object ChunqiuDetector {
 
         // 3. 物理文件残留探测 (需要 Root 权限通道才能有效读取)
         runCatching {
-            val checkCmd = "su -c 'ls /data/adb 2>/dev/null || echo none'"
+            val checkCmd = "ls /data/adb 2>/dev/null || echo none"
             val r = HuijuiShell.exec(checkCmd, useCache = false, timeoutMs = 3000L)
             if (r.isSuccess) {
                 val dirs = r.out.joinToString(" ")

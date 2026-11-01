@@ -26,12 +26,12 @@ object ModuleManager {
         val modules = mutableListOf<InstalledModule>()
         for (dir in MODULE_DIRS) {
             try {
-                val listResult = HuijuiShell.exec("su -c ls $dir")
+                val listResult = HuijuiShell.exec("ls $dir")
                 if (listResult.isSuccess && listResult.out.isNotEmpty()) {
                     val dirs = listResult.out.filter { it.isNotBlank() && !it.contains(":") }
                     for (moduleDir in dirs) {
                         val modulePath = "$dir/$moduleDir"
-                        val propResult = HuijuiShell.exec("su -c cat $modulePath/module.prop")
+                        val propResult = HuijuiShell.exec("cat $modulePath/module.prop")
                         if (propResult.isSuccess) {
                             val propMap = parseProp(propResult.out)
                             val id = propMap["id"] ?: moduleDir
@@ -40,8 +40,8 @@ object ModuleManager {
                             val author = propMap["author"] ?: "unknown"
                             val description = propMap["description"] ?: ""
 
-                            val disabledResult = HuijuiShell.exec("su -c test -f $modulePath/disable && echo yes || echo no")
-                            val removeResult = HuijuiShell.exec("su -c test -f $modulePath/remove && echo yes || echo no")
+                            val disabledResult = HuijuiShell.exec("test -f $modulePath/disable && echo yes || echo no")
+                            val removeResult = HuijuiShell.exec("test -f $modulePath/remove && echo yes || echo no")
 
                             modules.add(
                                 InstalledModule(
@@ -84,9 +84,9 @@ object ModuleManager {
 
         for (dir in MODULE_DIRS) {
             val path = "$dir/$moduleId"
-            val exists = HuijuiShell.exec("su -c test -d $path && echo yes || echo no").out.contains("yes")
+            val exists = HuijuiShell.exec("test -d $path && echo yes || echo no").out.joinToString("").contains("yes")
             if (exists) {
-                val cmd = if (enable) "su -c rm -f $path/disable" else "su -c touch $path/disable"
+                val cmd = if (enable) "rm -f $path/disable" else "touch $path/disable"
                 return@withContext HuijuiShell.exec(cmd).isSuccess
             }
         }
@@ -102,9 +102,9 @@ object ModuleManager {
         
         for (dir in MODULE_DIRS) {
             val path = "$dir/$moduleId"
-            val exists = HuijuiShell.exec("su -c test -d $path && echo yes || echo no").out.contains("yes")
+            val exists = HuijuiShell.exec("test -d $path && echo yes || echo no").out.joinToString("").contains("yes")
             if (exists) {
-                return@withContext HuijuiShell.exec("su -c touch $path/remove").isSuccess
+                return@withContext HuijuiShell.exec("touch $path/remove").isSuccess
             }
         }
         false
