@@ -34,14 +34,29 @@ jobs:
     - name: Compile KO
       run: |
         cd kernel/src
-        # 🚀 修复：用 rm 暴力清理，替代报错的 make clean
         rm -f *.o *.ko *.mod* .*.cmd
-        # 编译模块
+        # 缺符号表无所谓，直接强编
         make -C ../../common M=$PWD ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_EXTRA_SYMBOLS=../../common/vmlinux.symvers modules
         
-        # 剥离并重命名
         llvm-strip --strip-debug temp_root.ko || aarch64-linux-gnu-strip --strip-debug temp_root.ko
         mv temp_root.ko HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HUI_KO_${{ matrix.branch }}
+        path: kernel/src/HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
+
+  # 🚀 新增一个独立的任务，等所有编译完成后，统一发布
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
         
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
@@ -49,4 +64,4 @@ jobs:
         tag_name: v1.0-build
         name: "HUI 全版本内核模块"
         body: "基于最新源码编译的全版本纯净版 .ko"
-        files: kernel/src/HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
+        files: artifacts/*.ko
