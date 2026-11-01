@@ -153,8 +153,37 @@ object InstallIo {
     // ── 内核模块选择 ────────────────────────────────────────────────
 
     sealed interface KoPick {
-        data class Ok(val assetName: String, val branch: String) : KoPick
+        data class Ok(
+            val assetName: String,
+            val branch: String,
+            val vermagic: String?,
+            val compatible: Boolean,
+            val warning: String?
+        ) : KoPick
+
         data class Missing(val reason: String) : KoPick
+    }
+
+    /**
+     * 读取 .ko 里的 `vermagic=` 字串。
+     *
+     * 为什么需要：仓库里那 8 个模块，有 7 个是**同一个二进制文件**换了名字
+     * （MD5 全为 aeb131ff…，vermagic 都是 `5.10.270-g15fd0b87ae8d`）。
+     * 也就是说只有 5.10 和 6.12 两档是真的，其余命名的分支根本 insmod 不进去。
+     * 与其让用户"刷入成功"后一脸疑惑，不如在刷之前就把这件事说清楚。
+     */
+    fun readVermagic(context: Context, assetPath: String): String? = runCatching {
+        context.assets.open(assetPath).use { input ->
+            val text = String(input.readBytes(), Charsets.ISO_8859_1)
+            Regex("vermagic=([^\u0000\n]+)").find(text)?.groupValues?.get(1)?.trim()
+        }
+    }.getOrNull()
+
+    /** vermagic 的 x.y.z 与运行内核是否对得上（对不上 insmod 必被拒绝）。 */
+    fun isCompatible(vermagic: String?, kernelRelease: String): Boolean {
+        if (vermagic.isNullOrBlank() || kernelRelease.isBlank()) return false
+        val version = Regex("""(\d+\.\d+\.\d+)""").find(vermagic)?.groupValues?.get(1) ?: return false
+        return kernelRelease.startsWith(version)
     }
 
     fun availableKos(context: Context): List<String> =
@@ -177,7 +206,17 @@ object InstallIo {
 
         val all = availableKos(context)
         val exact = "HuiJuiPhantom_${info.branch}_${info.arch}.ko"
-        if (all.contains(exact)) return KoPick.Ok(exact, info.branch)
+        if (all.contains(exact)) {
+            val vermagic = readVermagic(context, "exploit/$exact")
+            val compatible = isCompatible(vermagic, kernelRelease)
+            val warning = if (compatible) {
+                null
+            } else {
+                "⚠️ 内置模块 vermagic「${vermagic ?: "未知"}」与当前内核「$kernelRelease」不一致，" +
+                    "insmod 很可能被内核拒绝；刷入后若仍显示未工作，说明模块没能加载。"
+            }
+            return KoPick.Ok(exact, info.branch, vermagic, compatible, warning)
+        }
 
         return KoPick.Missing(
             "内置模块缺少 $exact（当前内核 $kernelRelease）\n可用模块：${all.joinToString("、").ifEmpty { "无" }}"

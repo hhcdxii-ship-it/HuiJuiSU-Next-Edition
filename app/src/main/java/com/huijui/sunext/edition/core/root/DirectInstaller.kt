@@ -94,8 +94,9 @@ object DirectInstaller {
                 emit(InstallState.Error("❌ ${ko.reason}"))
                 return@flow
             }
-            val koAsset = (ko as InstallIo.KoPick.Ok).assetName
-            emit(InstallState.Progress("[-] 匹配内核模块: $koAsset"))
+            val koOk = ko as InstallIo.KoPick.Ok
+            emit(InstallState.Progress("[-] 匹配内核模块: ${koOk.assetName}"))
+            koOk.warning?.let { emit(InstallState.Progress(it)) }
 
             // ── 4. 投递工具到独立目录 ──────────────────────────────
             emit(InstallState.Progress("[-] 正在投递底层工具…"))
@@ -105,7 +106,7 @@ object DirectInstaller {
                 Triple("exploit/hsud_cli", "$REMOTE_DIR/hsud_cli", "0755"),
                 Triple("exploit/huijuiinit", "$REMOTE_DIR/huijuiinit", "0755"),
                 Triple("exploit/huijuisud", "$REMOTE_DIR/huijuisud", "0755"),
-                Triple("exploit/$koAsset", "$REMOTE_DIR/huijui.ko", "0644"),
+                Triple("exploit/${koOk.assetName}", "$REMOTE_DIR/huijui.ko", "0644"),
             )
             for ((asset, remote, mode) in staged) {
                 if (!InstallIo.stageAsset(context, asset, remote, mode)) {
