@@ -118,12 +118,18 @@ fun ToolboxScreen(
     // ── 设备信息：一次 IO，别在每次刷新里重建 ──────────────────────────
     LaunchedEffect(Unit) {
         deviceInfo = withContext(Dispatchers.IO) {
+            // EnvironmentInspector 一条命令拿到 SELinux 状态 / 挂载痕迹 / 内核串，
+            // 比 System.getProperty("os.version") 更贴近真实内核，
+            // 顺便把 DeviceInfo 里那个一直空着的 selinux 字段填上。
+            val env = runCatching { EnvironmentInspector.getEnvironment() }.getOrNull()
             DeviceInfo(
                 brand = Build.MANUFACTURER ?: "未知",
                 model = Build.MODEL ?: "未知",
                 androidVer = Build.VERSION.RELEASE ?: "未知",
-                kernelVer = System.getProperty("os.version") ?: "未知",
-                fingerprint = Build.FINGERPRINT ?: "未知"
+                kernelVer = env?.kernelVersion?.takeIf { it.isNotBlank() && it != "Unknown" }
+                    ?: System.getProperty("os.version") ?: "未知",
+                fingerprint = Build.FINGERPRINT ?: "未知",
+                selinux = env?.selinux?.takeIf { it != "Unknown" } ?: "未知"
             )
         }
     }
@@ -549,6 +555,7 @@ private fun DeviceInfoCard(deviceInfo: DeviceInfo) {
                     DeviceInfoRow("设备型号", "${deviceInfo.brand} ${deviceInfo.model}")
                     DeviceInfoRow("系统版本", "Android ${deviceInfo.androidVer}")
                     DeviceInfoRow("内核版本", deviceInfo.kernelVer)
+                    DeviceInfoRow("SELinux", deviceInfo.selinux)
                     DeviceInfoRow("系统指纹", deviceInfo.fingerprint)
                 }
             }

@@ -54,8 +54,20 @@ object HuiMotion {
     /** 全局倍率：设置页那个 animSpeedScale 终于在这里生效了。 */
     fun speed(): Float = AppSettings.animationSpeedScale.coerceIn(0.4f, 2.5f)
 
-    /** 是否关闭动画（设置里选「无动画」）。 */
-    fun disabled(): Boolean = AppSettings.animationStyle == com.huijui.sunext.edition.core.utils.AnimationStyle.NONE
+    /**
+     * 系统级「移除动画」开关。
+     *
+     * 开发者选项 / 无障碍里把「动画时长缩放」调成 0 时，系统会关掉所有过渡动画。
+     * Root 管理器的动效必须跟随这个设置，否则对晕动症用户就是折磨。
+     * 值在 MainActivity 启动时读一次写入这里，避免每帧去查 ContentResolver。
+     */
+    @Volatile
+    var systemDisablesAnimations: Boolean = false
+
+    /** 是否关闭动画（系统移除动画，或设置里选「无动画」）。 */
+    fun disabled(): Boolean =
+        systemDisablesAnimations ||
+            AppSettings.animationStyle == com.huijui.sunext.edition.core.utils.AnimationStyle.NONE
 
     fun duration(baseMs: Int): Int =
         if (disabled()) 0 else (baseMs / speed()).toInt().coerceIn(40, 3000)

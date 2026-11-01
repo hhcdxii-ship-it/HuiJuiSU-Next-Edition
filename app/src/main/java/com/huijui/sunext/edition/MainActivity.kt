@@ -75,6 +75,16 @@ class MainActivity : ComponentActivity() {
         // 崩溃捕获：此前 CrashHandler 全项目零引用，等于一次都没装上，
         // 线上崩了不会有任何本地日志可查。
         com.huijui.sunext.edition.core.utils.CrashHandler.init(this)
+
+        // 跟随系统的「移除动画」：动画缩放为 0 时关掉我们所有动效
+        runCatching {
+            val scale = android.provider.Settings.Global.getFloat(
+                contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            )
+            com.huijui.sunext.edition.core.ui.effect.HuiMotion.systemDisablesAnimations = scale == 0f
+        }
         setContent {
             HuijuiTheme {
                 MainApp()

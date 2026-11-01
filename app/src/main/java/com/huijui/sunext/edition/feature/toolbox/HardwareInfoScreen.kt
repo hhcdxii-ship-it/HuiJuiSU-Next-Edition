@@ -105,6 +105,10 @@ fun HardwareInfoScreen(onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(HuijuiLayout.CardSpacingNormal),
                     contentPadding = HuijuiLayout.ScreenContentPadding
                 ) {
+                    // 电池健康：设计容量 / 实际容量 / 循环次数 / 温度 / 电压
+                    // 这些数据系统设置里看不到，只有 Root 能读 sysfs
+                    item { BatteryHealthCard() }
+
                     item {
                         InfoSection(
                             icon = Icons.Default.PhoneAndroid,
