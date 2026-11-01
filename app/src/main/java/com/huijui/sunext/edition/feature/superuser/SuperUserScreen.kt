@@ -172,6 +172,17 @@ fun SuperUserScreen() {
                 )
             }
 
+            Spacer(Modifier.height(HuiSpace.s))
+
+            // 如实说明授权/撤销的实际语义，避免用户误以为拨一下开关就立刻生效/失效
+            ZakoText(
+                "HUI 模式下：授权写入 /dev/huijui 立即生效；撤销目前只移除本地名单，" +
+                    "内核侧暂不支持热撤销（重启后彻底失效）。KSU / APatch / Magisk 的授权以其管理器内的记录为准。",
+                color = Color.White.copy(alpha = 0.32f),
+                fontSize = 9.5.sp,
+                lineHeight = 13.sp
+            )
+
             Spacer(Modifier.height(HuiSpace.m))
         }
 

@@ -117,7 +117,9 @@ object HuijuiDeviceBridge {
     }
 
     private suspend fun revokeViaHui(packageName: String, uid: Int): Boolean {
-        // HUI.ko 暂不支持内核层撤销，仅返回 true 让 App 更新列表
+        // HUI.ko 目前没有内核层的「撤销」指令，只能把本地名单里的记录去掉。
+        // 这里如实返回 true 表示「本地已撤销」，UI 上必须把这一点说清楚，
+        // 否则用户会以为应用真的立刻失去了 Root。
         return true
     }
 
@@ -223,23 +225,25 @@ object HuijuiDeviceBridge {
      *   - 成功率取决于管理器是否兼容
      */
     private suspend fun grantViaGeneric(packageName: String, uid: Int): Boolean {
+        // ⚠️ 旧实现只要 runCatching 没抛异常就 success = true，
+        //    而 HuijuiShell.exec 失败时是**返回结果对象、不抛异常** ——
+        //    于是「未知管理器」下这条路径永远返回成功，等于又一个假成功。
+        //    现在逐条看真实退出码。
         var success = false
-        // 尝试 KernelSU
+
         runCatching {
-            HuijuiShell.exec("mkdir -p /data/adb/ksu && echo '$packageName' >> /data/adb/ksu/package_name")
-            success = true
+            val r = HuijuiShell.exec("mkdir -p /data/adb/ksu && echo '$packageName' >> /data/adb/ksu/package_name")
+            if (r.isSuccess) success = true
         }
-        // 尝试 APatch
         runCatching {
-            HuijuiShell.exec("mkdir -p /data/adb/ap && echo '$packageName' >> /data/adb/ap/package_name")
-            success = true
+            val r = HuijuiShell.exec("mkdir -p /data/adb/ap && echo '$packageName' >> /data/adb/ap/package_name")
+            if (r.isSuccess) success = true
         }
-        // 尝试 Magisk
         runCatching {
-            HuijuiShell.exec(
-                "magisk --sqlite \"INSERT OR REPLACE INTO policies (uid, policy, until, logging, notification) VALUES ($uid, 2, 0, 1, 1)\" 2>/dev/null"
+            val r = HuijuiShell.exec(
+                "magisk --sqlite \"INSERT OR REPLACE INTO policies (uid, policy, until, logging, notification) VALUES ($uid, 2, 0, 1, 1)\" 2>&1 && echo ok || echo fail"
             )
-            success = true
+            if (r.out.joinToString("").contains("ok")) success = true
         }
         return success
     }
