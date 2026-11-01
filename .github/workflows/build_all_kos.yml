@@ -1,0 +1,41 @@
+name: Build HUI Modules
+
+on:
+  workflow_dispatch: # 允许手动点击触发
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # A12 到 A17 的所有分支
+        branch: ["android12-5.10", "android13-5.10", "android13-5.15", "android14-5.15", "android14-6.1", "android15-6.6", "android16-6.12", "android17-6.18"]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+        
+    - name: Install Dependencies
+      run: sudo apt-get update && sudo apt-get install -y repo git build-essential bc bison flex libssl-dev libelf-dev clang lld llvm
+      
+    - name: Fetch Kernel Source
+      run: |
+        git clone https://android.googlesource.com/kernel/common -b ${{ matrix.branch }} --depth=1 common
+        cd common
+        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
+        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+        
+    - name: Compile KO
+      run: |
+        cd kernel/src
+        make clean
+        make -C ../../common M=$PWD ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_EXTRA_SYMBOLS=../../common/vmlinux.symvers modules
+        llvm-strip --strip-debug temp_root.ko || true
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HUI_KO_${{ matrix.branch }}
+        path: kernel/src/temp_root.ko
