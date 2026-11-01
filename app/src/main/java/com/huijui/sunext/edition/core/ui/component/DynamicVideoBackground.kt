@@ -65,6 +65,7 @@ fun SmartBackground() {
 // 视频壁纸
 // ─────────────────────────────────────────────────────────────────────
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 private fun VideoWallpaper() {
     val context = LocalContext.current
