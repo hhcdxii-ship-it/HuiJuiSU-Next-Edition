@@ -33,8 +33,9 @@ object HighRefreshRateHelper {
             // 设置首选刷新率
             layoutParams.preferredRefreshRate = maxRefreshRate
             
-            // 如果是 Android 23+，直接指定 modeId 更稳妥
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && bestModeId != -1) {
+            // 直接指定 modeId 比 preferredRefreshRate 更稳妥
+            // （minSdk 26，原来那个 SDK_INT >= M 的判断恒成立）
+            if (bestModeId != -1) {
                 layoutParams.preferredDisplayModeId = bestModeId
             }
             window.attributes = layoutParams

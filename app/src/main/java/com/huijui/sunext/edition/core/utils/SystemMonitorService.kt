@@ -225,18 +225,17 @@ class SystemMonitorService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID, "系统监控", NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "显示 CPU/内存/温度实时状态"
-                setShowBadge(false)
-                enableLights(false)
-                enableVibration(false)
-            }
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(channel)
+        // minSdk 26 == O，渠道 API 一定可用
+        val channel = NotificationChannel(
+            CHANNEL_ID, "系统监控", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "显示 CPU/内存/温度实时状态"
+            setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
         }
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(channel)
     }
 
     companion object {
@@ -248,11 +247,7 @@ class SystemMonitorService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, SystemMonitorService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
 
         fun stop(context: Context) {

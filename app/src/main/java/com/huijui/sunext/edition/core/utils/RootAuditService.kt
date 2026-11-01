@@ -143,18 +143,17 @@ class RootAuditService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID, "Root 审计", NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "显示最近一次 Root 请求"
-                setShowBadge(false)
-                enableLights(false)
-                enableVibration(false)
-            }
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(channel)
+        // minSdk 26 == O，渠道 API 一定可用
+        val channel = NotificationChannel(
+            CHANNEL_ID, "Root 审计", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "显示最近一次 Root 请求"
+            setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
         }
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(channel)
     }
 
     companion object {
@@ -165,11 +164,7 @@ class RootAuditService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, RootAuditService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
 
         fun stop(context: Context) {
