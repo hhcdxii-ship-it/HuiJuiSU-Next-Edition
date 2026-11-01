@@ -27,6 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.root.HsudInstaller
+import com.huijui.sunext.edition.core.root.DirectInstaller
+import com.huijui.sunext.edition.core.root.OtaInstaller
 import com.huijui.sunext.edition.core.root.AdbUsbController
 import com.huijui.sunext.edition.core.root.HuijuiShell
 import com.huijui.sunext.edition.core.ui.language.ZakoText
@@ -234,17 +236,30 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
                             isProcessing = true
                             processLog = "> 正在唤醒 hsud 守护进程...\n"
                             scope.launch {
-                                val success = HsudInstaller.installLkm(
-                                    context = context,
-                                    installToInactiveSlot = selectedMode == "ghost",
-                                    localImgUri = selectedUri,
-                                    onLog = { log -> processLog += "$log\n" },
-                                    customKoUri = customKoUri
-                                )
-                                
-                                if (success) {
-                                    if (selectedUri != null) patchedImgPath = "/sdcard/Download/HuiJuiPhantom_patched.img"
-                                    else isPatched = true
+                                if (selectedMode == "live") {
+                                    // 🚀 机器化精准直刷
+                                    DirectInstaller.install(context, selectedUri).collect { state ->
+                                        when (state) {
+                                            is DirectInstaller.InstallState.Progress -> processLog += state.message + "\n"
+                                            is DirectInstaller.InstallState.Success -> {
+                                                processLog += state.message + "\n"
+                                                isPatched = true
+                                            }
+                                            is DirectInstaller.InstallState.Error -> processLog += "❌ 错误: " + state.errorMsg + "\n"
+                                        }
+                                    }
+                                } else {
+                                    // 🚀 独立 OTA 槽位更新
+                                    OtaInstaller.install(context, selectedUri).collect { state ->
+                                        when (state) {
+                                            is OtaInstaller.OtaState.Progress -> processLog += state.message + "\n"
+                                            is OtaInstaller.OtaState.Success -> {
+                                                processLog += state.message + "\n"
+                                                isPatched = true
+                                            }
+                                            is OtaInstaller.OtaState.Error -> processLog += "❌ 错误: " + state.errorMsg + "\n"
+                                        }
+                                    }
                                 }
                                 isProcessing = false
                             }

@@ -6,6 +6,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.huijui.sunext.edition.core.ui.language.zakoString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -237,7 +238,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
                         )
                         // 🚀 7.4 段：小字说明暗化只在本页实时生效，其他页第 8 条统一改
                         ZakoText(
-                            text = "提示：暗化效果当前仅在本页实时预览，其他页面将在后续版本统一同步",
+                            text = zakoString("提示：暗化效果当前仅在本页实时预览，其他页面将在后续版本统一同步"),
                             color = Color.White.copy(0.4f),
                             fontSize = 10.sp,
                             lineHeight = 14.sp

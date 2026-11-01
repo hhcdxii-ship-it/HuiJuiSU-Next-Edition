@@ -1,3 +1,4 @@
+#include <cstring>
 #include "format.hpp"
 
 Name2Fmt name2fmt;

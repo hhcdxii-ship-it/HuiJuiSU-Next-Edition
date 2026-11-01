@@ -72,7 +72,7 @@ fun LanguageSettingsScreen(onBack: () -> Unit) {
                     isUnderConstruction = isUnderConstruction,
                     onClick = {
                         if (isUnderConstruction) {
-                            Toast.makeText(context, "这个语言还在施工中哦，笨蛋！", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, zakoString("这个语言还在施工中哦，笨蛋！"), Toast.LENGTH_SHORT).show()
                         } else {
                             AppSettings.currentLanguage = mode.name
                             AppSettings.save()
@@ -130,7 +130,7 @@ private fun LanguageCard(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "施工中",
+                                text = zakoString("施工中"),
                                 color = Color(0xFFFF9800),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold

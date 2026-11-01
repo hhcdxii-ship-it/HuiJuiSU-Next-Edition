@@ -1,6 +1,7 @@
 package com.huijui.sunext.edition.feature.toolbox
 
 import android.widget.Toast
+import com.huijui.sunext.edition.core.ui.language.zakoString
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -52,9 +53,9 @@ fun QuickActionScreen(onBack: () -> Unit) {
     suspend fun runAction(action: QuickActionProvider.QuickAction) {
         busyId = action.id
         try {
-            if (!HuijuiShell.isRooted()) { Toast.makeText(context, "连 Root 都没有，无法执行指令", Toast.LENGTH_SHORT).show(); return }
+            if (!HuijuiShell.isRooted()) { Toast.makeText(context, zakoString("连 Root 都没有，无法执行指令"), Toast.LENGTH_SHORT).show(); return }
             val result = withTimeoutOrNull(15000L) { withContext(Dispatchers.IO) { QuickActionProvider.execute(action) } }
-            if (result == null) { lastResult = action.title to "执行超时（15s）"; Toast.makeText(context, "执行超时", Toast.LENGTH_LONG).show() }
+            if (result == null) { lastResult = action.title to "执行超时（15s）"; Toast.makeText(context, zakoString("执行超时"), Toast.LENGTH_LONG).show() }
             else {
                 result.getOrNull()?.let { lastResult = action.title to it; Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
                     ?: run { val err = result.exceptionOrNull()?.message ?: "执行失败"; lastResult = action.title to "失败：$err"; Toast.makeText(context, err, Toast.LENGTH_LONG).show() }

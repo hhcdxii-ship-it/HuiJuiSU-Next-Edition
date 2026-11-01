@@ -14,14 +14,7 @@ static const char *MAGISK_LIST[] =
         { ".backup/.magisk", "init.magisk.rc",
           "overlay/init.magisk.rc" };
 
-class magisk_cpio : public cpio {
-public:
-    void patch();
-    int test();
-    char *sha1();
-    void restore();
-    void backup(const char *orig);
-};
+#include "ramdisk.hpp"
 
 bool check_env(const char *name) {
     const char *val = getenv(name);
@@ -221,7 +214,7 @@ void magisk_cpio::backup(const char *orig) {
     if (!rm_list.empty()) {
         auto rm_list_file = new cpio_entry(S_IFREG);
         rm_list_file->filesize = rm_list.length();
-        rm_list_file->data = xmalloc(rm_list.length());
+        rm_list_file->data = malloc(rm_list.length());
         memcpy(rm_list_file->data, rm_list.data(), rm_list.length());
         backups.emplace(".backup/.rmlist", rm_list_file);
     }
@@ -298,4 +291,72 @@ int cpio_commands(int argc, char *argv[]) {
 
     cpio.dump(incpio);
     return 0;
+}
+
+// =====================================================================
+// 🔥 纯血 HuiJuiSU 注入引擎 (对标 KernelSU)
+// =====================================================================
+#include <fcntl.h>
+#include <sys/stat.h>
+
+// 辅助函数：读取本地文件到字符串 (假设你的 tools 目录有这玩意，如果没有请调整)
+std::string read_file_to_string(const char* path) {
+    std::string data;
+    int fd = open(path, O_RDONLY);
+    if (fd >= 0) {
+        struct stat st;
+        fstat(fd, &st);
+        data.resize(st.st_size);
+        read(fd, &data[0], st.st_size);
+        close(fd);
+    }
+    return data;
+}
+
+
+void magisk_cpio::patch_huijui(const char* huijuiinit_path, const char* ko_path) {
+    // 1. 备份原厂 init 为 init.real
+    auto it = entries.find("init");
+    if (it != entries.end()) {
+        auto& init_entry = it->second;
+        auto init_real = std::make_unique<cpio_entry>(init_entry->mode);
+        init_real->data = malloc(init_entry->filesize);
+        memcpy(init_real->data, init_entry->data, init_entry->filesize);
+        init_real->filesize = init_entry->filesize;
+        entries["init.real"] = std::move(init_real);
+    }
+
+    // 2. 替换 init 为我们精简版 huijuiinit
+    add(0755, "init", huijuiinit_path);
+
+    // 3. 放入 ko 模块 和 daemon
+    add(0644, "huijui_phantom.ko", ko_path);
+    add(0755, "huijuisud", "huijuisud");
+
+    // 4. 生成 huijui.rc
+    const char* rc_content = 
+        "on post-fs-data\n"
+        "    chmod 0755 /huijui_phantom.ko /huijuisud\n"
+        "    insmod /huijui_phantom.ko\n"
+        "    start huijui_daemon\n"
+        "\n"
+        "service huijui_daemon /huijuisud\n"
+        "    class late_start\n"
+        "    user root\n"
+        "    group root\n";
+
+    FILE* f = fopen("huijui.rc", "wb");
+    fwrite(rc_content, 1, strlen(rc_content), f);
+    fclose(f);
+    add(0644, "huijui.rc", "huijui.rc");
+
+    // 5. 修改原厂 init.rc 导入 huijui.rc
+    if (exists("init.rc")) {
+        extract("init.rc", "init.rc");
+        FILE* init_rc = fopen("init.rc", "ab");
+        fputs("\nimport /huijui.rc\n", init_rc);
+        fclose(init_rc);
+        add(0644, "init.rc", "init.rc");
+        unlink("init.rc");
+    }
 }

@@ -71,6 +71,8 @@ data class OnboardingPageData(
 )
 
 private val onboardingPages = listOf(
+    OnboardingPageData(PageType.CONFIG_LANGUAGE, Icons.Default.Translate, Color(0xFFA855F7), "STEP 1 / 3",
+        "对话风格", "正常模式 还是 杂鱼模式？", "随时可以在设置里改"),
     OnboardingPageData(PageType.INTRO, Icons.Default.Security, Color(0xFFF59E0B), "WELCOME",
         "欢迎回家，机友", "从今天起，你的设备真正属于你",
         "HuiJuiSU Next 不只是一个 Root 管理器，它是一个有温度、有生命的控制台。接下来 13 步，带你认识它、配置它、拥有它。"),
@@ -89,12 +91,10 @@ private val onboardingPages = listOf(
     OnboardingPageData(PageType.INTRO, Icons.Default.Fingerprint, Color(0xFFEC4899), "DETECTOR",
         "环境检测，硬核到底", "KSU / Magisk / APatch / 越狱，一个都跑不掉",
         "RootEnvironmentDetector + RootEngineVerifier 双保险，检查专属进程、属性、/dev/huijui 设备节点。"),
-        OnboardingPageData(PageType.CONFIG_ACCENT, Icons.Default.Palette, Color(0xFFEF4444), "STEP 2 / 4",
+    OnboardingPageData(PageType.CONFIG_ACCENT, Icons.Default.Palette, Color(0xFFEF4444), "STEP 2 / 3",
         "挑一个主题色", "四种性格，你的偏好", "可在设置里随时更换"),
-    OnboardingPageData(PageType.CONFIG_MATERIAL, Icons.Default.Layers, Color(0xFF3B82F6), "STEP 3 / 4",
+    OnboardingPageData(PageType.CONFIG_MATERIAL, Icons.Default.Layers, Color(0xFF3B82F6), "STEP 3 / 3",
         "材质风格", "卡片长什么样，你说了算", "毛玻璃 / 实心 / 无材质三档"),
-    OnboardingPageData(PageType.CONFIG_LANGUAGE, Icons.Default.Translate, Color(0xFFA855F7), "STEP 4 / 4",
-        "对话风格", "正常模式 还是 杂鱼模式？", "随时可以在设置里改"),
     OnboardingPageData(PageType.INTRO, Icons.Default.AdminPanelSettings, Color(0xFFF59E0B), "FIRST RUN",
         "首次进入，请放行 Root", "只有授权后才能解锁全部功能",
         "如果没授权，底部「超管」入口会变灰。点击能量球刷新状态时，系统弹窗直接允许即可。"),

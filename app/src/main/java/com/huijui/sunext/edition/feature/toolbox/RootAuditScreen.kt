@@ -4,6 +4,7 @@ import com.huijui.sunext.edition.core.ui.language.ZakoText
 
 import android.content.pm.ApplicationInfo
 import android.widget.Toast
+import com.huijui.sunext.edition.core.ui.language.zakoString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

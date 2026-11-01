@@ -195,7 +195,7 @@ fun LiquidNavigationBar(
                         Icon(
                             imageVector = item.icon,
                             contentDescription = item.title,
-                            tint = color,
+                            tint = Color.White,
                             modifier = Modifier
                                 .size(24.dp)
                                 .graphicsLayer { scaleX = iconScale; scaleY = iconScale }
@@ -203,7 +203,7 @@ fun LiquidNavigationBar(
                         Spacer(modifier = Modifier.height(4.dp))
                         ZakoText(
                             text = item.title,
-                            color = color,
+                            color = Color.White,
                             fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )

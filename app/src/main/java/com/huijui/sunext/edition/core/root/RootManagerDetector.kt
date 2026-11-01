@@ -60,44 +60,58 @@ object RootManagerDetector {
     }
 
     private suspend fun doDetect(): RootManager {
-        // 1. 基础检查：有没有 Root (第一次跑会弹 KSU 授权框)
+        // 1. 基础检查：是否有 Root
         val idResult = HuijuiShell.exec("su -c id", useCache = false, timeoutMs = 10000L)
         if (!idResult.isSuccess || idResult.out.none { it.contains("uid=0") }) {
-            Log.e(TAG, "Root check failed: isSuccess=${idResult.isSuccess}, out=${idResult.out}, err=${idResult.err}")
             return RootManager.NONE
         }
 
-        // 2. 特征目录扫描 (先跑文件检测，比 pm list 快且准)
-        val pathCmd = """
-            su -c "test -d /data/adb/ksu && echo 'KSU:y' || echo 'KSU:n'"
-            su -c "test -f /data/adb/ksu/KernelSU_NULL && echo 'KSUNULL:y' || echo 'KSUNULL:n'"
-            su -c "test -d /data/adb/ksu/next && echo 'KSUNEXT:y' || echo 'KSUNEXT:n'"
-            su -c "test -d /data/adb/apd && echo 'AP:y' || echo 'AP:n'"
-            su -c "test -d /data/adb/magisk && echo 'MAG:y' || echo 'MAG:n'"
-        """.trimIndent()
-        val pathResult = HuijuiShell.exec(pathCmd, useCache = false, timeoutMs = 5000L).out.joinToString("\n")
+        // 2. 查内核模块（最准，因为这是运行时的）
+        val modules = HuijuiShell.exec("su -c cat /proc/modules", useCache = false, timeoutMs = 5000L).out.joinToString("\n").lowercase()
+        if (modules.contains("huijui")) return RootManager.HUIJUI
+        if (modules.contains("kernelsu")) return RootManager.KERNELSU
 
-        // 3. 暴力扫包名
-        val pmResult = HuijuiShell.exec("su -c pm list packages", useCache = false, timeoutMs = 5000L)
-        val packages = pmResult.out.joinToString("\n").lowercase()
+        // 3. 查包名与进程（通过 pm 和 ps）
+        val pkgs = HuijuiShell.exec("su -c pm list packages", useCache = false, timeoutMs = 5000L).out.joinToString("\n").lowercase()
+        val ps = HuijuiShell.exec("su -c ps -A", useCache = false, timeoutMs = 5000L).out.joinToString("\n").lowercase()
 
         return when {
-            // HUI 专属（但绝不能包含咱们自己的包名 com.huijui.sunext.edition）
-            packages.contains("com.huijui.sunext.ultra") -> RootManager.HUIJUI_ULTRA
+            // HUI 专属
+            pkgs.contains("com.huijui.sunext.ultra") -> RootManager.HUIJUI_ULTRA
+            ps.contains("huijuisu") || ps.contains("huijuiinit") -> RootManager.HUIJUI
 
-            // KSU 全家桶特征（KernelSU_NULL 本质上是 KSU 的变种，有 /data/adb/ksu 就算）
-            pathResult.contains("KSU:y") || pathResult.contains("KSUNULL:y") -> RootManager.KERNELSU
-            packages.contains("me.weishu.kernelsu") -> RootManager.KERNELSU
-            pathResult.contains("KSUNEXT:y") -> RootManager.KERNELSU_NEXT
-            packages.contains("com.rifsxd.ksunext") -> RootManager.KERNELSU_NEXT
-            packages.contains("com.sukisu.ultra") -> RootManager.SUKISU_ULTRA
-            packages.contains("com.bakasu.ksu") -> RootManager.BAKASU
+            // KSU 全家桶
+            pkgs.contains("com.rifsxd.ksunext") || ps.contains("ksunext") -> RootManager.KERNELSU_NEXT
+            pkgs.contains("com.sukisu.ultra") || ps.contains("sukisu") -> RootManager.SUKISU_ULTRA
+            pkgs.contains("com.bakasu.ksu") -> RootManager.BAKASU
+            pkgs.contains("me.weishu.kernelsu") -> RootManager.KERNELSU
+            // 如果有 ksu 目录，但包名不是上面这些，可能是内核自带或者遗留
+            HuijuiShell.exec("su -c test -d /data/adb/ksu").isSuccess -> RootManager.KERNELSU
 
-            // APatch / Magisk
-            packages.contains("me.bmax.apatch") || pathResult.contains("AP:y") -> RootManager.APATCH
-            packages.contains("com.topjohnwu.magisk") || pathResult.contains("MAG:y") -> RootManager.MAGISK
+            // APatch
+            pkgs.contains("me.bmax.apatch") || ps.contains("apd") || HuijuiShell.exec("su -c test -d /data/adb/apd").isSuccess -> RootManager.APATCH
 
-            // 只要能拿到 uid=0 但什么都没识别出来
+            // Magisk
+            pkgs.contains("io.github.huskydg.magisk") -> RootManager.MAGISK_KITSUNE
+            pkgs.contains("com.topjohnwu.magisk") -> RootManager.MAGISK
+            HuijuiShell.exec("su -c test -d /data/adb/magisk").isSuccess -> RootManager.MAGISK
+
+            // 其他变种 KSU
+            pkgs.contains("com.rifsxd.yukisu") -> RootManager.YUKISU
+            pkgs.contains("com.kow.kowsu") -> RootManager.KOWSU
+            pkgs.contains("com.rksu") -> RootManager.RKSU
+            pkgs.contains("com.mksu") -> RootManager.MKSU
+            pkgs.contains("com.wildksu") -> RootManager.WILDKSU
+            pkgs.contains("com.aster") -> RootManager.ASTER
+            pkgs.contains("com.folkpatch") -> RootManager.FOLKPATCH
+
+            // Magisk 变种
+            pkgs.contains("com.weavemask") -> RootManager.MAGISK_WEAVEMASK
+            pkgs.contains("com.topjohnwu.magisk.delta") || pkgs.contains("io.github.vvb2060.magisk") -> RootManager.MAGISK_DELTA
+            pkgs.contains("com.topjohnwu.magisk.alpha") -> RootManager.MAGISK_ALPHA
+
+            // 仅 Shizuku 或有 su 进程但没对上号
+            pkgs.contains("moe.shizuku.privileged.api") -> RootManager.SHIZUKU
             else -> RootManager.UNKNOWN
         }
     }

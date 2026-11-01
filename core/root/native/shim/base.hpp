@@ -28,7 +28,7 @@ int xopen(const char *pathname, int flags);
 int xopen(const char *pathname, int flags, mode_t mode);
 FILE *xfopen(const char *pathname, const char *mode);
 FILE *xfdopen(int fd, const char *mode);
-void *xmalloc(size_t size);
+void *xxmalloc(size_t size);
 void *xcalloc(size_t nmemb, size_t size);
 void *xrealloc(void *ptr, size_t size);
 void *xmmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
@@ -112,7 +112,7 @@ struct mmap_data : public byte_data {
     mmap_data(const mmap_data&) = delete;
     mmap_data(mmap_data &&o) { swap(o); }
     mmap_data(const char *name, bool rw = false);
-    ~mmap_data() { if (buf) munmap(buf, sz); }
+    ~mmap_data() { if (buf) if (buf) free(buf); }
     mmap_data& operator=(mmap_data &&other) { swap(other); return *this; }
 };
 

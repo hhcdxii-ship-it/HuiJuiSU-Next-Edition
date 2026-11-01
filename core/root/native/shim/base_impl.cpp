@@ -28,7 +28,7 @@ FILE *xfdopen(int fd, const char *mode) {
     return f;
 }
 
-void *xmalloc(size_t size) {
+void *xxmalloc(size_t size) {
     void *p = malloc(size);
     if (!p && size) abort();
     return p;

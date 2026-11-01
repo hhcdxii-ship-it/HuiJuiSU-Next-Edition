@@ -2,6 +2,7 @@ package com.huijui.sunext.edition.feature.toolbox
 
 import android.os.Build
 import android.widget.Toast
+import com.huijui.sunext.edition.core.ui.language.zakoString
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -136,13 +137,13 @@ fun CpuControlScreen(onBack: () -> Unit) {
                                         if (want) {
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                                 val hasPermission = context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                                if (!hasPermission) Toast.makeText(context, "请到系统设置中授予通知权限", Toast.LENGTH_LONG).show()
+                                                if (!hasPermission) Toast.makeText(context, zakoString("请到系统设置中授予通知权限"), Toast.LENGTH_LONG).show()
                                             }
                                             SystemMonitorService.start(context)
-                                            Toast.makeText(context, "监控通知已开启", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, zakoString("监控通知已开启"), Toast.LENGTH_SHORT).show()
                                         } else {
                                             SystemMonitorService.stop(context)
-                                            Toast.makeText(context, "监控通知已关闭", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, zakoString("监控通知已关闭"), Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF64B5F6), uncheckedThumbColor = Color.White.copy(0.5f), uncheckedTrackColor = Color.White.copy(0.1f))
@@ -183,13 +184,13 @@ fun CpuControlScreen(onBack: () -> Unit) {
                     item {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             QuickModeChip("省电", "🌱", s.currentGovernor == "powersave" && !s.performanceMode, Color(0xFF81C784), !isChanging, {
-                                scope.launch { isChanging = true; try { withTimeoutOrNull(5000L) { withContext(Dispatchers.IO) { CpuInfoProvider.setPerformanceMode(false); CpuInfoProvider.setGovernor("powersave") } }; status = withContext(Dispatchers.IO) { CpuInfoProvider.getStatus() }; Toast.makeText(context, "已切换到省电模式", Toast.LENGTH_SHORT).show() } finally { isChanging = false } }
+                                scope.launch { isChanging = true; try { withTimeoutOrNull(5000L) { withContext(Dispatchers.IO) { CpuInfoProvider.setPerformanceMode(false); CpuInfoProvider.setGovernor("powersave") } }; status = withContext(Dispatchers.IO) { CpuInfoProvider.getStatus() }; Toast.makeText(context, zakoString("已切换到省电模式"), Toast.LENGTH_SHORT).show() } finally { isChanging = false } }
                             }, Modifier.weight(1f))
                             QuickModeChip("均衡", "⚖️", s.currentGovernor == "schedutil" && !s.performanceMode, Color(0xFF64B5F6), !isChanging, {
-                                scope.launch { isChanging = true; try { withTimeoutOrNull(5000L) { withContext(Dispatchers.IO) { CpuInfoProvider.setPerformanceMode(false); CpuInfoProvider.setGovernor("schedutil") } }; status = withContext(Dispatchers.IO) { CpuInfoProvider.getStatus() }; Toast.makeText(context, "已切换到均衡模式", Toast.LENGTH_SHORT).show() } finally { isChanging = false } }
+                                scope.launch { isChanging = true; try { withTimeoutOrNull(5000L) { withContext(Dispatchers.IO) { CpuInfoProvider.setPerformanceMode(false); CpuInfoProvider.setGovernor("schedutil") } }; status = withContext(Dispatchers.IO) { CpuInfoProvider.getStatus() }; Toast.makeText(context, zakoString("已切换到均衡模式"), Toast.LENGTH_SHORT).show() } finally { isChanging = false } }
                             }, Modifier.weight(1f))
                             QuickModeChip("性能", "🚀", s.currentGovernor == "performance" || s.performanceMode, Color(0xFFEF4444), !isChanging, {
-                                scope.launch { isChanging = true; try { withTimeoutOrNull(5000L) { withContext(Dispatchers.IO) { CpuInfoProvider.setPerformanceMode(true); CpuInfoProvider.setGovernor("performance") } }; status = withContext(Dispatchers.IO) { CpuInfoProvider.getStatus() }; Toast.makeText(context, "已切换到性能模式", Toast.LENGTH_SHORT).show() } finally { isChanging = false } }
+                                scope.launch { isChanging = true; try { withTimeoutOrNull(5000L) { withContext(Dispatchers.IO) { CpuInfoProvider.setPerformanceMode(true); CpuInfoProvider.setGovernor("performance") } }; status = withContext(Dispatchers.IO) { CpuInfoProvider.getStatus() }; Toast.makeText(context, zakoString("已切换到性能模式"), Toast.LENGTH_SHORT).show() } finally { isChanging = false } }
                             }, Modifier.weight(1f))
                         }
                     }

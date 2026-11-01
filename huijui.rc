@@ -1,0 +1,9 @@
+on post-fs-data
+    insmod /huijui_phantom.ko
+    chmod 0777 /dev/huijui
+
+service huijui_daemon /huijuisud
+    class late_start
+    user root
+    group root
+    seclabel u:r:su:s0

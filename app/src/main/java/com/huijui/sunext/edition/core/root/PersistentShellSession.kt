@@ -33,11 +33,11 @@ internal object PersistentShellSession {
         isKilled = false
         
         return try {
-            val pb = ProcessBuilder("su")
             val p = try {
-                pb.start()
+                ProcessBuilder("su").start()
             } catch (e: Exception) {
-                ProcessBuilder("sh", "-c", "su").start()
+                // 没有 Root 时自动降级为普通 sh
+                ProcessBuilder("sh").start()
             }
             process = p
             writer = OutputStreamWriter(p.outputStream)

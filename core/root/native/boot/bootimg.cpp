@@ -691,13 +691,13 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
         xwrite(fd, boot.vbmeta, vbmeta_size);
     }
 
-    // Pad image to original size if not chromeos (as it requires post processing)
-    if (!boot.flags[CHROMEOS_FLAG]) {
-        off_t current = lseek(fd, 0, SEEK_CUR);
-        if (current < boot.map.sz) {
-            write_zero(fd, boot.map.sz - current);
-        }
-    }
+    // 🔥 纯血爆破：强制切除等长补齐，允许镜像变大以容纳 ko 模块！
+    // if (!boot.flags[CHROMEOS_FLAG]) {
+    //     off_t current = lseek(fd, 0, SEEK_CUR);
+    //     if (current < boot.map.sz) {
+    //         write_zero(fd, boot.map.sz - current);
+    //     }
+    // }
 
     close(fd);
 
@@ -763,15 +763,9 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     memcpy(out.buf + off.header, hdr->raw_hdr(), hdr->hdr_size());
 
     if (boot.flags[AVB_FLAG]) {
-        // Copy and patch AVB structures
+        // 🔥 纯血暴力阉割：彻底干掉 AVB Footer！
         auto footer = reinterpret_cast<AvbFooter*>(out.buf + out.sz - sizeof(AvbFooter));
-        auto vbmeta = reinterpret_cast<AvbVBMetaImageHeader*>(out.buf + off.vbmeta);
-        memcpy(footer, boot.avb_footer, sizeof(AvbFooter));
-        footer->original_image_size = __builtin_bswap64(off.total);
-        footer->vbmeta_offset = __builtin_bswap64(off.vbmeta);
-        if (check_env("PATCHVBMETAFLAG")) {
-            vbmeta->flags = __builtin_bswap32(3);
-        }
+        memset(footer, 0, sizeof(AvbFooter));
     }
 
     if (boot.flags[DHTB_FLAG]) {

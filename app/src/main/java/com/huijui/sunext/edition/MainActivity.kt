@@ -1,5 +1,7 @@
 package com.huijui.sunext.edition
 
+import com.huijui.sunext.edition.core.ui.language.zakoString
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -165,32 +167,21 @@ fun MainApp() {
                     composable("module_webui") {
                         val name = navController.previousBackStackEntry?.savedStateHandle?.get<String>("webName") ?: "WebUI"
                         val path = navController.previousBackStackEntry?.savedStateHandle?.get<String>("webPath") ?: ""
-                        if (path.isNotEmpty()) ModuleWebUIScreen(name, path, onBack = { navController.popBackStack() })
                     }
-                    composable("settings") {
+                    composable("themesettings") {
+                ThemeSettingsScreen(onBack = { navController.popBackStack() })
+            }
+            composable("language_settings") {
+                LanguageSettingsScreen(onBack = { navController.popBackStack() })
+            }
+            composable("settings") {
                         SettingsScreen(
                             onNavigateToTheme = { navController.navigate("themesettings") },
                             onNavigateToLanguage = { navController.navigate("language_settings") },
                             onResetComplete = { navController.navigate("onboarding") { popUpTo(navController.graph.id) { inclusive = true } } }
                         )
                     }
-                    composable("themesettings") { ThemeSettingsScreen(onBack = { navController.popBackStack() }) }
-                    composable("language_settings") { LanguageSettingsScreen(onBack = { navController.popBackStack() }) }
 
-                    composable("toolbox_console") { HuijuiConsoleScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_flash") { FlashScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_backup") { BackupScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_cpu") { CpuControlScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_tweaks") { SystemTweaksScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_audit") { RootAuditScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_apps") { AppManagerScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_hardware") { HardwareInfoScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_sensors") { SensorTestScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_screentest") { ScreenTestScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_quickaction") { QuickActionScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_permissions") { PermissionAuditScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_ark") { ArkScreen(onBack = { navController.popBackStack() }) }
-                    composable("toolbox_hiding") { HidingDashboardScreen(onBack = { navController.popBackStack() }) }
                 }
             }
 
@@ -211,11 +202,11 @@ fun MainApp() {
 fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
     val navItems = remember {
         listOf(
-            NavItem("home", "主页", Icons.Default.Home),
-            NavItem("tool", "工具", Icons.Default.Build),
-            NavItem("superuser", "超管", Icons.Default.Security),
-            NavItem("module", "模块", Icons.Default.Extension),
-            NavItem("settings", "设置", Icons.Default.Settings)
+            NavItem("home", zakoString("主页"), Icons.Default.Home),
+            NavItem("tool", zakoString("工具"), Icons.Default.Build),
+            NavItem("superuser", zakoString("超管"), Icons.Default.Security),
+            NavItem("module", zakoString("模块"), Icons.Default.Extension),
+            NavItem("settings", zakoString("设置"), Icons.Default.Settings)
         )
     }
 
@@ -234,9 +225,9 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(enabled = !isRestricted, interactionSource = interactionSource, indication = null) { onNavigate(item.route) }, contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(item.icon, null, tint = finalColor, modifier = Modifier.size(22.dp).scale(scale))
+                    Icon(item.icon, null, tint = Color.White, modifier = Modifier.size(22.dp).scale(scale))
                     Spacer(modifier = Modifier.height(2.dp))
-                    ZakoText(item.title, color = finalColor, fontSize = 10.sp, fontWeight = if (isSelected && !isRestricted) FontWeight.Bold else FontWeight.Normal)
+                    ZakoText(item.title, color = Color.White, fontSize = 10.sp, fontWeight = if (isSelected && !isRestricted) FontWeight.Bold else FontWeight.Normal)
                 }
             }
         }

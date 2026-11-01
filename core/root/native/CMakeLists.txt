@@ -1,37 +1,20 @@
 cmake_minimum_required(VERSION 3.18)
 project(hsud CXX C)
 
-
-# ===== 强制关闭 xz 命令行工具编译，只编 liblzma =====
-set(XZ_TOOL_XZ OFF CACHE BOOL "" FORCE)
-set(XZ_TOOL_XZDEC OFF CACHE BOOL "" FORCE)
-set(XZ_TOOL_LZMAINFO OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/xz EXCLUDE_FROM_ALL)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -Wno-everything")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -fPIC -Os -s -w")
-else()
-    # 🚀 针对 GCC (Linux 电脑端) 的编译选项，加入 -fpermissive 容忍 packed 字段绑定
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -w -Wno-unused-result -fpermissive")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -fPIC -Os -s -w -Wno-unused-result -fpermissive")
-endif()
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
 
-# ===== 只把 xz 当子项目；zopfli 直接编 .c（排除自带命令行入口 zopfli_bin.c）=====
+# ===== xz 子项目 =====
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/xz EXCLUDE_FROM_ALL)
 
+# ===== 提取通用源文件 =====
 file(GLOB BOOT_SRC   ${CMAKE_CURRENT_SOURCE_DIR}/boot/*.cpp)
-file(GLOB SHIM_SRC   ${CMAKE_CURRENT_SOURCE_DIR}/shim/*.cpp)
 file(GLOB ZOPFLI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/external/zopfli/src/zopfli/*.c)
 list(FILTER ZOPFLI_SRC EXCLUDE REGEX "zopfli_bin\\.c$")
 
-add_library(hsud SHARED
+set(COMMON_SRC
     ${BOOT_SRC}
-    ${SHIM_SRC}
     ${ZOPFLI_SRC}
     external/mincrypt/sha.c
     external/mincrypt/sha256.c
@@ -57,8 +40,7 @@ add_library(hsud SHARED
     external/dtc/libfdt/fdt_overlay.c
 )
 
-target_include_directories(hsud PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/shim
+set(COMMON_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/boot
     ${CMAKE_CURRENT_SOURCE_DIR}/external/mincrypt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/external/lz4/lib
@@ -68,15 +50,64 @@ target_include_directories(hsud PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/external/zopfli/src
 )
 
-target_link_libraries(hsud z log liblzma jnigraphics)
+# ==========================================
+# 🚀 环境隔离编译
+# ==========================================
+if(ANDROID)
+    # --- Android (NDK) 编译：生成 JNI 动态库 ---
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fPIC -Os -s -Wno-everything")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -fPIC -Os -s -w")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
 
-# ===== huijuiinit 静态劫持引擎 =====
+    file(GLOB SHIM_SRC ${CMAKE_CURRENT_SOURCE_DIR}/shim/*.cpp)
+    # 排除 Linux 下不需要的 jni 头
+    add_library(hsud SHARED ${COMMON_SRC} ${SHIM_SRC})
+# 🚀 强制启用 16 KB 页面大小 ELF 对齐 (Android 15+ 兼容)
+target_link_options(hsud PRIVATE "-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
 
-# 🚀 纯血用户态守护进程
-add_executable(huijuisud huijuiinit/huijuisud.c)
-target_link_options(huijuisud PRIVATE -static -Os -s)
-set_target_properties(huijuisud PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+    target_include_directories(hsud PRIVATE ${COMMON_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/shim)
+    target_link_libraries(hsud z log liblzma)
 
-add_executable(huijuiinit huijuiinit/huijuiinit.c)
-target_link_options(huijuiinit PRIVATE -static -Os -s)
-set_target_properties(huijuiinit PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+    # 守护进程
+    add_executable(huijuisud huijuiinit/huijuisud.c)
+    target_link_options(huijuisud PRIVATE -static -Os -s)
+
+    # 劫持引擎
+    add_executable(huijuiinit huijuiinit/huijuiinit.c)
+    target_link_options(huijuiinit PRIVATE -static -Os -s)
+
+
+    # 🚀 编译独立的命令行工具 hsud_cli (用于 App 内部调用)
+    add_executable(hsud_cli ${COMMON_SRC}
+        shim/base_impl.cpp
+        shim/stream.cpp
+        shim/info.cpp
+        shim/result.cpp
+        cli_entry.cpp
+    )
+    target_include_directories(hsud_cli PRIVATE ${COMMON_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/shim)
+    target_link_libraries(hsud_cli z log liblzma)
+    
+    
+    # 把编译好的 hsud_cli 拷贝到 assets 目录下
+    add_custom_command(TARGET hsud_cli POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hsud_cli> ${CMAKE_CURRENT_SOURCE_DIR}/../../assets/exploit/hsud_cli
+    )
+
+else()
+    # --- Linux (WSL) 编译：生成独立可执行文件 hsud ---
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -s -w -Wno-unused-result -fpermissive")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os -s -w")
+
+    # Linux 下需要排除 jni_wrapper.cpp，加上 base/stream 等 shim 文件
+    add_executable(hsud_cli ${COMMON_SRC}
+        shim/base_impl.cpp
+        shim/stream.cpp
+        shim/info.cpp
+        shim/result.cpp
+        cli_entry.cpp
+    )
+    set_target_properties(hsud_cli PROPERTIES OUTPUT_NAME "hsud")
+    target_include_directories(hsud_cli PRIVATE ${COMMON_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/shim)
+    target_link_libraries(hsud_cli z liblzma)
+endif()

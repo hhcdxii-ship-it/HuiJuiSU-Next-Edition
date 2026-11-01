@@ -48,8 +48,7 @@ object HuijuiShell {
     }
 
     suspend fun isRooted(): Boolean = withContext(Dispatchers.IO) {
-        val result = exec("id", useCache = false)
-        result.isSuccess && result.out.any { it.contains("uid=0") }
+        RootEngineVerifier.checkStatus().isWorking
     }
 
     suspend fun execStreaming(

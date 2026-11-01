@@ -1,216 +1,259 @@
 package com.huijui.sunext.edition.core.root
 
+import android.util.Log
+
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 object HsudInstaller {
 
-    suspend fun installLkm(
-        context: Context,
-        installToInactiveSlot: Boolean,
-        localImgUri: Uri? = null,
-        onLog: (String) -> Unit,
-        customKoUri: Uri? = null
-    ): Boolean = withContext(Dispatchers.IO) {
+    sealed class PatchState {
+        data class Progress(val message: String) : PatchState()
+        data class Success(val outputPath: String) : PatchState()
+        data class Error(val errorMsg: String) : PatchState()
+    }
+
+    init {
         try {
-            val isAndroid14Plus = Build.VERSION.SDK_INT >= 34
-            val arch = getArchitecture()
-            val targetPartitionBase = if (isAndroid14Plus) "init_boot" else "boot"
-            
-            onLog("> [引擎] 激活纯血 hsud 引擎，接管 $targetPartitionBase")
-            onLog("> [环境] Android ${Build.VERSION.RELEASE} | 架构 $arch")
-
-            val workDir = File(context.cacheDir, "huijui_patch")
-            if (workDir.exists()) workDir.deleteRecursively()
-            workDir.mkdirs()
-
-            // 准备内核模块
-            val cacheKo: File
-            if (customKoUri != null) {
-                onLog("> [模块] 正在读取用户提供的自定义内核模块...")
-                cacheKo = File(workDir, "custom_huijui.ko")
-                if (!copyUriToFile(context, customKoUri, cacheKo)) {
-                    onLog("❌ 错误：无法读取自定义模块文件。")
-                    return@withContext false
-                }
-            } else {
-                val kernelVersion = getKernelVersion()
-                val (mainVer, subVer) = parseKernelVersion(kernelVersion)
-                val gkiBranch = matchGkiBranch(mainVer, subVer)
-                val koName = "HuiJuiPhantom_${gkiBranch}_${arch}.ko"
-                onLog("> [模块] 匹配内置纯血内核: $koName")
-                cacheKo = File(workDir, koName)
-                if (!extractAsset(context, "exploit/$koName", cacheKo)) {
-                    onLog("❌ 错误：APK 中缺失 $koName，请尝试手动选择本地模块。")
-                    return@withContext false
-                }
-            }
-
-            // 提取守护进程
-            val cacheSud = File(workDir, "huijuisud")
-            if (!extractAsset(context, "exploit/huijuisud", cacheSud)) {
-                onLog("❌ 错误：APK 中缺失 huijuisud 引擎。")
-                return@withContext false
-            }
-            cacheSud.setExecutable(true)
-
-            // 准备待注入文件
-            onLog("> [修补] 正在准备注入文件...")
-            val targetImgFile = File(workDir, "stock_boot.img")
-            val slotSuffix = if (installToInactiveSlot) {
-                if (getSlotSuffix() == "_a") "_b" else "_a"
-            } else getSlotSuffix()
-            val targetPartition = targetPartitionBase + slotSuffix
-
-            if (localImgUri != null) {
-                onLog("> [读取] 正在读取用户提供的本地镜像...")
-                if (!copyUriToFile(context, localImgUri, targetImgFile)) {
-                    onLog("❌ 错误：无法读取本地镜像文件。")
-                    return@withContext false
-                }
-            } else {
-                onLog("> [提取] 正在提取底层分区 $targetPartition ...")
-                HuijuiShell.exec("su -c 'dd if=/dev/block/by-name/$targetPartition of=${targetImgFile.absolutePath}'")
-                if (!targetImgFile.exists() || targetImgFile.length() == 0L) {
-                    onLog("❌ 错误：提取分区失败，请检查 Root 权限。")
-                    return@withContext false
-                }
-                // 备份原厂镜像
-                val backupDir = File("/sdcard/Download/HuiJui_Backup")
-                backupDir.mkdirs()
-                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                val backupFile = File(backupDir, "原厂_${targetPartition}_$timestamp.img")
-                targetImgFile.copyTo(backupFile, overwrite = true)
-                onLog("> [防砖] 备份成功: ${backupFile.name}")
-            }
-
-            val hFiles = File(workDir, "huijui_files")
-            hFiles.mkdirs()
-            cacheKo.copyTo(File(hFiles, "huijui_phantom.ko"), overwrite = true)
-            cacheSud.copyTo(File(hFiles, "huijuisud"), overwrite = true)
-
-            val rcFile = File(hFiles, "huijui.rc")
-            rcFile.writeText("on post-fs-data\n    insmod /sbin/huijui_phantom.ko\n    exec - root -- /sbin/huijuisud\n")
-
-            // 🚀 JNI 执行核心修补
-            onLog("> [修补] 开始解包镜像...")
-            if (HsudNative.runCommand(workDir.absolutePath, "hsud", "unpack", "stock_boot.img") != 0) {
-                onLog("❌ 解包失败"); return@withContext false
-            }
-
-            onLog("> [修补] 正在向 ramdisk 注入...")
-            // 1. 塞入核心文件
-            HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "mkdir 0755 sbin")
-            HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0644 sbin/huijui_phantom.ko huijui_files/huijui_phantom.ko")
-            HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0755 sbin/huijuisud huijui_files/huijuisud")
-
-            if (isAndroid14Plus) {
-                // 🚀 终极偷天换日：强制替换原厂 init
-                onLog("> [策略] 正在执行底层 init 替换...")
-                
-                // 提取 huijuiinit
-                val cacheInit = File(workDir, "huijuiinit")
-                extractAsset(context, "exploit/huijuiinit", cacheInit)
-                cacheInit.setExecutable(true)
-                cacheInit.copyTo(File(hFiles, "huijuiinit"), overwrite = true)
-
-                // 替换原厂 init
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "extract init init.real")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "rm init")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init huijui_files/huijuiinit")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.real init.real")
-                
-                // 清理临时文件
-                val realInit = File(workDir, "init.real")
-                if (realInit.exists()) realInit.delete()
-            } else {
-                // A13- 老机型继续走原厂 rc 注入
-                onLog("> [策略] 正在执行传统 rc 注入...")
-                HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "extract init.rc init.rc.orig")
-                val initRcFile = File(workDir, "init.rc.orig")
-                if (!initRcFile.exists()) {
-                    initRcFile.writeText("on early-init\n    insmod /sbin/huijui_phantom.ko\n    chmod 0755 /sbin/huijuisud\n")
-                    HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.rc init.rc.orig")
-                } else {
-                    initRcFile.appendText("\non early-init\n    insmod /sbin/huijui_phantom.ko\n    chmod 0755 /sbin/huijuisud\n")
-                    HsudNative.runCommand(workDir.absolutePath, "hsud", "cpio", "ramdisk.cpio", "add 0750 init.rc init.rc.orig")
-                }
-            }
-
-            onLog("> [修补] 重新打包镜像...")
-            if (HsudNative.runCommand(workDir.absolutePath, "hsud", "repack", "stock_boot.img", "new_boot.img") != 0) {
-                onLog("❌ 打包失败"); return@withContext false
-            }
-
-            val newBoot = File(workDir, "new_boot.img")
-            if (!newBoot.exists() || newBoot.length() == 0L) {
-                onLog("❌ [失败] repack 未生成有效镜像")
-                return@withContext false
-            }
-
-            if (localImgUri != null) {
-                val outFile = File("/sdcard/Download/HuiJuiPhantom_patched_${targetPartition}.img")
-                newBoot.copyTo(outFile, overwrite = true)
-                onLog("✅ [成功] 本地镜像修补完成！输出：${outFile.absolutePath}")
-            } else {
-                onLog("> [写入] 正在写回分区 $targetPartition ...")
-                HuijuiShell.exec("su -c 'dd if=${newBoot.absolutePath} of=/dev/block/by-name/$targetPartition'")
-                onLog("✅ [成功] 纯血内核注入完成！请立即重启设备。")
-            }
-            return@withContext true
-
-        } catch (e: Exception) {
-            onLog("❌ 系统异常: ${e.message}")
-            false
+            System.loadLibrary("hsud")
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
     }
 
-    // --- 辅助函数 ---
-    private fun getKernelVersion(): String = try { 
-        Runtime.getRuntime().exec("uname -r").inputStream.bufferedReader().readText().trim() 
+    private var appContext: Context? = null
+    fun init(context: Context) { appContext = context.applicationContext }
+    
+    // 兜底：通过反射获取全局 Application Context
+    private fun getGlobalContext(): Context? {
+        return appContext ?: try {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            val currentApplication = activityThread.getMethod("currentApplication").invoke(null)
+            currentApplication as? Context
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getCurrentSlot(): String = try {
+        Runtime.getRuntime().exec(arrayOf("getprop", "ro.boot.slot_suffix")).inputStream.bufferedReader().readText().trim().ifEmpty { "" }
     } catch (e: Exception) { "" }
 
-    private fun parseKernelVersion(version: String): Pair<Int, Int> { 
-        val match = Regex("""(\d+)\.(\d+)""").find(version)
-        return Pair(match?.groupValues?.get(1)?.toIntOrNull() ?: 0, match?.groupValues?.get(2)?.toIntOrNull() ?: 0) 
+    private fun getDynamicKoName(context: Context): String {
+        val kernelVersion = try {
+            Runtime.getRuntime().exec(arrayOf("uname", "-r")).inputStream.bufferedReader().readText().trim()
+        } catch (e: Exception) { "" }
+
+        val regex = Regex("""([0-9]+\.[0-9]+)""")
+        val match = regex.find(kernelVersion)
+        val kmi = match?.value ?: ""
+
+        val allAssets = context.assets.list("exploit")?.filter { it.endsWith(".ko") } ?: emptyList()
+        
+        val fuzzyKmi = kmi.replace(".", "_")
+        val exactMatch = allAssets.find { it.contains(kmi) || it.contains(fuzzyKmi) }
+        if (exactMatch != null) return exactMatch
+
+        return when {
+            kmi.startsWith("6.18") -> allAssets.find { it.contains("17") } ?: "HuiJuiPhantom_17_6.18_arm64.ko"
+            kmi.startsWith("6.12") -> allAssets.find { it.contains("16") } ?: "HuiJuiPhantom_android16-6.12_arm64.ko"
+            kmi.startsWith("6.6")  -> allAssets.find { it.contains("15") } ?: "HuiJuiPhantom_15_6.6_arm64.ko"
+            kmi.startsWith("6.1")  -> allAssets.find { it.contains("14") } ?: "HuiJuiPhantom_14_6.1_arm64.ko"
+            kmi.startsWith("5.15") -> allAssets.find { it.contains("13") && it.contains("5.15") } ?: "HuiJuiPhantom_13_5.15_arm64.ko"
+            kmi.startsWith("5.10") -> allAssets.find { it.contains("12") } ?: "HuiJuiPhantom_12_5.10_arm64.ko"
+            else -> allAssets.firstOrNull() ?: "HuiJuiPhantom_android16-6.12_arm64.ko"
+        }
     }
 
-    private fun getArchitecture(): String { 
-        val abis = Build.SUPPORTED_ABIS
-        return if (abis.contains("arm64-v8a")) "arm64" else "x86_64" 
+    private fun releaseAssets(context: Context, targetKoName: String) {
+        val targetDir = File(context.filesDir, "patch_env")
+        if (!targetDir.exists()) targetDir.mkdirs()
+        
+        val initFile = File(targetDir, "huijuiinit")
+        if (!initFile.exists() || initFile.length() < 1000) {
+            context.assets.open("exploit/huijuiinit").use { i -> initFile.outputStream().use { o -> i.copyTo(o) } }
+            initFile.setExecutable(true)
+        }
+
+        val koFile = File(targetDir, "huijui_phantom.ko")
+        context.assets.open("exploit/$targetKoName").use { i -> koFile.outputStream().use { o -> i.copyTo(o) } }
+        
+        // 释放 huijuisud 到同一目录
+        val daemonFile = File(targetDir, "huijuisud")
+        context.assets.open("exploit/huijuisud").use { i -> daemonFile.outputStream().use { o -> i.copyTo(o) } }
+        daemonFile.setExecutable(true)
     }
 
-    private fun getSlotSuffix(): String = try { 
-        Runtime.getRuntime().exec("getprop ro.boot.slot_suffix").inputStream.bufferedReader().readText().trim() 
-    } catch (e: Exception) { "" }
+    // 🚀 [重构剥离] 镜像修补逻辑已迁移至 ImagePatcher.kt
 
-    private fun matchGkiBranch(main: Int, sub: Int): String = when { 
-        main >= 6 && sub >= 18 -> "android17-6.18"
-        main >= 6 && sub >= 12 -> "android16-6.12"
-        main >= 6 && sub >= 6 -> "android15-6.6"
-        main >= 6 && sub >= 1 -> "android14-6.1"
-        main == 5 && sub >= 15 -> "android14-5.15"
-        main == 5 && sub >= 10 -> "android12-5.10"
-        else -> "android12-5.10" 
+
+
+
+    fun patchImage(
+        context: Context,
+        imgPath: String,
+        targetPartition: String,
+        outputPath: String
+    ): Flow<PatchState> = flow {
+        // 🚀 直接交给完全独立的 ImagePatcher 模块处理，自身完全解耦
+        ImagePatcher.patch(context, imgPath, outputPath).collect { state ->
+            when (state) {
+                is ImagePatcher.PatchState.Progress -> emit(PatchState.Progress(state.message))
+                is ImagePatcher.PatchState.Success -> emit(PatchState.Success(state.outputPath))
+                is ImagePatcher.PatchState.Error -> emit(PatchState.Error(state.errorMsg))
+            }
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun oneClickRoot(): Flow<PatchState> = flow {
+        val context = appContext ?: return@flow
+        try {
+            emit(PatchState.Progress("[-] 正在唤醒底层环境..."))
+            
+            // 1. 获取槽位
+            val slotRes = HuijuiShell.exec("getprop ro.boot.slot_suffix")
+            val slot = slotRes.out.firstOrNull()?.trim() ?: ""
+            
+            var targetPartition = "init_boot"
+            var blockDevice = "/dev/block/by-name/init_boot" + slot
+            
+            val checkRes = HuijuiShell.exec("ls " + blockDevice)
+            if (!checkRes.isSuccess) {
+                targetPartition = "boot"
+                blockDevice = "/dev/block/by-name/boot" + slot
+                emit(PatchState.Progress("[-] 未发现 init_boot，自动切换至 boot 分区"))
+            }
+
+            val backupDir = File("/sdcard/Download")
+            if (!backupDir.exists()) backupDir.mkdirs()
+            val origImg = File(backupDir, "stock_" + targetPartition + ".img")
+            val patchedImg = File(backupDir, "patched_" + targetPartition + ".img")
+
+            emit(PatchState.Progress("[-] 正在提取原厂镜像..."))
+            HuijuiShell.exec("dd if=" + blockDevice + " of=" + origImg.absolutePath + " bs=1M")
+
+            if (!origImg.exists()) {
+                emit(PatchState.Error("❌ 提取失败！"))
+                return@flow
+            }
+
+            // 2. 准备修补工具
+            emit(PatchState.Progress("[-] 正在准备修补环境..."))
+            val workDir = File(context.cacheDir, "patch_work").apply { mkdirs() }
+            val huijuiinit = File(workDir, "huijuiinit")
+            val huijuisud = File(workDir, "huijuisud")
+            val koFile = File(workDir, "huijui_phantom.ko")
+            val hsudBin = File(workDir, "hsud_cli")
+
+            context.assets.open("exploit/huijuiinit").use { it.copyTo(huijuiinit.outputStream()) }
+            context.assets.open("exploit/huijuisud").use { it.copyTo(huijuisud.outputStream()) }
+            val koName = getDynamicKoName(context)
+            context.assets.open("exploit/" + koName).use { it.copyTo(koFile.outputStream()) }
+            context.assets.open("exploit/hsud_cli").use { it.copyTo(hsudBin.outputStream()) }
+
+            val workPath = "/data/local/tmp/huijui_work"
+            HuijuiShell.exec("rm -rf " + workPath + " && mkdir -p " + workPath + " && chmod 777 " + workPath)
+
+            listOf(hsudBin, huijuiinit, huijuisud, koFile, origImg).forEach {
+                HuijuiShell.exec("cp " + it.absolutePath + " " + workPath + "/")
+            }
+            HuijuiShell.exec("chmod 755 " + workPath + "/hsud_cli " + workPath + "/huijuiinit " + workPath + "/huijuisud")
+
+            // 3. 底层解包与打包
+            emit(PatchState.Progress("[-] 正在注入纯血模块..."))
+            HuijuiShell.exec("cd " + workPath + " && ./hsud_cli unpack stock_" + targetPartition + ".img")
+            HuijuiShell.exec("cd " + workPath + " && ./hsud_cli cpio ramdisk.cpio mv init init.real add 0755 init huijuiinit add 0755 huijuisud huijuisud add 0755 force_insmod force_insmod add 0644 huijui_phantom.ko huijui_phantom.ko")
+            HuijuiShell.exec("cd " + workPath + " && ./hsud_cli repack stock_" + targetPartition + ".img patched_" + targetPartition + ".img")
+
+            HuijuiShell.exec("cp " + workPath + "/patched_" + targetPartition + ".img " + patchedImg.absolutePath)
+
+            if (!patchedImg.exists()) {
+                emit(PatchState.Error("❌ 引擎修补失败！"))
+                return@flow
+            }
+
+            emit(PatchState.Progress("[-] 正在直接写回 " + blockDevice + "..."))
+            HuijuiShell.exec("dd if=" + patchedImg.absolutePath + " of=" + blockDevice + " bs=4096")
+
+            emit(PatchState.Success("✅ 一键提取并刷入成功！请重启手机生效！"))
+
+        } catch (e: Throwable) {
+            emit(PatchState.Error("❌ 执行异常: " + e.message))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun checkRootStatus(): Flow<PatchState> = flow {
+        emit(PatchState.Progress("正在检查内核模块加载状态..."))
+        val devNode = File("/dev/huijui")
+        val hasModule = try {
+            val proc = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat /proc/modules"))
+            proc.inputStream.bufferedReader().readText().contains("huijui")
+        } catch (e: Exception) { false }
+
+        if (devNode.exists() || hasModule) {
+            emit(PatchState.Success("🎉 纯血引擎已接管！/dev/huijui 节点已就绪，Root 权限正常！"))
+        } else {
+            emit(PatchState.Error("❌ 模块未加载。请尝试重启手机，或检查内核模块版本是否匹配。"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    external fun nativePatch(imagePath: String, targetPartition: String, outputPath: String, initPath: String, koPath: String): Boolean
+
+    suspend fun installLkm(
+        context: Context,
+        installToInactiveSlot: Boolean,
+        localImgUri: Uri?,
+        onLog: (String) -> Unit,
+        customKoUri: Uri? = null
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        onLog("[-] 正在准备底层镜像 (幽灵模式: $installToInactiveSlot)...")
+        
+        if (localImgUri == null) {
+            onLog("❌ 未选择镜像文件！")
+            return@withContext false
+        }
+
+        try {
+            val tempFile = File(context.cacheDir, "lkm_temp.img")
+            context.contentResolver.openInputStream(localImgUri)?.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            }
+
+            if (!tempFile.exists() || tempFile.length() == 0L) {
+                onLog("❌ 镜像读取失败，文件为空！")
+                return@withContext false
+            }
+
+            val outPath = File(context.cacheDir, "patched_lkm.img").absolutePath
+            var isSuccess = false
+
+            // 直接调用完全独立的 ImagePatcher
+            ImagePatcher.patch(context, tempFile.absolutePath, outPath).collect { state ->
+                when (state) {
+                    is ImagePatcher.PatchState.Progress -> onLog(state.message)
+                    is ImagePatcher.PatchState.Success -> {
+                        onLog("✅ LKM 修补成功: \${state.outputPath}")
+                        isSuccess = true
+                    }
+                    is ImagePatcher.PatchState.Error -> {
+                        onLog("❌ LKM 修补失败: \${state.errorMsg}")
+                        isSuccess = false
+                    }
+                }
+            }
+            
+            return@withContext isSuccess
+        } catch (e: Throwable) {
+            onLog("❌ 执行异常: \${e.message}")
+            return@withContext false
+        }
     }
-
-    private fun extractAsset(context: Context, assetPath: String, destFile: File): Boolean = try { 
-        context.assets.open(assetPath).use { input -> FileOutputStream(destFile).use { input.copyTo(it) } }
-        true 
-    } catch (e: Exception) { false }
-
-    private fun copyUriToFile(context: Context, uri: Uri, destFile: File): Boolean = try { 
-        val input: InputStream? = context.contentResolver.openInputStream(uri)
-        input?.use { FileOutputStream(destFile).use { out -> it.copyTo(out) } }
-        true 
-    } catch (e: Exception) { false }
 }

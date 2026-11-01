@@ -29,7 +29,7 @@ object HuijuiScriptRunner {
                 if (targetKoName != null) {
                     try {
                         // 从 assets/lkm/ 目录提取对应的 ko 文件
-                        context.assets.open("lkm/$targetKoName").use { input ->
+                        context.assets.open("exploit/$targetKoName").use { input ->
                             File(assetDir, targetKoName).outputStream().use { output -> input.copyTo(output) }
                         }
                     } catch (e: Exception) {

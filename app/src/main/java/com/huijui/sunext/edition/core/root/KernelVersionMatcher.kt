@@ -6,19 +6,25 @@ object KernelVersionMatcher {
 
     data class GkiInfo(val branch: String, val arch: String)
 
+    // 获取当前运行环境的内核版本
     fun getCurrentGkiInfo(): GkiInfo? {
         val arch = System.getProperty("os.arch") ?: "aarch64"
         val targetArch = if (arch.contains("aarch64") || arch.contains("arm64")) "arm64" else "x86_64"
 
-        // 获取内核版本 (如 6.1.25-android14-11-g...)
         val kernelRelease = try {
             ProcessBuilder("uname", "-r").start().inputStream.bufferedReader().readText().trim()
         } catch (e: Exception) { "" }
 
+        return matchKmi(kernelRelease, targetArch)
+    }
+
+    // 根据传入的内核字符串匹配对应的 KMI
+    fun matchKmi(kernelRelease: String, arch: String): GkiInfo? {
+        if (kernelRelease.isBlank()) return null
+        
         val androidVerMatch = Regex("android(\\d+)").find(kernelRelease)
         val kernelMajorMatch = Regex("^(\\d+\\.\\d+)").find(kernelRelease)
 
-        // 如果由于某些原因 uname 没拿到 android 版本，用 Build.VERSION 兜底
         val androidVer = androidVerMatch?.groupValues?.get(1) ?: Build.VERSION.RELEASE.split(".")[0]
         val kernelMajor = kernelMajorMatch?.groupValues?.get(1) ?: "5.10"
 
@@ -32,12 +38,11 @@ object KernelVersionMatcher {
             else -> null
         } ?: return null
 
-        return GkiInfo(branch, targetArch)
+        return GkiInfo(branch, arch)
     }
 
-    // 🚀 生成最终应该加载的文件名，并加入智能容错
     fun getExpectedKoFileName(): String? {
         val info = getCurrentGkiInfo() ?: return null
-        return "HUI_${info.branch}_${info.arch}.ko"
+        return "HuiJuiPhantom_${info.branch}_${info.arch}.ko"
     }
 }

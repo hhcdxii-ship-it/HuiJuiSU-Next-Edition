@@ -47,6 +47,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     androidResources {
+        noCompress.add("huijuiinit")
+        noCompress.add("ko")
         noCompress += "mp4"
     }
     externalNativeBuild {

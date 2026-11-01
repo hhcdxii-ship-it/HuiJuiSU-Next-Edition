@@ -1,76 +1,94 @@
 package com.huijui.sunext.edition.core.root
 
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * 🩸 HUI 底层接管验证器（性能优化版）
- *
- * 相对旧实现：
- *   - 旧：3 个检查各跑 1 次 exec（test /dev、lsmod、isRooted），共 3 次进程交互
- *   - 新：3 个检查合并成 1 条命令，单次 exec 拿到全部结果
- *   - checkOtherManagers：2 个检查合并成 1 次 exec
- *   - 单次验证时间从 ~200-300ms 降到 ~15-30ms
- *
- * 输出约定（解析稳定，不依赖 exit code）：
- *   DEV:y / DEV:n   — /dev/huijui 字符设备是否存在
- *   MOD:y / MOD:n   — 内核是否加载 HUI 模块
- *   ROOT:y / ROOT:n — Shell 是否真拿到 uid=0
- *   MGR:Magisk / MGR:KernelSU — 检测到的其他管理器
- */
 object RootEngineVerifier {
 
-    const val HUI_DEVICE = "/dev/huijui"
+    private const val SOCKET_NAME = "\u0000huijui_ghost_socket"
+
+    data class EngineStatus(
+        val isWorking: Boolean,
+        val mode: String, // "HUI", "KSU", "MAGISK", "APATCH", "NONE"
+        val message: String
+    )
 
     data class VerifyReport(
         val isActive: Boolean,
-        val devicePresent: Boolean,
-        val moduleLoaded: Boolean,
-        val channelRoot: Boolean,
         val detail: String
     )
 
-    suspend fun verifyDetailed(): VerifyReport = withContext(Dispatchers.IO) {
-        // 3 个检查合并成 1 条 multiline 命令
-        // 每条独立用 ( ... && echo "KEY:y" || echo "KEY:n" ) 包裹
-        // 任意一条失败都不影响其他两条的输出
-        val combined = """
-            ( test -c $HUI_DEVICE && echo "DEV:y" || echo "DEV:n" )
-            ( lsmod 2>/dev/null | grep -q HUI && echo "MOD:y" || echo "MOD:n" )
-            ( id 2>/dev/null | grep -q "uid=0" && echo "ROOT:y" || echo "ROOT:n" )
-        """.trimIndent()
-
-        val result = HuijuiShell.exec(combined)
-        val out = result.out.joinToString("\n")
-
-        val devicePresent = out.contains("DEV:y")
-        val moduleLoaded = out.contains("MOD:y")
-        val channelRoot = out.contains("ROOT:y")
-        val active = devicePresent && channelRoot
-
-        val detail = buildString {
-            append("HUI设备=").append(if (devicePresent) "✅" else "❌")
-            append(" 模块=").append(if (moduleLoaded) "✅" else "❌")
-            append(" Root=").append(if (channelRoot) "✅" else "❌")
+        suspend fun checkStatus(): EngineStatus = withContext(Dispatchers.IO) {
+        // 1. 优先检查纯血 HUI 模式
+        if (checkHuiSocket()) {
+            return@withContext EngineStatus(true, "HUI", "✅ 纯血引擎运行中")
         }
 
-        VerifyReport(active, devicePresent, moduleLoaded, channelRoot, detail)
+        // 2. 只要 su 命令能出 uid=0，管它是什么管理器，直接给绿灯！
+        val suCheck = suExec("su -c 'id'")
+        if (suCheck.contains("uid=0") || suCheck.contains("root")) {
+            return@withContext EngineStatus(true, "COMPAT", "✅ 兼容模式 (HUI Ready)")
+        }
+
+        // 3. 连 su 都调不起来，才是真的未工作
+        EngineStatus(false, "NONE", "❌ 引擎未唤醒，请先获取 Root 权限")
     }
 
-    suspend fun verifyHuijuiActive(): Boolean = verifyDetailed().isActive
+    suspend fun verifyDetailed(): VerifyReport = withContext(Dispatchers.IO) {
+        val status = checkStatus()
+        if (status.isWorking) {
+            VerifyReport(true, "纯血模式 (${status.mode}) 运行中")
+        } else {
+            VerifyReport(false, status.message)
+        }
+    }
 
-    suspend fun checkOtherManagers(): String? = withContext(Dispatchers.IO) {
-        // 2 个检查合并成 1 次 exec
-        val combined = """
-            ( [ -d /data/adb/magisk ] && echo "MGR:Magisk" )
-            ( [ -d /data/adb/ksu ] && echo "MGR:KernelSU" )
-        """.trimIndent()
-        val result = HuijuiShell.exec(combined)
-        val out = result.out.joinToString("\n")
-        when {
-            out.contains("MGR:Magisk") -> "Magisk"
-            out.contains("MGR:KernelSU") -> "KernelSU"
-            else -> null
+    private suspend fun suExec(cmd: String): String = withContext(Dispatchers.IO) {
+        try {
+            val p = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            val out = StringBuilder()
+            // 使用独立线程读取，防止 readText 阻塞导致 waitFor 失效
+            val reader = Thread {
+                try {
+                    p.inputStream.bufferedReader().forEachLine { out.appendLine(it) }
+                } catch (e: Exception) {}
+            }
+            reader.start()
+            
+            val finished = p.waitFor(8, java.util.concurrent.TimeUnit.SECONDS)
+            if (!finished) {
+                p.destroyForcibly()
+                return@withContext "TIMEOUT"
+            }
+            reader.join(1000)
+            out.toString()
+        } catch (e: Exception) {
+            return@withContext "ERROR: ${e.message}"
+        }
+    }
+
+    private fun checkHuiSocket(): Boolean {
+        return try {
+            val socket = LocalSocket()
+            socket.connect(LocalSocketAddress(SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT))
+            val out = socket.outputStream
+            out.write("id\n".toByteArray())
+            out.flush()
+
+            val input = socket.inputStream
+            val buffer = ByteArray(1024)
+            val length = input.read(buffer)
+            socket.close()
+
+            if (length > 0) {
+                String(buffer, 0, length).contains("uid=0")
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 }

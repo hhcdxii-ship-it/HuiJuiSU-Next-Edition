@@ -1,6 +1,14 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
+#ifdef __ANDROID__
+#include "base.hpp"
+#else
+#include "xwrap.hpp"
+#include "mmap.hpp"
+#endif
+
 #include <utility>
 #include <bitset>
 #include "format.hpp"
@@ -408,7 +416,7 @@ private:
 protected: name() = default;            \
 public:                                 \
 name(void *ptr) {                       \
-    raw = xmalloc(sizeof(hdr));         \
+    raw = malloc(sizeof(hdr));         \
     memcpy(raw, ptr, sizeof(hdr));      \
 }                                       \
 size_t hdr_size() override {            \

@@ -110,22 +110,22 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                     }
                     inputStream?.close()
                     
-                    Toast.makeText(context, "正在安装模块...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, zakoString("正在安装模块..."), Toast.LENGTH_SHORT).show()
                     
                     // 纯血 UI 安装：这里应该触发专门的安装 Dialog，但为了快速跑通：
                     val success = ModuleManager.installModule(tempFile.absolutePath)
                     
                     withContext(Dispatchers.Main) {
                         if (success) {
-                            Toast.makeText(context, "模块安装完成", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, zakoString("模块安装完成"), Toast.LENGTH_LONG).show()
                             loadLocalModules()
                         } else {
-                            Toast.makeText(context, "底层拦截：纯血模块请通过专属弹窗安装", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, zakoString("底层拦截：纯血模块请通过专属弹窗安装"), Toast.LENGTH_LONG).show()
                         }
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "错误: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, zakoString("错误: ${e.message}"), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -177,7 +177,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                                         if (ModuleManager.toggleModule(module.id, enable)) {
                                             loadLocalModules()
                                         } else {
-                                            Toast.makeText(context, "操作失败：纯血模式锁", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, zakoString("操作失败：纯血模式锁"), Toast.LENGTH_SHORT).show()
                                         }
                                     } 
                                 },
@@ -186,7 +186,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                                         if (ModuleManager.uninstallModule(module.id)) {
                                             loadLocalModules()
                                         } else {
-                                            Toast.makeText(context, "卸载被拦截：纯血模式锁", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, zakoString("卸载被拦截：纯血模式锁"), Toast.LENGTH_SHORT).show()
                                         }
                                     } 
                                 }
@@ -259,7 +259,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 ZakoText(
-                    text = "兼容模式下禁止插拔模块，去切回纯血 HUI 啦！",
+                    text = zakoString("兼容模式下禁止插拔模块，去切回纯血 HUI 啦！"),
                     color = Color(0xFFEF4444),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold

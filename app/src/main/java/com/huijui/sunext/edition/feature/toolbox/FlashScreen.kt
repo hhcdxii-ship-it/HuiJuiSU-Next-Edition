@@ -4,6 +4,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.huijui.sunext.edition.core.ui.language.zakoString
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -161,7 +162,7 @@ fun FlashScreen(onBack: () -> Unit) {
                                         }
                                         pendingImages = done
                                         isDetecting = false
-                                        Toast.makeText(context, "训练完成，共 ${done.size} 个文件已识别", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, zakoString("训练完成，共 ${done.size} 个文件已识别"), Toast.LENGTH_SHORT).show()
                                     }
                                 } else { showConfirmDialog = true }
                             }
@@ -221,7 +222,7 @@ fun FlashScreen(onBack: () -> Unit) {
                                 isFlashing = false
                                 overallStage = ""
                                 val ok = results.count { it.success }
-                                Toast.makeText(context, "完成 $ok/${results.size}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, zakoString("完成 $ok/${results.size}"), Toast.LENGTH_LONG).show()
                             }
                         }
                     }) { ZakoText(if (advancedMode) "高级模式确认" else "确认刷入", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold) }
