@@ -83,7 +83,27 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
         isLoadingLocal = true; localError = null
         try {
             val result = withContext(Dispatchers.IO) { ModuleManager.scanModules() }
-            installedModules = result
+
+            // 模块更新检查。
+            // `InstalledModule.updateAvailable` 这个字段一直存在，但从来没有任何代码写过它 ——
+            // 也就是说 App 里根本没有"检查更新"这个功能。
+            // 这里拿仓库列表按 id 比对版本，标记出可更新的模块。
+            val marked = withContext(Dispatchers.IO) {
+                runCatching {
+                    val remote = ModuleRepoProvider.fetchModules().associateBy { it.id }
+                    if (remote.isEmpty()) result
+                    else result.map { installed ->
+                        val latest = remote[installed.id]
+                        if (latest != null && latest.version != installed.version) {
+                            installed.copy(updateAvailable = true)
+                        } else {
+                            installed
+                        }
+                    }
+                }.getOrDefault(result)
+            }
+
+            installedModules = marked
             if (result.isEmpty()) localError = "没读到模块"
         } catch (e: Exception) { localError = "底层报错: ${e.message}" } finally { isLoadingLocal = false }
     }
@@ -306,7 +326,20 @@ private fun LocalModuleCard(module: InstalledModule, onToggle: (Boolean) -> Unit
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     ZakoText(module.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    ZakoText("v${module.version} · ${module.author}", color = Color.White.copy(0.5f), fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ZakoText("v${module.version} · ${module.author}", color = Color.White.copy(0.5f), fontSize = 11.sp)
+                        if (module.updateAvailable) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(Color(0xFF00E5FF).copy(alpha = 0.18f))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            ) {
+                                ZakoText("可更新", color = Color(0xFF00E5FF), fontSize = 9.sp)
+                            }
+                        }
+                    }
                 }
                 Switch(checked = module.isEnabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = AppSettings.accentColor.color))
             }
