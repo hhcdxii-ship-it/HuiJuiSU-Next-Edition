@@ -75,6 +75,9 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
     // Detail state
     var selectedModuleDetail by remember { mutableStateOf<ModuleRepoProvider.RemoteModule?>(null) }
 
+    // 待安装的 ZIP：交给 ModuleInstallDialog 处理（它自带流式进度与失败原因）
+    var installRequest by remember { mutableStateOf<Pair<String, Uri>?>(null) }
+
     suspend fun loadLocalModules() {
         isLoadingLocal = true; localError = null
         try {
@@ -100,39 +103,29 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
     val zipPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            scope.launch {
-                try {
-                    val inputStream = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(it) }
-                    val tempFile = File(context.cacheDir, "temp_module.zip")
-                    withContext(Dispatchers.IO) {
-                        FileOutputStream(tempFile).use { output -> inputStream?.copyTo(output) }
-                    }
-                    inputStream?.close()
-                    
-                    Toast.makeText(context, zakoString("正在安装模块..."), Toast.LENGTH_SHORT).show()
-                    
-                    // 纯血 UI 安装：这里应该触发专门的安装 Dialog，但为了快速跑通：
-                    val success = ModuleManager.installModule(tempFile.absolutePath)
-                    
-                    withContext(Dispatchers.Main) {
-                        if (success) {
-                            Toast.makeText(context, zakoString("模块安装完成"), Toast.LENGTH_LONG).show()
-                            loadLocalModules()
-                        } else {
-                            Toast.makeText(context, zakoString("底层拦截：纯血模块请通过专属弹窗安装"), Toast.LENGTH_LONG).show()
-                        }
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, zakoString("错误: ${e.message}"), Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
+        // ⚠️ 旧实现在这里调用了 ModuleManager.installModule() —— 那是个**恒返回 false** 的占位桩，
+        //    于是每次导入都失败，还弹「请通过专属弹窗安装」，而那个 ModuleInstallDialog
+        //    全项目从来没有被渲染过一次。整条 ZIP 安装链路是断的。
+        //    现在直接把 Uri 交给真正的安装对话框。
+        uri?.let { u ->
+            val name = u.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "module.zip"
+            installRequest = name to u
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // 真正的安装入口
+        installRequest?.let { (name, u) ->
+            ModuleInstallDialog(
+                fileName = name,
+                zipUri = u,
+                onDismiss = {
+                    installRequest = null
+                    scope.launch { loadLocalModules() }
+                }
+            )
+        }
+
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Spacer(modifier = Modifier.height(24.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

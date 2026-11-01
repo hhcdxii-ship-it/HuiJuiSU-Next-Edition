@@ -189,7 +189,8 @@ object AppManagerProvider {
 
         val r = HuijuiShell.exec("pm uninstall --user 0 $packageName 2>&1")
         val out = r.out.joinToString(" ")
-        if (out.contains("Success") || (r.isSuccess && !out.contains("Exception"))) {
+        // 先看真实退出码，再看文本；文本只用来排除「退出码 0 但实际报错」的情况
+        if ((r.isSuccess && !out.contains("Exception")) || out.contains("Success")) {
             Result.success("已从当前用户卸载 $packageName")
         } else {
             Result.failure(Exception(out.take(120).ifBlank { "卸载失败" }))

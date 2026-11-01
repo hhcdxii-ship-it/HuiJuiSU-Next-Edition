@@ -50,8 +50,8 @@ object ModuleManager {
                                     version = version,
                                     author = author,
                                     description = description,
-                                    isEnabled = !disabledResult.out.contains("yes"),
-                                    removePending = removeResult.out.contains("yes")
+                                    isEnabled = !disabledResult.out.joinToString("").contains("yes"),
+                                    removePending = removeResult.out.joinToString("").contains("yes")
                                 )
                             )
                         }
