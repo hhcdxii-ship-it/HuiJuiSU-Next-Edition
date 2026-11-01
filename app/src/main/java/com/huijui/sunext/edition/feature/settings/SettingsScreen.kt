@@ -196,6 +196,27 @@ fun SettingsScreen(
                         else if (!AppSettings.isAntiRootLossEnabled) SystemGuardian.stopGuardian()
                     }
                     Spacer(Modifier.height(HuiSpace.m))
+                    // 电池优化豁免：系统监控 / Root 审计都是前台服务，
+                    // 被厂商的省电策略杀掉之后监控就静默中断了，而用户完全不知道。
+                    SettingsRow(
+                        icon = Icons.Default.BatteryFull,
+                        title = "忽略电池优化",
+                        subtitle = "防止系统在后台杀掉监控与守护进程",
+                        onClick = {
+                            runCatching {
+                                val uri = android.net.Uri.parse("package:${context.packageName}")
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                        uri
+                                    )
+                                )
+                            }.onFailure {
+                                Toast.makeText(context, "无法打开电池优化设置，请手动在系统设置里关闭", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(HuiSpace.m))
                     ToggleRow(
                         icon = Icons.Default.Shield,
                         title = "Root 掉线守护",
