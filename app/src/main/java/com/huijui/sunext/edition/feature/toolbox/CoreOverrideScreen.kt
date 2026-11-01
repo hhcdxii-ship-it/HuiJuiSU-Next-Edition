@@ -75,7 +75,7 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(top = 40.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(top = 40.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 

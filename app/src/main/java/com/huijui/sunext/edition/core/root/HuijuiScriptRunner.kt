@@ -7,7 +7,14 @@ import java.io.File
 
 object HuijuiScriptRunner {
 
-    private const val ASSET_DAEMON = "Hsud"
+    /**
+     * 注意：assets 里**没有** Hsud 这个文件，真正的守护进程是 exploit/huijuisud。
+     * 旧代码直接 open("Hsud") 抛 FileNotFoundException，被外层 catch 包成
+     * 「释放 assets 失败」，于是热接管卡片永远失败。
+     * 这里从 exploit/huijuisud 取，并在工作目录里落成脚本期望的文件名 Hsud。
+     */
+    private const val ASSET_DAEMON = "exploit/huijuisud"
+    private const val DAEMON_LOCAL_NAME = "Hsud"
     private const val ASSET_HOT_INSTALL = "huijui_hot_install.sh"
 
     suspend fun runHotInstall(context: Context): HuijuiShell.CommandResult =
@@ -19,13 +26,14 @@ object HuijuiScriptRunner {
                 deleteRecursively(); mkdirs()
             }
 
+            val targetKoName = KernelVersionMatcher.getExpectedKoFileName()
+
             try {
                 // 1. 释放基础工具与脚本
-                copyAsset(context, ASSET_DAEMON, assetDir)
+                copyAsset(context, ASSET_DAEMON, assetDir, DAEMON_LOCAL_NAME)
                 copyAsset(context, ASSET_HOT_INSTALL, assetDir)
                 
                 // 🚀 2. 大兼容核心：动态匹配并释放内核模块
-                val targetKoName = KernelVersionMatcher.getExpectedKoFileName()
                 if (targetKoName != null) {
                     try {
                         // 从 assets/lkm/ 目录提取对应的 ko 文件
@@ -50,8 +58,8 @@ object HuijuiScriptRunner {
             }
 
             val script = File(assetDir, ASSET_HOT_INSTALL)
-            val daemon = File(assetDir, ASSET_DAEMON)
-            val koFile = File(assetDir, KernelVersionMatcher.getExpectedKoFileName()!!)
+            val daemon = File(assetDir, DAEMON_LOCAL_NAME)
+            val koFile = File(assetDir, targetKoName)
 
             HuijuiShell.exec("chmod 755 '${script.absolutePath}' '${daemon.absolutePath}'")
             
@@ -59,9 +67,14 @@ object HuijuiScriptRunner {
             HuijuiShell.exec("sh '${script.absolutePath}' '${workDir.absolutePath}' '${assetDir.absolutePath}' '${koFile.name}'")
         }
 
-    private fun copyAsset(context: Context, name: String, destDir: File) {
-        context.assets.open(name).use { input ->
-            File(destDir, name).outputStream().use { output -> input.copyTo(output) }
+    private fun copyAsset(
+        context: Context,
+        assetPath: String,
+        destDir: File,
+        destName: String = assetPath.substringAfterLast('/')
+    ) {
+        context.assets.open(assetPath).use { input ->
+            File(destDir, destName).outputStream().use { output -> input.copyTo(output) }
         }
     }
 }

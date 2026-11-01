@@ -169,7 +169,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                 } else if (installedModules.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ZakoText(localError ?: "一个模块都没有", color = Color(0xFFEF4444), fontSize = 14.sp) }
                 } else {
-                    LazyColumn(contentPadding = PaddingValues(bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(installedModules, key = { it.id }) { module ->
                             LocalModuleCard(module,
                                 onToggle = { enable -> 
@@ -235,7 +235,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                     if (filteredList.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ZakoText("没找到匹配的应用", color = Color.White.copy(0.5f)) }
                     } else {
-                        LazyColumn(contentPadding = PaddingValues(bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(filteredList, key = { it.id }) { m ->
                                 Box(modifier = Modifier.clickable { selectedModuleDetail = m }) {
                                     RemoteModuleCard(module = m)
@@ -252,7 +252,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 100.dp, end = 24.dp) 
+                    .padding(bottom = 20.dp, end = 24.dp) 
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFFEF4444).copy(alpha = 0.25f))
                     .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
