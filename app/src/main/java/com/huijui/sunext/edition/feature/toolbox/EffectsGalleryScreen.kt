@@ -170,9 +170,11 @@ private fun EffectTile(
     index: Int
 ) {
     val progress = remember { Animatable(0f) }
+    // 12 个样例同时跑无限动画，切到后台必须停，否则就是个常驻的 CPU 热源
+    val started = com.huijui.sunext.edition.core.ui.component.rememberIsLifecycleStarted()
 
-    LaunchedEffect(type, easing, durationMs) {
-        if (HuiMotion.disabled()) {
+    LaunchedEffect(type, easing, durationMs, started) {
+        if (HuiMotion.disabled() || !started) {
             progress.snapTo(1f)
             return@LaunchedEffect
         }

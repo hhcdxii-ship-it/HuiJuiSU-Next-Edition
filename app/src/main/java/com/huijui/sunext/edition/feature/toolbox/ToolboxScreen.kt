@@ -101,8 +101,11 @@ fun ToolboxScreen(
     var showTempRootDialog by remember { mutableStateOf(false) }
     var ghostChecked by remember { mutableStateOf(false) }
 
-    // ── 时钟：只在分钟变化时重组，不再每 10 秒无脑刷一次 ───────────────
-    LaunchedEffect(Unit) {
+    // ── 时钟：只在分钟变化时重组，且切后台立刻停 ────────────────────
+    //    之前是无条件 5 秒醒一次 —— 后台也照跑，等于一个常量唤醒源。
+    val clockStarted = rememberIsLifecycleStarted()
+    LaunchedEffect(clockStarted) {
+        if (!clockStarted) return@LaunchedEffect
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
         var last = ""
         while (true) {
