@@ -583,31 +583,37 @@ private fun DeviceInfoRow(label: String, value: String) {
 private fun statusColor(status: HuiRootStatus): Color = when (status) {
     HuiRootStatus.Unknown -> Color(0xFF8E8E96)
     HuiRootStatus.NotRooted -> Color(0xFFEF4444)
-    is HuiRootStatus.Working -> when (status.manager) {
-        RootManager.HUIJUI -> Color(0xFF81C784)
-        RootManager.HUIJUI_ULTRA -> Color(0xFF00E5FF)
-        else -> Color(0xFFFFC107)
+    is HuiRootStatus.Locked -> Color(0xFFFFC107)
+    is HuiRootStatus.Working -> when (status.engine) {
+        HuiEngine.HUI_NATIVE -> Color(0xFF81C784)   // 纯血：绿
+        HuiEngine.HUI_ALONGSIDE -> Color(0xFF00E5FF) // 叠加：青
+        HuiEngine.HUI_STALE -> Color(0xFFFFC107)     // 残留：琥珀
+        HuiEngine.BORROWED -> Color(0xFF4FC3F7)      // 借用：蓝
     }
 }
 
 private fun statusTitle(status: HuiRootStatus): String = when (status) {
     HuiRootStatus.Unknown -> "检测中..."
     HuiRootStatus.NotRooted -> "未工作"
-    is HuiRootStatus.Working -> when (status.manager) {
-        RootManager.HUIJUI -> "工作中 (HUI)"
-        RootManager.HUIJUI_ULTRA -> "工作中 (HUI-Ultra)"
-        else -> "工作中 (${status.manager.shortName} 兼容)"
+    is HuiRootStatus.Locked -> "已锁定"
+    is HuiRootStatus.Working -> when (status.engine) {
+        HuiEngine.HUI_NATIVE -> "工作中 (HUI)"
+        HuiEngine.HUI_ALONGSIDE -> "工作中 (HUI · ${managerLabel(status.manager)})"
+        HuiEngine.HUI_STALE -> "引擎未响应"
+        HuiEngine.BORROWED -> "兼容模式 (${managerLabel(status.manager)})"
     }
+}
+
+/** detector 认不出来时不要显示 "None" / "Unknown"，给一个人话标签。 */
+private fun managerLabel(manager: RootManager): String = when (manager) {
+    RootManager.NONE, RootManager.UNKNOWN -> "通用 su"
+    else -> manager.shortName
 }
 
 private fun subtitled(status: HuiRootStatus): String = when (status) {
     HuiRootStatus.Unknown -> "正在探测底层引擎"
-    HuiRootStatus.NotRooted ->
-        if (EnvironmentPurge.isLocked()) {
-            "环境已锁定 · ${EnvironmentPurge.remainingLockText()}"
-        } else {
-            "引擎未唤醒 · 点此重新接管"
-        }
+    HuiRootStatus.NotRooted -> "引擎未唤醒 · 点此重新接管"
+    is HuiRootStatus.Locked -> "作弊哨兵已触发 · ${EnvironmentPurge.remainingLockText()}"
     is HuiRootStatus.Working -> status.detail
 }
 

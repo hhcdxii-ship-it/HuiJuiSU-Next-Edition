@@ -16,8 +16,12 @@ object RootEngineVerifier {
 
     data class EngineStatus(
         val isWorking: Boolean,
-        val mode: String, // "HUI", "COMPAT", "NONE"
-        val message: String
+        val mode: String, // "HUI", "COMPAT", "NONE", "LOCKED"
+        val message: String,
+        /** HUI 自己的 socket 是否真的回了包 —— 这是「纯血在跑」的唯一硬证据 */
+        val huiSocketUp: Boolean = false,
+        /** su 是否可用（不代表是 HUI 提供的） */
+        val suAvailable: Boolean = false
     )
 
     data class VerifyReport(
@@ -38,13 +42,25 @@ object RootEngineVerifier {
 
         // 1. 纯血 HUI：守护进程 socket 能直接回 uid=0
         if (checkHuiSocket()) {
-            return@withContext EngineStatus(true, "HUI", "✅ 纯血引擎运行中")
+            return@withContext EngineStatus(
+                isWorking = true,
+                mode = "HUI",
+                message = "✅ 纯血引擎运行中",
+                huiSocketUp = true,
+                suAvailable = true
+            )
         }
 
-        // 2. 兜底：只要 su 真能拿到 uid=0 就放行
+        // 2. 兜底：只要 su 真能拿到 uid=0 就放行（但这不等于 HUI 在跑）
         val suOut = suExec("id")
         if (UID_ZERO.containsMatchIn(suOut)) {
-            return@withContext EngineStatus(true, "COMPAT", "✅ 兼容模式 (HUI Ready)")
+            return@withContext EngineStatus(
+                isWorking = true,
+                mode = "COMPAT",
+                message = "✅ 已取得 Root（非 HUI 引擎）",
+                huiSocketUp = false,
+                suAvailable = true
+            )
         }
 
         // 3. 连 su 都调不起来
