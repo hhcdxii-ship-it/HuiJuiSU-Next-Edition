@@ -65,15 +65,15 @@ fun SystemTweaksScreen(onBack: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onBack() }) {
                 Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White)
-                ZakoText("返回", color = Color.White, fontSize = 16.sp)
+                ZakoText("返回", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    ZakoText("系统魔改", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    ZakoText("系统魔改", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     ZakoText("广告屏蔽 · 分区可写切换", color = Color.White.copy(0.6f), fontSize = 12.sp)
                 }
                 Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(0.1f)).clickable { scope.launch { reload() } }, contentAlignment = Alignment.Center) {
