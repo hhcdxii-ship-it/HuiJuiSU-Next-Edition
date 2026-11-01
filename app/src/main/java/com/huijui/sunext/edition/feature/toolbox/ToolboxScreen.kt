@@ -118,19 +118,28 @@ fun ToolboxScreen(
     // ── 设备信息：一次 IO，别在每次刷新里重建 ──────────────────────────
     LaunchedEffect(Unit) {
         deviceInfo = withContext(Dispatchers.IO) {
-            // EnvironmentInspector 一条命令拿到 SELinux 状态 / 挂载痕迹 / 内核串，
-            // 比 System.getProperty("os.version") 更贴近真实内核，
-            // 顺便把 DeviceInfo 里那个一直空着的 selinux 字段填上。
-            val env = runCatching { EnvironmentInspector.getEnvironment() }.getOrNull()
-            DeviceInfo(
-                brand = Build.MANUFACTURER ?: "未知",
-                model = Build.MODEL ?: "未知",
-                androidVer = Build.VERSION.RELEASE ?: "未知",
-                kernelVer = env?.kernelVersion?.takeIf { it.isNotBlank() && it != "Unknown" }
-                    ?: System.getProperty("os.version") ?: "未知",
-                fingerprint = Build.FINGERPRINT ?: "未知",
-                selinux = env?.selinux?.takeIf { it != "Unknown" } ?: "未知"
-            )
+            // DeviceInfoProvider 把 6 个字段合并成 1 条 shell 命令并做 5 秒缓存，
+            // 比逐个 getprop/Build.* 更准（部分 ROM 的 Build 字段与 getprop 不一致），
+            // 也避免反复刷新时重复跑命令。它本来就是为这块写的，只是没接上。
+            val info = runCatching { DeviceInfoProvider.get() }.getOrNull()
+            if (info != null) {
+                DeviceInfo(
+                    brand = info.brand,
+                    model = info.model,
+                    androidVer = info.androidVer,
+                    kernelVer = info.kernelVer,
+                    fingerprint = info.fingerprint,
+                    selinux = info.selinux
+                )
+            } else {
+                DeviceInfo(
+                    brand = Build.MANUFACTURER ?: "未知",
+                    model = Build.MODEL ?: "未知",
+                    androidVer = Build.VERSION.RELEASE ?: "未知",
+                    kernelVer = System.getProperty("os.version") ?: "未知",
+                    fingerprint = Build.FINGERPRINT ?: "未知"
+                )
+            }
         }
     }
 

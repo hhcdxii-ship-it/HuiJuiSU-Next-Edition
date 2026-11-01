@@ -56,7 +56,15 @@ object HuiStrings {
         "返回" to "返回", "重试" to "重試", "正在读取..." to "正在讀取…",
         "取消" to "取消", "确定" to "確定", "匹配" to "匹配", "说明" to "說明",
         "当前内核有匹配模块" to "目前核心有匹配模組", "当前内核没有匹配模块" to "目前核心沒有匹配模組",
-        "判定分支" to "判定分支", "内核模块矩阵" to "核心模組矩陣"
+        "判定分支" to "判定分支", "内核模块矩阵" to "核心模組矩陣",
+        "动效实验室" to "動效實驗室", "作弊哨兵" to "作弊哨兵", "系统守护" to "系統守護",
+        "电池健康" to "電池健康", "设计容量" to "設計容量", "实际容量" to "實際容量",
+        "循环次数" to "循環次數", "温度" to "溫度", "电压" to "電壓", "当前电量" to "目前電量",
+        "已锁定" to "已鎖定", "引擎未响应" to "引擎未回應", "兼容模式" to "相容模式",
+        "效果" to "效果", "缓动" to "緩動", "时长" to "時長",
+        "防开发者选项被重置" to "防開發者選項被重置", "Root 掉线守护" to "Root 斷線守護",
+        "环境检查通过" to "環境檢查通過", "当前不可刷入" to "目前不可刷入",
+        "正在读取..." to "正在讀取…"
     )
 
     private val en = mapOf(
@@ -80,7 +88,15 @@ object HuiStrings {
         "取消" to "Cancel", "确定" to "OK", "匹配" to "match", "说明" to "Notes",
         "当前内核有匹配模块" to "A matching module is bundled",
         "当前内核没有匹配模块" to "No module matches this kernel",
-        "判定分支" to "Detected branch", "内核模块矩阵" to "Kernel module matrix"
+        "判定分支" to "Detected branch", "内核模块矩阵" to "Kernel module matrix",
+        "动效实验室" to "Motion lab", "作弊哨兵" to "Cheat sentinel", "系统守护" to "System guardian",
+        "电池健康" to "Battery health", "设计容量" to "Design capacity", "实际容量" to "Full capacity",
+        "循环次数" to "Cycles", "温度" to "Temp", "电压" to "Voltage", "当前电量" to "Level",
+        "已锁定" to "Locked", "引擎未响应" to "Engine unresponsive", "兼容模式" to "Compatibility mode",
+        "效果" to "Effect", "缓动" to "Easing", "时长" to "Duration",
+        "防开发者选项被重置" to "Keep developer options on", "Root 掉线守护" to "Root watchdog",
+        "环境检查通过" to "Environment check passed", "当前不可刷入" to "Flashing not allowed",
+        "正在读取..." to "Loading…"
     )
 
     private val ja = mapOf(
@@ -140,7 +156,15 @@ object HuiStrings {
         "取消" to "算了", "确定" to "就这样", "匹配" to "对上了", "说明" to "听好了",
         "当前内核有匹配模块" to "这台机器的内核有对应模块哦",
         "当前内核没有匹配模块" to "糟糕，这台机器的内核没有对应模块",
-        "判定分支" to "认出来的分支", "内核模块矩阵" to "内核小玩意一览"
+        "判定分支" to "认出来的分支", "内核模块矩阵" to "内核小玩意一览",
+        "动效实验室" to "本小姐的动效小把戏", "作弊哨兵" to "抓外挂的杂鱼探测器",
+        "系统守护" to "看门狗在值班", "电池健康" to "电池还剩几口气",
+        "设计容量" to "出厂容量", "实际容量" to "现在能装多少", "循环次数" to "充放电次数",
+        "温度" to "烫不烫", "电压" to "电压啦", "当前电量" to "还剩多少电",
+        "已锁定" to "被本小姐锁了", "引擎未响应" to "引擎装死中", "兼容模式" to "借别人的壳",
+        "效果" to "花招", "缓动" to "节奏", "时长" to "快慢",
+        "防开发者选项被重置" to "别让人关掉开发者选项", "Root 掉线守护" to "盯着 Root 别跑",
+        "环境检查通过" to "检查过了，能刷", "当前不可刷入" to "现在不准刷，笨蛋"
     )
 
     /** 供覆盖率统计用：这一档语言到底录了多少条。 */
