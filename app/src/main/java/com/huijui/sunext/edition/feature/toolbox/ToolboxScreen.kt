@@ -602,7 +602,12 @@ private fun statusTitle(status: HuiRootStatus): String = when (status) {
 
 private fun subtitled(status: HuiRootStatus): String = when (status) {
     HuiRootStatus.Unknown -> "正在探测底层引擎"
-    HuiRootStatus.NotRooted -> "引擎未唤醒 · 点此重新接管"
+    HuiRootStatus.NotRooted ->
+        if (EnvironmentPurge.isLocked()) {
+            "环境已锁定 · ${EnvironmentPurge.remainingLockText()}"
+        } else {
+            "引擎未唤醒 · 点此重新接管"
+        }
     is HuiRootStatus.Working -> status.detail
 }
 

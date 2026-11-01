@@ -26,6 +26,16 @@ object RootEngineVerifier {
     )
 
     suspend fun checkStatus(): EngineStatus = withContext(Dispatchers.IO) {
+        // 0. 作弊哨兵触发后的环境锁定：这段时间内引擎一律不工作，
+        //    否则「自爆」就只是清空了一次授权，重启 App 就复活了，等于没有惩罚。
+        if (EnvironmentPurge.isLocked()) {
+            return@withContext EngineStatus(
+                false,
+                "LOCKED",
+                "🔒 环境已锁定（作弊哨兵触发）· ${EnvironmentPurge.remainingLockText()}后解除"
+            )
+        }
+
         // 1. 纯血 HUI：守护进程 socket 能直接回 uid=0
         if (checkHuiSocket()) {
             return@withContext EngineStatus(true, "HUI", "✅ 纯血引擎运行中")

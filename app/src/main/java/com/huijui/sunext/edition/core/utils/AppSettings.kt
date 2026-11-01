@@ -76,6 +76,15 @@ object AppSettings {
     var systemMonitorEnabled by mutableStateOf(false)
     var rootAuditEnabled by mutableStateOf(false)
 
+    /** 作弊哨兵：默认开启。判定条件见 CheatSentinel，只装性能模块的用户不会被误伤。 */
+    var cheatSentinelEnabled by mutableStateOf(true)
+
+    /** 自爆之后的环境锁（毫秒时间戳），锁定期内不接受重新启用。 */
+    var cheatLockUntil by mutableStateOf(0L)
+
+    /** 累计自爆次数，用于在设置页给出可见的后果。 */
+    var cheatPurgeCount by mutableStateOf(0)
+
     fun init(context: Context) {
         if (isInitialized) return
         prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -112,6 +121,9 @@ object AppSettings {
         defaultLauncherMode = prefs.getBoolean("default_launcher_mode", true)
         systemMonitorEnabled = prefs.getBoolean("system_monitor_enabled", false)
         rootAuditEnabled = prefs.getBoolean("root_audit_enabled", false)
+        cheatSentinelEnabled = prefs.getBoolean("cheat_sentinel", true)
+        cheatLockUntil = prefs.getLong("cheat_lock_until", 0L)
+        cheatPurgeCount = prefs.getInt("cheat_purge_count", 0)
 
         isInitialized = true
     }
@@ -167,6 +179,9 @@ object AppSettings {
             putBoolean("default_launcher_mode", defaultLauncherMode)
             putBoolean("system_monitor_enabled", systemMonitorEnabled)
             putBoolean("root_audit_enabled", rootAuditEnabled)
+            putBoolean("cheat_sentinel", cheatSentinelEnabled)
+            putLong("cheat_lock_until", cheatLockUntil)
+            putInt("cheat_purge_count", cheatPurgeCount)
             apply()
         }
     }

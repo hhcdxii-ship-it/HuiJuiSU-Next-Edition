@@ -15,6 +15,8 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.huijui.sunext.edition.MainActivity
 import com.huijui.sunext.edition.R
+import com.huijui.sunext.edition.core.root.CheatSentinel
+import com.huijui.sunext.edition.core.root.EnvironmentPurge
 import com.huijui.sunext.edition.core.root.CpuInfoProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +95,9 @@ class SystemMonitorService : Service() {
         isMonitoring = true
 
         monitorJob = serviceScope.launch {
+            // 作弊哨兵节拍：每 10 次采样（约 80 秒）检查一次，避免频繁拉 ps
+            var sentinelTick = 0
+
             while (isActive && isMonitoring) {
                 // 每次循环前，如果此时处于后台或灭屏，直接等
                 // 广播已经接管了暂停逻辑，这里只要保证不重复就行
@@ -112,6 +117,23 @@ class SystemMonitorService : Service() {
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
+                // 🚀 作弊哨兵：只有「作弊工具在跑 + 联机游戏在跑 + 它真的拿到 Root」
+                //    三条件同时成立才会自爆环境，具体权重见 CheatSentinel
+                if (AppSettings.cheatSentinelEnabled) {
+                    sentinelTick++
+                    if (sentinelTick >= 10) {
+                        sentinelTick = 0
+                        try {
+                            val report = CheatSentinel.inspect(this@SystemMonitorService)
+                            if (report.isGuilty) {
+                                EnvironmentPurge.execute(this@SystemMonitorService, report)
+                            }
+                        } catch (_: Exception) {
+                            // 哨兵自身绝不能把监控服务带崩
+                        }
+                    }
+                }
+
                 // 🚀 稍微拉长一下间隔，5秒会做很多无用功，8秒足够
                 delay(UPDATE_INTERVAL_MS) 
             }

@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.BuildConfig
 import com.huijui.sunext.edition.R
+import com.huijui.sunext.edition.core.root.EnvironmentPurge
 import com.huijui.sunext.edition.core.ui.component.GlassCard
 import com.huijui.sunext.edition.core.ui.design.HuiIconBadge
 import com.huijui.sunext.edition.core.ui.design.HuiSpace
@@ -113,6 +116,52 @@ fun SettingsScreen(
                     FeatureRow(Icons.Default.Security, "3 级防格机拦截", "白名单分区过滤 + GKI 校验")
                     FeatureRow(Icons.Default.SettingsBackupRestore, "无感热备份", "刷机前自动备份，秒级回滚")
                     FeatureRow(Icons.Default.Language, "原生 WebUI 沙盒", "支持 Magisk / KSU 模块 HTML 控制台")
+                }
+            }
+        }
+
+        // ── 安全与反作弊 ────────────────────────────────────────────
+        item { SectionLabel("安全与反作弊", modifier = Modifier.padding(top = HuiSpace.m)) }
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        HuiIconBadge(icon = Icons.Default.Security, tint = accent, size = 38.dp, iconSize = 19.dp)
+                        Spacer(Modifier.width(HuiSpace.m))
+                        Column(modifier = Modifier.weight(1f)) {
+                            ZakoText("作弊哨兵", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.height(2.dp))
+                            ZakoText(
+                                "用 Root 在联机游戏开挂时，自爆 HUI 环境并撤销全部授权",
+                                color = Color.White.huiTertiary,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Switch(
+                            checked = AppSettings.cheatSentinelEnabled,
+                            onCheckedChange = {
+                                AppSettings.cheatSentinelEnabled = it
+                                AppSettings.save()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = accent,
+                                uncheckedThumbColor = Color.White.copy(alpha = 0.75f),
+                                uncheckedTrackColor = Color.White.copy(alpha = 0.10f),
+                                uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
+                            )
+                        )
+                    }
+                    if (AppSettings.cheatPurgeCount > 0) {
+                        Spacer(Modifier.height(HuiSpace.s))
+                        ZakoText(
+                            "已触发自爆 ${AppSettings.cheatPurgeCount} 次 · " +
+                                EnvironmentPurge.remainingLockText(),
+                            color = Color(0xFFFFC107),
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             }
         }
