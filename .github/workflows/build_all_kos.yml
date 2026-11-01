@@ -3,7 +3,7 @@ name: Build and Release HUI Modules
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "polish/v3" ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,57 +16,155 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false 
+      fail-fast: false
       matrix:
-        branch: ["android12-5.10", "android13-5.10", "android13-5.15", "android14-5.15", "android14-6.1", "android15-6.6", "android16-6.12", "android17-6.18"]
+        branch:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+          - android17-6.18
     steps:
-    - uses: actions/checkout@v4
-      with:
-        lfs: true
-        
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        # 🚀 核心修复：加上 libdw-dev 和 libelf-dev
-        sudo apt-get install -y repo git build-essential bc bison flex libssl-dev libelf-dev libdw-dev clang lld llvm gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
-      
-    - name: Fetch Kernel Source
-      run: |
-        git clone https://android.googlesource.com/kernel/common -b ${{ matrix.branch }} --depth=1 common
-        cd common
-        make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-        make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
-        
-    - name: Compile KO
-      run: |
-        cd kernel/src
-        rm -f *.o *.ko *.mod* .*.cmd
-        make -C ../../common M=$PWD ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_MODPOST_WARN=1 modules
-        
-        llvm-strip --strip-debug temp_root.ko || aarch64-linux-gnu-strip --strip-debug temp_root.ko
-        mv temp_root.ko HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
-        
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: HUI_KO_${{ matrix.branch }}
-        path: kernel/src/HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y repo git build-essential bc bison flex \
+            libssl-dev libelf-dev libdw-dev clang lld llvm \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+      - name: Fetch Kernel Source
+        run: |
+          git clone https://android.googlesource.com/kernel/common \
+            -b ${{ matrix.branch }} --depth=1 common
+
+      - name: Configure Kernel
+        working-directory: common
+        run: |
+          make ARCH=arm64 LLVM=1 gki_defconfig
+
+      # ⚠️ 关键步骤，之前缺失：
+      #    modules_prepare 只生成头文件和脚本，**不生成 Module.symvers**。
+      #    没有 vmlinux.symvers，modpost 无法解析导出符号的 CRC，
+      #    编译出来的 .ko 里 __versions 全为 0x00000000，
+      #    insmod 时会报 "disagrees about version of symbol module_layout" 并失败。
+      #    必须完整编一次 vmlinux 才会产出 Module.symvers。
+      - name: Build vmlinux (generates Module.symvers)
+        working-directory: common
+        run: |
+          make ARCH=arm64 LLVM=1 -j$(nproc) vmlinux
+
+      - name: Compile KO
+        working-directory: kernel/src
+        run: |
+          rm -f *.o *.ko *.mod *.mod.c .*.cmd
+          make -C ../../common M="$PWD" ARCH=arm64 LLVM=1 modules
+
+          llvm-strip --strip-debug huijui_phantom.ko temp_root.ko \
+            || aarch64-linux-gnu-strip --strip-debug huijui_phantom.ko temp_root.ko
+
+          mv huijui_phantom.ko "HuiJuiPhantom_${{ matrix.branch }}_arm64.ko"
+
+      - name: Verify Module
+        working-directory: kernel/src
+        run: |
+          KO="HuiJuiPhantom_${{ matrix.branch }}_arm64.ko"
+          test -f "$KO" || { echo "::error::未产出 $KO"; exit 1; }
+          SIZE=$(stat -c %s "$KO")
+          echo "大小: $SIZE B"
+          [ "$SIZE" -gt 8000 ] || { echo "::error::文件过小，疑似空模块"; exit 1; }
+
+          # ELF 头必须是 AArch64
+          file "$KO" | grep -q 'ARM aarch64' || { echo "::error::不是 AArch64 ELF"; exit 1; }
+
+          # vermagic 必须和本 KMI 分支的内核版本主线一致
+          echo "--- vermagic ---"
+          strings "$KO" | grep -m1 'vermagic=' || { echo "::error::缺少 vermagic"; exit 1; }
+          EXPECT=$(echo "${{ matrix.branch }}" | sed -E 's/.*-([0-9]+\.[0-9]+)$/\1/')
+          strings "$KO" | grep -m1 'vermagic=' | grep -q "^vermagic=$EXPECT" \
+            || { echo "::error::vermagic 与分支 ${{ matrix.branch }} 不符"; exit 1; }
+
+          # modversions CRC 不能全为零（全零说明没拿到 Module.symvers）
+          if readelf -x __versions "$KO" >/dev/null 2>&1; then
+            ZEROS=$(readelf -x __versions "$KO" | grep -A999 '0x' | grep -oE '00000000 00000000 00000000 00000000' | wc -l)
+            echo "__versions 中疑似全零行: $ZEROS"
+          fi
+
+          echo "✅ 校验通过: $KO"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HUI_KO_${{ matrix.branch }}
+          path: kernel/src/HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
+          if-no-files-found: error
+
+  # 把编译产物直接回写进 App 的 assets，这样打完就是最新的 8 个 ko
+  sync-assets:
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: kos
+          merge-multiple: true
+
+      - name: Copy into app assets
+        run: |
+          cp -v kos/*.ko app/src/main/assets/exploit/
+          ls -l app/src/main/assets/exploit/*.ko
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/exploit/*.ko
+          if git diff --cached --quiet; then
+            echo "内核模块无变化，跳过提交"
+          else
+            git commit -m "chore(kernel): 云编译更新 8 个 KMI 内核模块 [skip ci]"
+            git push
+          fi
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: always() 
+    if: success()
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
-        merge-multiple: true
-        
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v1.0-build
-        name: "HUI 全版本内核模块"
-        body: "基于最新源码编译的全版本纯净版 .ko"
-        files: artifacts/*.ko
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ko-latest
+          name: "HUI 全版本内核模块（最新）"
+          body: |
+            基于最新源码编译的全 KMI 内核模块。
+
+            | KMI | 说明 |
+             |---|---|
+             | android12-5.10 | Android 12 / 5.10 |
+             | android13-5.10 | Android 13 / 5.10 |
+             | android13-5.15 | Android 13 / 5.15 |
+             | android14-5.15 | Android 14 / 5.15 |
+             | android14-6.1  | Android 14 / 6.1  |
+             | android15-6.6  | Android 15 / 6.6  |
+             | android16-6.12 | Android 16 / 6.12 |
+             | android17-6.18 | Android 17 / 6.18 |
+          files: artifacts/*.ko
+          make_latest: false
