@@ -22,22 +22,24 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        # 🚀 核心修复：加上 gcc 和 binutils 交叉编译工具链
         sudo apt-get install -y repo git build-essential bc bison flex libssl-dev libelf-dev clang lld llvm gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
       
     - name: Fetch Kernel Source
       run: |
         git clone https://android.googlesource.com/kernel/common -b ${{ matrix.branch }} --depth=1 common
         cd common
-        # 这里去掉了 LLVM=1，有些老版本内核用 LLVM=1 可能会找错汇编器，直接用 gcc 交叉编译更稳
         make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
         make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
         
     - name: Compile KO
       run: |
         cd kernel/src
-        make clean
+        # 🚀 修复：用 rm 暴力清理，替代报错的 make clean
+        rm -f *.o *.ko *.mod* .*.cmd
+        # 编译模块
         make -C ../../common M=$PWD ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_EXTRA_SYMBOLS=../../common/vmlinux.symvers modules
+        
+        # 剥离并重命名
         llvm-strip --strip-debug temp_root.ko || aarch64-linux-gnu-strip --strip-debug temp_root.ko
         mv temp_root.ko HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
         
