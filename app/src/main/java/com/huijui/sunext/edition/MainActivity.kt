@@ -4,6 +4,7 @@ import com.huijui.sunext.edition.core.ui.language.zakoString
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.compose.setContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -88,6 +89,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 必须在 super.onCreate 之前：SplashScreen 要在窗口创建前接管启动图，
+        // 并在首帧后把主题切回 postSplashScreenTheme（否则会一直停在启动主题上）
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
         com.huijui.sunext.edition.core.utils.HighRefreshRateHelper.enableMaxRefreshRate(this)
         AppSettings.init(this)
