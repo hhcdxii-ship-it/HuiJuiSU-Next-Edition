@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +35,22 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
     var modules by remember { mutableStateOf<List<String>>(emptyList()) }
     var isPerfMode by remember { mutableStateOf(false) }
     var currentGov by remember { mutableStateOf("schedutil") }
+    var kernelStatus by remember { mutableStateOf("") }
+
+    // 首次进入时从内核读**真实**配置。
+    // 之前这两个状态是写死的默认值（false / "schedutil"），
+    // 所以哪怕上次已经开了性能模式，重进控制台开关也显示成关闭 —— 状态与实际不符。
+    LaunchedEffect(Unit) {
+        val cfg = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { HuijuiModuleBridge.getCurrentConfig() }.getOrDefault("")
+        }
+        cfg.lineSequence().forEach { line ->
+            when {
+                line.startsWith("PERF_MODE:") -> isPerfMode = line.substringAfter(':').trim() == "1"
+                line.startsWith("GOVERNOR:") -> currentGov = line.substringAfter(':').trim()
+            }
+        }
+    }
 
     // 定时刷新日志。
     // 原来是无条件 3 秒轮询，每次两条 shell 往返 —— 屏幕开着就一直烧。
@@ -44,6 +61,8 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
         while (true) {
             kernelLogs = HuijuiModuleBridge.getKernelLogs()
             modules = HuijuiModuleBridge.getMountedModules()
+            // getKernelStatus 读的是 /proc/hui_status，之前定义了但没人调用
+            kernelStatus = runCatching { HuijuiModuleBridge.getKernelStatus() }.getOrDefault("").trim()
             kotlinx.coroutines.delay(5000)
         }
     }
@@ -70,6 +89,18 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 0. 内核自报状态（/proc/hui_status）
+            if (kernelStatus.isNotBlank()) {
+                ZakoText(
+                    kernelStatus,
+                    color = Color.White.copy(alpha = 0.45f),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             // 1. 性能调优区
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
