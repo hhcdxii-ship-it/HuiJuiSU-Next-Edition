@@ -167,10 +167,9 @@ object InstallIo {
     /**
      * 读取 .ko 里的 `vermagic=` 字串。
      *
-     * 为什么需要：仓库里那 8 个模块，有 7 个是**同一个二进制文件**换了名字
-     * （MD5 全为 aeb131ff…，vermagic 都是 `5.10.270-g15fd0b87ae8d`）。
-     * 也就是说只有 5.10 和 6.12 两档是真的，其余命名的分支根本 insmod 不进去。
-     * 与其让用户"刷入成功"后一脸疑惑，不如在刷之前就把这件事说清楚。
+     * 这是刷写前的最后一道闸：vermagic 的分支号对不上，`insmod` 必被内核拒绝，
+     * 而失败发生在**开机时**，用户只会看到"刷入成功"但状态一直"未工作"。
+     * 提前把模块的真实构建目标打出来，能把这种玄学问题一次说清。
      */
     fun readVermagic(context: Context, assetPath: String): String? = runCatching {
         context.assets.open(assetPath).use { input ->
@@ -179,11 +178,23 @@ object InstallIo {
         }
     }.getOrNull()
 
-    /** vermagic 的 x.y.z 与运行内核是否对得上（对不上 insmod 必被拒绝）。 */
+    /**
+     * vermagic 的**分支号**（x.y）与运行内核是否一致。
+     *
+     * 为什么不是比 x.y.z：GKI 模块的 vermagic 带的是**构建时**的补丁号与 git hash
+     * （例如 `6.1.177-g00ed7c2479b4`），而设备上跑的通常是同分支的另一个补丁号
+     * （`6.1.75-android14-...`）。按整串比会把 8 个正确的模块全部误判成不兼容。
+     * 真正决定能不能加载的是 KMI 分支：5.10 / 5.15 / 6.1 / 6.6 / 6.12 / 6.18。
+     */
     fun isCompatible(vermagic: String?, kernelRelease: String): Boolean {
-        if (vermagic.isNullOrBlank() || kernelRelease.isBlank()) return false
-        val version = Regex("""(\d+\.\d+\.\d+)""").find(vermagic)?.groupValues?.get(1) ?: return false
-        return kernelRelease.startsWith(version)
+        val moduleBranch = branchOf(vermagic) ?: return false
+        val kernelBranch = branchOf(kernelRelease) ?: return false
+        return moduleBranch == kernelBranch
+    }
+
+    private fun branchOf(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        return Regex("""(\d+)\.(\d+)""").find(raw)?.let { "${it.groupValues[1]}.${it.groupValues[2]}" }
     }
 
     fun availableKos(context: Context): List<String> =
