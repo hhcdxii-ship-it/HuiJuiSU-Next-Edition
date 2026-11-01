@@ -80,12 +80,25 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
                         Column {
                             ZakoText("当前防御等级", color = Color.White.copy(0.5f), fontSize = 12.sp)
                             Spacer(modifier = Modifier.height(8.dp))
-                            if (s.isHuiActive) ZakoText("Level 3 · 内核级隔离", color = AppSettings.accentColor.color, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                            else ZakoText("未启用 (HUI 内核未接管)", color = Color(0xFFFFC107), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            if (!s.huiActive) {
+                                ZakoText("未启用 (HUI 内核未接管)", color = Color(0xFFFFC107), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            } else if (s.allHidden) {
+                                ZakoText("Level 3 · 内核级隔离", color = AppSettings.accentColor.color, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                            } else {
+                                ZakoText("部分暴露", color = Color(0xFFEF4444), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
-                            StatusRow("敏感路径隔离 (/data/adb)", s.isPathHidden)
-                            StatusRow("挂载点命名空间隔离", s.isMountHidden)
-                            StatusRow("内核底层符号擦除", s.isKernelHidden)
+                            // 这几行是按「本进程能否看见」判定的，不是按 HUI 是否激活
+                            StatusRow("路径 /data/adb/huijui", s.pathVisible)
+                            StatusRow("设备节点 /dev/huijui", s.deviceVisible)
+                            StatusRow("挂载表痕迹", s.mountVisible)
+                            StatusRow("内核模块名", s.kernelVisible)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ZakoText(
+                                "以上从本应用(非 root)视角测量 —— 也就是其它普通应用能看到的范围",
+                                color = Color.White.copy(alpha = 0.35f),
+                                fontSize = 10.sp
+                            )
                         }
                     }
                 }
@@ -126,10 +139,26 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
     }
 }
 
+/**
+ * @param visible true = 本进程能看见它 = 没藏住；null = 无法判定
+ */
 @Composable
-private fun StatusRow(label: String, isOk: Boolean) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        ZakoText(label, color = Color.White.copy(0.7f), fontSize = 13.sp)
-        Icon(if (isOk) Icons.Default.CheckCircle else Icons.Default.Cancel, null, tint = if (isOk) Color(0xFF81C784) else Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+private fun StatusRow(label: String, visible: Boolean?) {
+    val (icon, tint, note) = when (visible) {
+        false -> Triple(Icons.Default.CheckCircle, Color(0xFF81C784), "已隔离")
+        true -> Triple(Icons.Default.Cancel, Color(0xFFEF4444), "暴露")
+        null -> Triple(Icons.Default.HelpOutline, Color(0xFF9E9E9E), "未知")
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ZakoText(label, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ZakoText(note, color = tint.copy(alpha = 0.85f), fontSize = 11.sp)
+            Spacer(Modifier.width(6.dp))
+            Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
+        }
     }
 }
