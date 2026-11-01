@@ -38,7 +38,11 @@ object PartitionBackupManager {
         
         val timestamp = timeFormat.format(Date())
         val backupPath = "$BACKUP_DIR/${cleanPartition}_${timestamp}.img"
-        val ddRes = HuijuiShell.exec("dd if='$devicePath' of='$backupPath' bs=1M 2>&1", timeoutMs = 60_000L)
+        // conv=fsync + sync：不落盘就拔电/重启，备份文件是半截的，恢复时直接写坏分区
+        val ddRes = HuijuiShell.exec(
+            "dd if='$devicePath' of='$backupPath' bs=1M conv=fsync 2>&1; sync",
+            timeoutMs = 120_000L
+        )
         if (!ddRes.isSuccess) {
             HuijuiShell.exec("rm -f '$backupPath'")
             return@withContext BackupResult(false, "", "dd 备份失败")
@@ -59,10 +63,16 @@ object PartitionBackupManager {
     suspend fun restorePartition(partition: String, backupPath: String): Boolean = withContext(Dispatchers.IO) {
         val cleanPartition = partition.trim().lowercase()
         if (cleanPartition !in RESTORE_ALLOWED || backupPath.isBlank()) return@withContext false
+
+        // 归属校验：文件名必须是 <partition>_…，防止把 boot 的备份恢复进 dtbo
+        val fileName = backupPath.substringAfterLast('/')
+        if (!fileName.startsWith("${cleanPartition}_")) return@withContext false
+
         val devicePath = resolvePartitionDevice(cleanPartition) ?: return@withContext false
-        val checkRes = HuijuiShell.exec("test -s '$backupPath' && echo ok || echo no")
-        if (!checkRes.out.joinToString("").contains("ok")) return@withContext false
-        HuijuiShell.exec("dd if='$backupPath' of='$devicePath' bs=1M 2>&1", timeoutMs = 60_000L).isSuccess
+
+        // 复用 InstallIo.writeImage：它会做容量校验、conv=fsync、sync、以及**全长**回读 MD5。
+        // 旧实现只有一句裸 dd，既没有容量校验也没有回读 —— 备份比分区大时会写坏相邻区域。
+        InstallIo.writeImage(backupPath, devicePath).ok
     }
 
     suspend fun listAllBackups(): Map<String, List<BackupInfo>> = withContext(Dispatchers.IO) {
@@ -97,9 +107,29 @@ object PartitionBackupManager {
         Unit
     }
 
+    /**
+     * 分区名 → 设备节点。
+     *
+     * A/B 设备上必须先试**当前槽位**：旧实现固定按 boot → boot_a → boot_b 找，
+     * 在 _b 槽上运行时会把 _a 当成目标 —— 备份备错槽、恢复写进另一个槽，
+     * 表现为「恢复成功但开机还是旧系统」。
+     */
     private suspend fun resolvePartitionDevice(partition: String): String? {
-        for (c in listOf("/dev/block/by-name/$partition", "/dev/block/by-name/${partition}_a", "/dev/block/by-name/${partition}_b")) {
-            if (HuijuiShell.exec("test -e '$c' && echo yes || echo no").out.joinToString("").contains("yes")) return c
+        val slot = runCatching {
+            HuijuiShell.exec("getprop ro.boot.slot_suffix").out.firstOrNull()?.trim().orEmpty()
+        }.getOrDefault("")
+
+        val candidates = buildList {
+            if (slot.isNotBlank()) add("/dev/block/by-name/$partition$slot")
+            add("/dev/block/by-name/$partition")
+            add("/dev/block/by-name/${partition}_a")
+            add("/dev/block/by-name/${partition}_b")
+        }.distinct()
+
+        for (c in candidates) {
+            if (HuijuiShell.exec("test -e '$c' && echo yes || echo no").out.joinToString("").contains("yes")) {
+                return c
+            }
         }
         return null
     }
