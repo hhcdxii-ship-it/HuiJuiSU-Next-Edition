@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.NearMe
@@ -127,7 +128,7 @@ fun SensorTestScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onBack() }
             ) {
-                Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
                 ZakoText("返回", color = Color.White, fontSize = 16.sp)
             }
 

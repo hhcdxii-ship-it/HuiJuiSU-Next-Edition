@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -99,7 +100,7 @@ fun AppManagerScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onBack() }
             ) {
-                Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
                 ZakoText("返回", color = Color.White, fontSize = 16.sp)
             }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -67,7 +68,7 @@ fun QuickActionScreen(onBack: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = HuijuiLayout.ScreenHorizontal)) {
             Spacer(modifier = Modifier.height(HuijuiLayout.DetailTopSpacer))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onBack() }) {
-                Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
                 ZakoText("返回", color = Color.White, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(16.dp))

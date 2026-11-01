@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
@@ -49,7 +50,7 @@ fun HuijuiConsoleScreen(onBack: () -> Unit) {
                 title = { ZakoText("HUI 内核控制台", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)

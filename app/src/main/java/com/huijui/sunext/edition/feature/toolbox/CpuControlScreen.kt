@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -82,7 +83,7 @@ fun CpuControlScreen(onBack: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Spacer(modifier = Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onBack() }) {
-                Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
                 ZakoText("返回", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
             }
             Spacer(modifier = Modifier.height(16.dp))

@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -477,7 +479,7 @@ private fun ModeConfigContent(
                 )
                 ChoiceCard(
                     selected = !selectedLauncher, accent = deepAccent,
-                    icon = Icons.Default.ViewList, title = "经典模式",
+                    icon = Icons.AutoMirrored.Filled.ViewList, title = "经典模式",
                     subtitle = "老板风 · 极简列表",
                     onClick = { selectedLauncher = false; AppSettings.defaultLauncherMode = false },
                     modifier = Modifier.weight(1f)
@@ -491,7 +493,7 @@ private fun ModeConfigContent(
                 modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(14.dp))
             ChoiceCard(selected = !selectedLauncher, accent = deepAccent,
-                icon = Icons.Default.ViewList, title = "经典模式",
+                icon = Icons.AutoMirrored.Filled.ViewList, title = "经典模式",
                 subtitle = "老板风 · 极简列表",
                 onClick = { selectedLauncher = false; AppSettings.defaultLauncherMode = false },
                 modifier = Modifier.fillMaxWidth())
@@ -956,7 +958,7 @@ private fun NextButton(enabled: Boolean, isLast: Boolean, accent: Color, onClick
         ZakoText(if (isLast) "进入控制台" else "下一步", color = textColor, fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
         Spacer(modifier = Modifier.width(6.dp))
-        Icon(if (isLast) Icons.Default.RocketLaunch else Icons.Default.ArrowForward,
+        Icon(if (isLast) Icons.Default.RocketLaunch else Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
     }
 }
