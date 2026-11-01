@@ -1,5 +1,8 @@
 package com.huijui.sunext.edition.feature.settings
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -62,6 +65,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showResetDialog by remember { mutableStateOf(false) }
+    // 崩溃日志：CrashHandler 一直在往 filesDir 写，但从来没有入口能看到
+    var crashLog by remember { mutableStateOf<String?>(null) }
     var isResetting by remember { mutableStateOf(false) }
     val accent = AppSettings.accentColor.color
 
@@ -245,6 +250,22 @@ fun SettingsScreen(
             )
         }
 
+        // ── 诊断 ────────────────────────────────────────────────────
+        item { SectionLabel("诊断", modifier = Modifier.padding(top = HuiSpace.m)) }
+        item {
+            SettingsRow(
+                icon = Icons.Default.BugReport,
+                title = "崩溃日志",
+                subtitle = "查看最近一次崩溃的堆栈",
+                onClick = {
+                    crashLog = runCatching {
+                        val f = java.io.File(context.filesDir, "hui_crash.log")
+                        if (f.exists()) f.readText().takeLast(8000) else ""
+                    }.getOrDefault("")
+                }
+            )
+        }
+
         // ── 关于 ────────────────────────────────────────────────────
         item { SectionLabel("关于", modifier = Modifier.padding(top = HuiSpace.m)) }
         item {
@@ -277,6 +298,51 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    crashLog?.let { log ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { crashLog = null },
+            title = { ZakoText("崩溃日志", color = Color.White) },
+            text = {
+                if (log.isBlank()) {
+                    ZakoText("还没有崩溃记录，挺好。", color = Color.White.huiSecondary)
+                } else {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier.heightIn(max = 380.dp)
+                    ) {
+                        androidx.compose.foundation.rememberScrollState().let { scroll ->
+                            androidx.compose.foundation.layout.Column(
+                                modifier = Modifier.verticalScroll(scroll)
+                            ) {
+                                ZakoText(
+                                    log,
+                                    color = Color.White.huiSecondary,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    runCatching {
+                        java.io.File(context.filesDir, "hui_crash.log").delete()
+                    }
+                    crashLog = null
+                }) {
+                    ZakoText("清除记录", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { crashLog = null }) {
+                    ZakoText("关闭", color = Color.White.huiSecondary)
+                }
+            },
+            containerColor = Color(0xFF1C1C21)
+        )
     }
 
     if (showResetDialog) {
