@@ -15,7 +15,20 @@ data class InstalledModule(
 )
 
 object ModuleManager {
-    private val MODULE_DIRS = listOf("/data/adb/modules", "/data/adb/ksu/modules", "/data/adb/ap/modules")
+    /**
+     * 模块目录。
+     *
+     * ⚠️ 以前漏了 HUI 自己的私有目录 `/data/adb/huijuisu/modules` ——
+     * 纯血模式下用本管理器装进去的模块，列表里根本看不到（但 ModuleEngine 和
+     * HuijuiModuleUninstaller 里又都写着这个路径，三处实现各说各话）。
+     * HUI 目录放最前面：纯血环境应当优先展示自家模块。
+     */
+    private val MODULE_DIRS = listOf(
+        "/data/adb/huijuisu/modules",
+        "/data/adb/modules",
+        "/data/adb/ksu/modules",
+        "/data/adb/ap/modules"
+    )
 
     suspend fun scanModules(): List<InstalledModule> = withContext(Dispatchers.IO) {
         // 🚀 优先走 KSU 官方 JSON
@@ -87,7 +100,9 @@ object ModuleManager {
             val exists = HuijuiShell.exec("test -d $path && echo yes || echo no").out.joinToString("").contains("yes")
             if (exists) {
                 val cmd = if (enable) "rm -f $path/disable" else "touch $path/disable"
-                return@withContext HuijuiShell.exec(cmd).isSuccess
+                val ok = HuijuiShell.exec(cmd).isSuccess
+                if (ok) reloadModules()
+                return@withContext ok
             }
         }
         false
@@ -104,10 +119,17 @@ object ModuleManager {
             val path = "$dir/$moduleId"
             val exists = HuijuiShell.exec("test -d $path && echo yes || echo no").out.joinToString("").contains("yes")
             if (exists) {
-                return@withContext HuijuiShell.exec("touch $path/remove").isSuccess
+                val ok = HuijuiShell.exec("touch $path/remove").isSuccess
+                if (ok) reloadModules()
+                return@withContext ok
             }
         }
         false
+    }
+
+    /** 通知内核按需重载模块挂载表（HUI 私有接口；不存在时静默忽略）。 */
+    private suspend fun reloadModules() {
+        HuijuiShell.exec("echo 'RELOAD_MODULES' > /proc/hui_config 2>/dev/null")
     }
 
     // 🚀 占位安全接口：底层不处理安装，留给纯血 UI 层去处理
