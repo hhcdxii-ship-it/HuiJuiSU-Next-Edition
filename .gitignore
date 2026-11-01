@@ -40,3 +40,4 @@ Run
 *.o
 *.a
 *.so
+local.properties

@@ -8,13 +8,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 enum class MaterialStyle { GLASS, SOLID, NONE }
 enum class AnimationStyle { SPRING, SMOOTH, NONE }
 enum class WallpaperType { VIDEO, IMAGE, NONE }
-enum class WallpaperScaleMode { 
+enum class WallpaperScaleMode {
     FIT,     // 适应（完整显示，可能有黑边）
     FILL,    // 拉伸（铺满全屏，可能会变形）
     ZOOM     // 裁切（填满全屏，裁切边缘）
@@ -29,7 +33,12 @@ enum class AccentColor(val color: Color, val displayName: String) {
 object AppSettings {
     private const val PREF_NAME = "huijui_next_prefs"
     private lateinit var prefs: SharedPreferences
-    private val saveScope = CoroutineScope(Dispatchers.IO)
+
+    // SupervisorJob：以前任何一个写入协程抛异常，都会把整个 saveScope 连带取消，
+    // 之后所有设置保存静默失效（重启 App 才发现全丢了）。
+    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val saveMutex = Mutex()
+    private var saveJob: Job? = null
 
     var isXiaomiDevice by mutableStateOf(false); private set
     var isHyperOs by mutableStateOf(false); private set
@@ -66,8 +75,6 @@ object AppSettings {
 
     var systemMonitorEnabled by mutableStateOf(false)
     var rootAuditEnabled by mutableStateOf(false)
-
-    private val isSaving = AtomicBoolean(false)
 
     fun init(context: Context) {
         if (isInitialized) return
@@ -109,42 +116,58 @@ object AppSettings {
         isInitialized = true
     }
 
-    // 🚀 核心优化：异步保存，并且合并连续的 save 请求
+    /**
+     * 异步保存。
+     *
+     * ⚠️ 旧实现是这么写的：
+     * ```
+     * if (isSaving.getAndSet(true)) return   // 并发时直接丢弃这次保存
+     * ```
+     * 也就是说「正在写」的那一瞬间进来的保存请求会被**静默丢掉**。
+     * 而它内部的 prefs.edit() 是在协程里读字段的 —— 读写时序一旦错开，
+     * 用户刚改的那一项就没写进磁盘。典型症状：设置改完，杀进程再进，值又变回去了。
+     *
+     * 现在改成「防抖 + 互斥 + 每次都写整快照」：
+     *   - 60ms 内的连续调用合并成一次（拖动滑杆不会打爆磁盘）；
+     *   - 永远以最新字段值写一份完整快照，后写覆盖前写，不会丢；
+     *   - 用 SupervisorJob，单次写失败不会把整个保存通道废掉。
+     */
     fun save() {
         if (!::prefs.isInitialized) return
-        if (isSaving.getAndSet(true)) return // 防止并发写入
-        saveScope.launch {
-            try {
-                prefs.edit().apply {
-                    putBoolean("check_manager", isCheckManagerUpdateEnabled)
-                    putString("current_language", currentLanguage)
-                    putBoolean("launcher_landscape", isLauncherLandscape)
-                    putBoolean("check_module", isCheckModuleUpdateEnabled)
-                    putBoolean("hide_selinux", isHideSelinuxEnabled)
-                    putBoolean("hide_root", isHideRootEnabled)
-                    putBoolean("anti_root_loss", isAntiRootLossEnabled)
-                    putBoolean("anti_dev_options", isAntiDevOptionsEnabled)
-                    putBoolean("anti_wallpaper_reset", isAntiWallpaperResetEnabled)
-                    putString("material_style", materialStyle.name)
-                    putString("animation_style", animationStyle.name)
-                    putString("wallpaper_type", wallpaperType.name)
-                    putString("wallpaper_scale_mode", wallpaperScaleMode.name)
-                    putFloat("card_corner_radius", cardCornerRadius)
-                    putString("accent_color", accentColor.name)
-                    putFloat("wallpaper_dim", wallpaperDimAlpha)
-                    putFloat("anim_speed", animationSpeedScale)
-                    putString("custom_video", customVideoPath)
-                    putString("custom_image", customImagePath)
-                    putStringSet("granted_apps", grantedApps)
-                    putBoolean("onboarding_completed", onboardingCompleted)
-                    putBoolean("default_launcher_mode", defaultLauncherMode)
-                    putBoolean("system_monitor_enabled", systemMonitorEnabled)
-                    putBoolean("root_audit_enabled", rootAuditEnabled)
-                    apply()
-                }
-            } finally {
-                isSaving.set(false)
-            }
+        saveJob?.cancel()
+        saveJob = saveScope.launch {
+            delay(60)
+            saveMutex.withLock { writeSnapshot() }
+        }
+    }
+
+    private fun writeSnapshot() {
+        prefs.edit().apply {
+            putBoolean("check_manager", isCheckManagerUpdateEnabled)
+            putString("current_language", currentLanguage)
+            putBoolean("launcher_landscape", isLauncherLandscape)
+            putBoolean("check_module", isCheckModuleUpdateEnabled)
+            putBoolean("hide_selinux", isHideSelinuxEnabled)
+            putBoolean("hide_root", isHideRootEnabled)
+            putBoolean("anti_root_loss", isAntiRootLossEnabled)
+            putBoolean("anti_dev_options", isAntiDevOptionsEnabled)
+            putBoolean("anti_wallpaper_reset", isAntiWallpaperResetEnabled)
+            putString("material_style", materialStyle.name)
+            putString("animation_style", animationStyle.name)
+            putString("wallpaper_type", wallpaperType.name)
+            putString("wallpaper_scale_mode", wallpaperScaleMode.name)
+            putFloat("card_corner_radius", cardCornerRadius)
+            putString("accent_color", accentColor.name)
+            putFloat("wallpaper_dim", wallpaperDimAlpha)
+            putFloat("anim_speed", animationSpeedScale)
+            putString("custom_video", customVideoPath)
+            putString("custom_image", customImagePath)
+            putStringSet("granted_apps", grantedApps)
+            putBoolean("onboarding_completed", onboardingCompleted)
+            putBoolean("default_launcher_mode", defaultLauncherMode)
+            putBoolean("system_monitor_enabled", systemMonitorEnabled)
+            putBoolean("root_audit_enabled", rootAuditEnabled)
+            apply()
         }
     }
 

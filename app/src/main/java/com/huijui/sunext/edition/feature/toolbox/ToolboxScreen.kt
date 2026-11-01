@@ -1,35 +1,63 @@
 package com.huijui.sunext.edition.feature.toolbox
 
+import android.os.Build
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huijui.sunext.edition.core.root.*
 import com.huijui.sunext.edition.core.ui.component.GlassCard
+import com.huijui.sunext.edition.core.ui.component.rememberIsLifecycleStarted
+import com.huijui.sunext.edition.core.ui.component.rememberPausableInfiniteTransition
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.utils.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,13 +68,20 @@ data class DeviceInfo(
     val fingerprint: String = "未知", val selinux: String = "Unknown"
 )
 
-enum class ManagerState(val title: String, val color: Color) {
-    NOT_WORKING("未工作", Color(0xFFEF4444)),
-    WORKING_HUIJUI("独立", Color(0xFF81C784)),
-    WORKING_ULTRA("兼容 (基于BakaSU)", Color(0xFF00E5FF)),
-    WORKING_COMPAT("兼容", Color(0xFFFFC107))
-}
-
+/**
+ * 主页。
+ *
+ * 相比旧版的改动（每一条都是能看见的问题）：
+ *   1. **不再有全屏转圈**。旧版 `isLoading` 一置 true 就把整页换成 CircularProgressIndicator，
+ *      点一下刷新按钮整页闪一下白 —— 现在只在卡片角上转一个小圈，内容永远在场。
+ *   2. **状态卡是唯一视觉焦点**。旧版有三张同样权重的全宽卡（状态卡 + 刷入卡 + 重载卡），
+ *      用户根本不知道该看哪。现在改成「一张 hero 卡 + 2×2 快捷入口」。
+ *   3. **状态切换有连续过渡**。旧版直接 `managerTitle = ...` 硬切；现在底色、光晕、
+ *      文案共用同一条颜色插值链，dot 在工作状态下才呼吸。
+ *   4. **状态不再三重探测**。旧版一次刷新里既跑 RootManagerDetector 又跑 isRooted()，
+ *      外层还套 5s 超时（经常超时后显示旧状态）。现在统一走 RootStatusRepository。
+ *   5. 修掉了状态栏 padding 加两次导致顶部空白过高、以及底部 100dp + 120dp 双重留白。
+ */
 @Composable
 fun ToolboxScreen(
     onNavigateToFlash: () -> Unit,
@@ -54,212 +89,149 @@ fun ToolboxScreen(
     onNavigateToModule: () -> Unit,
     onNavigateToHotInstall: () -> Unit
 ) {
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+
+    val status by RootStatusRepository.status.collectAsState()
+    val isRefreshing by RootStatusRepository.isRefreshing.collectAsState()
 
     var deviceInfo by remember { mutableStateOf(DeviceInfo()) }
-    var managerState by remember { mutableStateOf(ManagerState.NOT_WORKING) }
-    var detectedManager by remember { mutableStateOf<RootManager?>(null) }
-    var managerTitle by remember { mutableStateOf("未获取权限") }
-    var showTempRootDialog by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-
     var currentTime by remember { mutableStateOf("") }
+    var showTempRootDialog by remember { mutableStateOf(false) }
+    var ghostChecked by remember { mutableStateOf(false) }
+
+    // ── 时钟：只在分钟变化时重组，不再每 10 秒无脑刷一次 ───────────────
     LaunchedEffect(Unit) {
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-        while (true) { currentTime = sdf.format(Date()); delay(10000) }
-    }
-
-    LaunchedEffect(refreshTrigger) {
-        isLoading = true
-        try {
-            val result = withTimeoutOrNull(5000L) { // 🚀 加大超时时间
-                withContext(Dispatchers.IO) {
-                    try { HuijuiShell.exec("su -c id", useCache = false, timeoutMs = 2000L) } catch (_: Exception) {}
-                    val detected = RootManagerDetector.detect(forceRefresh = false)
-                    val isRooted = HuijuiShell.isRooted()
-                    
-                    val (bootState, chunqiu) = getBootAndChunqiu(context)
-
-                    return@withContext Triple(detected, isRooted, Pair(bootState, chunqiu))
-                }
+        var last = ""
+        while (true) {
+            val now = sdf.format(Date())
+            if (now != last) {
+                last = now
+                currentTime = now
             }
-
-            if (result != null) {
-                val (detected, isRooted, envCheck) = result
-                val (bootState, chunqiu) = envCheck
-                withContext(Dispatchers.Main) {
-                    detectedManager = detected
-                    deviceInfo = DeviceInfo(
-                        brand = android.os.Build.MANUFACTURER ?: "未知",
-                        model = android.os.Build.MODEL ?: "未知",
-                        androidVer = android.os.Build.VERSION.RELEASE ?: "未知",
-                        kernelVer = System.getProperty("os.version") ?: "未知",
-                        fingerprint = android.os.Build.FINGERPRINT ?: "未知"
-                    )
-                    managerState = when {
-                        !isRooted -> ManagerState.NOT_WORKING
-                        detected == RootManager.HUIJUI -> ManagerState.WORKING_HUIJUI
-                        detected == RootManager.HUIJUI_ULTRA -> ManagerState.WORKING_ULTRA
-                        else -> ManagerState.WORKING_COMPAT
-                    }
-                    managerTitle = when (managerState) {
-                        ManagerState.WORKING_HUIJUI -> "工作中 (HUI)"
-                        ManagerState.WORKING_ULTRA -> "工作中 (HUI-Ultra)"
-                        ManagerState.WORKING_COMPAT -> "工作中 (${detected?.shortName ?: "未知"} 兼容)"
-                        ManagerState.NOT_WORKING -> "未工作"
-                    }
-
-                    if (!isRooted) {
-                        val isTrulyCleanLocked =
-                            bootState.isBootloaderLocked &&
-                            !bootState.isProbablyRootedEnv &&
-                            !bootState.isSuspicious &&
-                            !chunqiu.isSuspicious &&
-                            !chunqiu.isDefinitelyRooted &&
-                            chunqiu.reasons.isEmpty()
-
-                        if (isTrulyCleanLocked) {
-                            showTempRootDialog = true
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // 忽略异常
-        } finally {
-            isLoading = false
+            delay(5_000)
         }
     }
+
+    // ── 设备信息：一次 IO，别在每次刷新里重建 ──────────────────────────
+    LaunchedEffect(Unit) {
+        deviceInfo = withContext(Dispatchers.IO) {
+            DeviceInfo(
+                brand = Build.MANUFACTURER ?: "未知",
+                model = Build.MODEL ?: "未知",
+                androidVer = Build.VERSION.RELEASE ?: "未知",
+                kernelVer = System.getProperty("os.version") ?: "未知",
+                fingerprint = Build.FINGERPRINT ?: "未知"
+            )
+        }
+    }
+
+    // ── 状态轮询：只在前台跑。切后台立刻停，回来立刻补一次 ────────────
+    val started = rememberIsLifecycleStarted()
+    LaunchedEffect(started) {
+        if (!started) return@LaunchedEffect
+        RootStatusRepository.refresh(force = true)
+        while (true) {
+            delay(5_000)
+            RootStatusRepository.refresh()
+        }
+    }
+
+    // ── 幽灵模式：只在「确实没 Root」且还没问过的时候探一次环境 ────────
+    LaunchedEffect(status) {
+        if (status is HuiRootStatus.NotRooted && !ghostChecked) {
+            ghostChecked = true
+            val clean = withContext(Dispatchers.IO) {
+                runCatching {
+                    val (boot, chunqiu) = getBootAndChunqiu(context)
+                    boot.isBootloaderLocked &&
+                        !boot.isProbablyRootedEnv &&
+                        !boot.isSuspicious &&
+                        !chunqiu.isSuspicious &&
+                        !chunqiu.isDefinitelyRooted &&
+                        chunqiu.reasons.isEmpty()
+                }.getOrDefault(false)
+            }
+            if (clean) showTempRootDialog = true
+        }
+    }
+
+    val isWorking = status.isWorking
+    val accent = AppSettings.accentColor.color
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AppSettings.accentColor.color)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item(span = { GridItemSpan(2) }) {
+                HeaderRow(
+                    currentTime = currentTime,
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scope.launch { RootStatusRepository.refresh(force = true) }
+                    }
+                )
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(top = 24.dp, bottom = 120.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item(span = { GridItemSpan(2) }) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                        Column {
-                            ZakoText("SYSTEM TIME", color = Color.White.copy(0.5f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 3.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // 🚀 极致美学时钟：渐变色 + 发光阴影 + 适中字重
-                            Text(
-                                text = currentTime,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                                        colors = listOf(Color.White, Color(0xFFE0E0E0), Color.White.copy(alpha = 0.7f))
-                                    ),
-                                    fontSize = 76.sp,
-                                    fontWeight = FontWeight.Light,
-                                    fontFamily = FontFamily.Monospace,
-                                    letterSpacing = 2.sp,
-                                    shadow = androidx.compose.ui.graphics.Shadow(
-                                        color = AppSettings.accentColor.color.copy(alpha = 0.5f),
-                                        offset = androidx.compose.ui.geometry.Offset(0f, 8f),
-                                        blurRadius = 24f
-                                    )
-                                )
-                            )
-                        }
-                        IconButton(onClick = {
-                            if (!isLoading) {
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                refreshTrigger++
-                            }
-                        }) { Icon(Icons.Default.Refresh, "刷新", tint = Color.White.copy(0.5f)) }
-                    }
-                }
 
-                item(span = { GridItemSpan(2) }) {
-                    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = {
-                        if (managerState == ManagerState.WORKING_HUIJUI) onNavigateToFlash() else onNavigateToOverride()
-                    }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(56.dp).background(managerState.color.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Shield, null, tint = managerState.color, modifier = Modifier.size(28.dp))
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                ZakoText("ROOT STATUS", color = Color.White.copy(0.5f), fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                ZakoText(managerTitle, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                ZakoText(managerState.title, color = managerState.color, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                            }
-                            Text("${AppSettings.grantedApps.size}", color = managerState.color, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+            item(span = { GridItemSpan(2) }) {
+                HeroStatusCard(
+                    status = status,
+                    grantedCount = AppSettings.grantedApps.size,
+                    onClick = { if (isWorking) onNavigateToFlash() else onNavigateToOverride() }
+                )
+            }
 
-                item(span = { GridItemSpan(2) }) {
-                    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = {
-                        if (managerState == ManagerState.WORKING_HUIJUI) onNavigateToFlash() else onNavigateToOverride()
-                    }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.SystemUpdate, null, tint = AppSettings.accentColor.color, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            ZakoText(if (managerState == ManagerState.WORKING_HUIJUI) "刷入镜像" else "底层重载", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+            item {
+                QuickActionCard(
+                    icon = Icons.Default.SystemUpdate,
+                    title = if (isWorking) "刷入镜像" else "底层重载",
+                    tint = accent,
+                    onClick = if (isWorking) onNavigateToFlash else onNavigateToOverride
+                )
+            }
+            item {
+                QuickActionCard(
+                    icon = Icons.Default.Terminal,
+                    title = "接管底层",
+                    tint = Color(0xFFFF2A85),
+                    onClick = onNavigateToHotInstall
+                )
+            }
+            item {
+                QuickActionCard(
+                    icon = Icons.Default.Extension,
+                    title = "模块挂载",
+                    tint = Color(0xFF8B5CF6),
+                    onClick = onNavigateToModule
+                )
+            }
+            item {
+                QuickActionCard(
+                    icon = Icons.Default.Memory,
+                    title = "内核接管",
+                    tint = Color(0xFF4FC3F7),
+                    onClick = onNavigateToOverride
+                )
+            }
 
-                item {
-                    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onNavigateToModule) {
-                        Column {
-                            Icon(Icons.Default.Extension, null, tint = Color(0xFF8B5CF6), modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ZakoText("模块挂载", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-                item {
-                    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onNavigateToHotInstall) {
-                        Column {
-                            Icon(Icons.Default.Terminal, null, tint = Color(0xFFFF2A85), modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ZakoText("接管底层", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-
-                item(span = { GridItemSpan(2) }) {
-                    var expanded by remember { mutableStateOf(false) }
-                    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { expanded = !expanded }) {
-                        Column {
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                ZakoText("系统与设备信息", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = Color.White.copy(0.5f))
-                            }
-                            if (expanded) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                DeviceInfoRow("设备型号", "${deviceInfo.brand} ${deviceInfo.model}")
-                                DeviceInfoRow("系统版本", "Android ${deviceInfo.androidVer}")
-                                DeviceInfoRow("内核版本", deviceInfo.kernelVer)
-                                DeviceInfoRow("系统指纹", deviceInfo.fingerprint)
-                            }
-                        }
-                    }
-                }
+            item(span = { GridItemSpan(2) }) {
+                DeviceInfoCard(deviceInfo)
             }
         }
     }
 
-    // 🚀 幽灵模式弹窗
     if (showTempRootDialog) {
         var isExploiting by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { if (!isExploiting) showTempRootDialog = false },
-            title = { ZakoText("幽灵模式 👻", color = AppSettings.accentColor.color, fontWeight = FontWeight.Bold) },
+            title = { ZakoText("幽灵模式 👻", color = accent, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     ZakoText(
@@ -268,11 +240,14 @@ fun ToolboxScreen(
                     )
                     if (isExploiting) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        CircularProgressIndicator(color = AppSettings.accentColor.color)
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = accent
+                        )
                     }
                 }
             },
-            containerColor = Color(0xFF2C2C2C),
+            containerColor = Color(0xFF1C1C21),
             confirmButton = {
                 if (!isExploiting) {
                     TextButton(onClick = {
@@ -281,19 +256,18 @@ fun ToolboxScreen(
                             val success = ExploitManager.runGhostMode(context) { log ->
                                 android.util.Log.d("GhostMode", log)
                             }
-                            withContext(Dispatchers.Main) {
-                                isExploiting = false
-                                showTempRootDialog = false
-                                if (success) {
-                                    Toast.makeText(context, "幽灵模式已开启！重启后失效哦！", Toast.LENGTH_LONG).show()
-                                    refreshTrigger++
-                                } else {
-                                    Toast.makeText(context, "漏洞执行失败，请查看日志或联系开发者。", Toast.LENGTH_LONG).show()
-                                }
+                            isExploiting = false
+                            showTempRootDialog = false
+                            if (success) {
+                                Toast.makeText(context, "幽灵模式已开启！重启后失效哦！", Toast.LENGTH_LONG).show()
+                                RootStatusRepository.invalidate()
+                                RootStatusRepository.refresh(force = true)
+                            } else {
+                                Toast.makeText(context, "漏洞执行失败，请查看日志或联系开发者。", Toast.LENGTH_LONG).show()
                             }
                         }
                     }) {
-                        ZakoText("领取体验卡", color = AppSettings.accentColor.color, fontWeight = FontWeight.Bold)
+                        ZakoText("领取体验卡", color = accent, fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -308,29 +282,347 @@ fun ToolboxScreen(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// 头部：时钟 + 刷新
+// ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun HeaderRow(
+    currentTime: String,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Column {
+            ZakoText(
+                "SYSTEM TIME",
+                color = Color.White.copy(0.45f),
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 3.sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = currentTime.ifEmpty { "--:--" },
+                style = TextStyle(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color.White, Color(0xFFE2E2E6), Color.White.copy(alpha = 0.65f))
+                    ),
+                    fontSize = 68.sp,
+                    fontWeight = FontWeight.Light,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp,
+                    shadow = Shadow(
+                        color = AppSettings.accentColor.color.copy(alpha = 0.45f),
+                        offset = Offset(0f, 8f),
+                        blurRadius = 22f
+                    )
+                )
+            )
+        }
+
+        Box(
+            modifier = Modifier.size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isRefreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                    color = AppSettings.accentColor.color
+                )
+            } else {
+                IconButton(onClick = onRefresh) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "刷新",
+                        tint = Color.White.copy(0.55f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Hero 状态卡
+// ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun HeroStatusCard(
+    status: HuiRootStatus,
+    grantedCount: Int,
+    onClick: () -> Unit
+) {
+    val target = statusColor(status)
+    val color by animateColorAsState(
+        targetValue = target,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "heroStatusColor"
+    )
+    val title = statusTitle(status)
+    val isWorking = status.isWorking
+
+    val transition = rememberPausableInfiniteTransition("heroPulse")
+    val pulse by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "heroPulse"
+    )
+    val breath = if (isWorking) pulse else 0f
+
+    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // 右上角光晕：状态色的"呼吸"，是整张卡最贵的一笔质感
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val radius = size.maxDimension * 0.92f
+                val center = Offset(size.width * 0.86f, size.height * 0.10f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            color.copy(alpha = 0.10f + 0.18f * breath),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = radius
+                    ),
+                    radius = radius,
+                    center = center
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(color.copy(alpha = 0.14f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Shield, null, tint = color, modifier = Modifier.size(26.dp))
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        StatusDot(color = color, breath = breath, active = isWorking)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        ZakoText(
+                            "ROOT STATUS",
+                            color = Color.White.copy(0.45f),
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    AnimatedContent(
+                        targetState = title,
+                        transitionSpec = {
+                            (fadeIn(tween(260)) + scaleIn(initialScale = 0.94f)) togetherWith fadeOut(tween(140))
+                        },
+                        label = "heroTitle"
+                    ) { text ->
+                        ZakoText(
+                            text,
+                            color = Color.White,
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
+                    ZakoText(
+                        subtitled(status),
+                        color = color,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    ZakoText("授权", color = Color.White.copy(0.4f), fontSize = 10.sp)
+                    Text(
+                        text = grantedCount.toString(),
+                        color = color,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusDot(color: Color, breath: Float, active: Boolean) {
+    Box(contentAlignment = Alignment.Center) {
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .graphicsLayer {
+                        scaleX = 0.72f + breath * 0.46f
+                        scaleY = 0.72f + breath * 0.46f
+                        alpha = 0.34f - breath * 0.22f
+                    }
+                    .background(color, CircleShape)
+            )
+        }
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 快捷入口
+// ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun QuickActionCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+        Column {
+            Box(
+                modifier = Modifier.size(38.dp).background(tint.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            ZakoText(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 设备信息
+// ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun DeviceInfoCard(deviceInfo: DeviceInfo) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val arrow by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "deviceArrow"
+    )
+
+    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { expanded = !expanded }) {
+        Column {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                ZakoText(
+                    "系统与设备信息",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    Icons.Default.ExpandMore,
+                    null,
+                    tint = Color.White.copy(0.5f),
+                    modifier = Modifier.rotate(arrow)
+                )
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(animationSpec = tween(260)) + fadeIn(tween(220)),
+                exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(tween(140))
+            ) {
+                Column(modifier = Modifier.padding(top = 10.dp)) {
+                    DeviceInfoRow("设备型号", "${deviceInfo.brand} ${deviceInfo.model}")
+                    DeviceInfoRow("系统版本", "Android ${deviceInfo.androidVer}")
+                    DeviceInfoRow("内核版本", deviceInfo.kernelVer)
+                    DeviceInfoRow("系统指纹", deviceInfo.fingerprint)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun DeviceInfoRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        ZakoText(label, color = Color.White.copy(0.5f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-        ZakoText(value, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        ZakoText(label, color = Color.White.copy(0.45f), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        ZakoText(
+            value,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f).padding(start = 16.dp)
+        )
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 状态映射
+// ─────────────────────────────────────────────────────────────────────
+
+private fun statusColor(status: HuiRootStatus): Color = when (status) {
+    HuiRootStatus.Unknown -> Color(0xFF8E8E96)
+    HuiRootStatus.NotRooted -> Color(0xFFEF4444)
+    is HuiRootStatus.Working -> when (status.manager) {
+        RootManager.HUIJUI -> Color(0xFF81C784)
+        RootManager.HUIJUI_ULTRA -> Color(0xFF00E5FF)
+        else -> Color(0xFFFFC107)
+    }
+}
+
+private fun statusTitle(status: HuiRootStatus): String = when (status) {
+    HuiRootStatus.Unknown -> "检测中..."
+    HuiRootStatus.NotRooted -> "未工作"
+    is HuiRootStatus.Working -> when (status.manager) {
+        RootManager.HUIJUI -> "工作中 (HUI)"
+        RootManager.HUIJUI_ULTRA -> "工作中 (HUI-Ultra)"
+        else -> "工作中 (${status.manager.shortName} 兼容)"
+    }
+}
+
+private fun subtitled(status: HuiRootStatus): String = when (status) {
+    HuiRootStatus.Unknown -> "正在探测底层引擎"
+    HuiRootStatus.NotRooted -> "引擎未唤醒 · 点此重新接管"
+    is HuiRootStatus.Working -> status.detail
 }
 
 // 简单的内存缓存
 private var lastBootState: BootloaderDetector.BootState? = null
 private var lastChunqiuResult: ChunqiuDetector.DetectionResult? = null
 private var lastCheckTime = 0L
-private const val CHECK_CACHE_TTL = 30_000L // 30秒内不重复检测
+private const val CHECK_CACHE_TTL = 30_000L
 
 suspend fun getBootAndChunqiu(context: android.content.Context): Pair<BootloaderDetector.BootState, ChunqiuDetector.DetectionResult> {
     val now = System.currentTimeMillis()
-    if (lastBootState != null && lastChunqiuResult != null && now - lastCheckTime < CHECK_CACHE_TTL) {
-        return Pair(lastBootState!!, lastChunqiuResult!!)
+    val boot = lastBootState
+    val chunqiu = lastChunqiuResult
+    if (boot != null && chunqiu != null && now - lastCheckTime < CHECK_CACHE_TTL) {
+        return Pair(boot, chunqiu)
     }
-    val boot = BootloaderDetector.detectBootState()
-    val chunqiu = ChunqiuDetector.comprehensiveCheck(context)
-    lastBootState = boot
-    lastChunqiuResult = chunqiu
+    val newBoot = BootloaderDetector.detectBootState()
+    val newChunqiu = ChunqiuDetector.comprehensiveCheck(context)
+    lastBootState = newBoot
+    lastChunqiuResult = newChunqiu
     lastCheckTime = now
-    return Pair(boot, chunqiu)
+    return Pair(newBoot, newChunqiu)
 }
