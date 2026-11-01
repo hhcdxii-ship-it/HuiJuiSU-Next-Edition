@@ -373,7 +373,8 @@ private suspend fun detectPartition(context: android.content.Context, item: Pend
         val localFile = File(cacheDir, item.fileName)
         context.contentResolver.openInputStream(item.uri)?.use { input -> localFile.outputStream().use { output -> input.copyTo(output) } }
         val abis = android.os.Build.SUPPORTED_ABIS
-        val daemonName = if (android.os.Build.VERSION.RELEASE.toIntOrNull() ?: 0 >= 14) "hsud" else "hud"
+        // 括号必须加：?: 的优先级低于 >=，不写括号容易被读成 `x ?: (0 >= 14)`
+        val daemonName = if ((android.os.Build.VERSION.RELEASE.toIntOrNull() ?: 0) >= 14) "hsud" else "hud"
         val daemonPath = File(context.cacheDir, daemonName)
         if (!daemonPath.exists()) {
             try { context.assets.open("exploit/$daemonName").use { input -> daemonPath.outputStream().use { it2 -> input.copyTo(it2) } }; daemonPath.setExecutable(true) } catch (e: Exception) { return@withContext Pair(null, "缺少 $daemonName 引擎") }
