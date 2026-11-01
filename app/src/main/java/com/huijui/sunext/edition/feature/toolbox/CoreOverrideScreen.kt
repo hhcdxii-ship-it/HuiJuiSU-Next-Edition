@@ -75,9 +75,13 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(top = 40.dp, bottom = 20.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            // 极速热接管：免重启、免刷镜像的一条路。
+            // 这张卡片功能早就写好了，但此前从未被任何界面引用 —— 又一条断链。
+            item { HuijuiHotInstallCard() }
 
             item {
                 Box(
