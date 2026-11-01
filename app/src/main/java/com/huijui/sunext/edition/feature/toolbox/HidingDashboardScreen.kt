@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.toolbox
 
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,7 +58,7 @@ fun HidingDashboardScreen(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(20.dp))
 
         if (isLoading || status == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
+            HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp))
         } else {
             val s = status!!
             LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 40.dp)) {

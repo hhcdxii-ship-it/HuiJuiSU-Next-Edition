@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.toolbox
 
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,7 +85,7 @@ fun SystemTweaksScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
+                HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp))
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(top = 20.dp, bottom = 40.dp)) {
                     item { ZakoText("广告屏蔽", color = Color.White.copy(0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp)) }

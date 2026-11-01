@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.toolbox
 
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 
 import android.widget.Toast
@@ -105,9 +106,7 @@ fun ArkScreen(onBack: () -> Unit) {
             ZakoText("历史快照 (${snapshots.size})", color = Color.White.copy(0.5f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AppSettings.accentColor.color)
-                }
+                HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp))
             } else if (snapshots.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     ZakoText("还没有方舟快照", color = Color.White.copy(0.4f), fontSize = 14.sp)

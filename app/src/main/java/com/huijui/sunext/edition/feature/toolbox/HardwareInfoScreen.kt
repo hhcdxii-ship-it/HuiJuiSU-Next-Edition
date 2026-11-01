@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.toolbox
 
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 
 import android.content.ClipData
@@ -96,9 +97,7 @@ fun HardwareInfoScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoading || info == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AppSettings.accentColor.color)
-                }
+                HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp))
             } else {
                 val hw = info!!
                 LazyColumn(
