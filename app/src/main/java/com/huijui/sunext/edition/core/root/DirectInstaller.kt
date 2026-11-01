@@ -48,6 +48,21 @@ object DirectInstaller {
                 return@flow
             }
 
+            // ── 0. 前置检测：系统版本 / 内核 KMI / 内置模块 / 目标分区 ──
+            //    任何一项不过就直接停在这里，绝不带着问题往下 dd。
+            emit(InstallState.Progress("[-] 检测系统与内核版本…"))
+            val pre = InstallPreflight.run(context)
+            if (!pre.canProceed) {
+                emit(InstallState.Error("❌ 前置检测未通过：${pre.blocking}"))
+                return@flow
+            }
+            emit(
+                InstallState.Progress(
+                    "[-] 检测通过：Android ${pre.androidRelease} / 内核 ${pre.kernelRelease} " +
+                        "→ ${pre.kmiBranch}，模块 ${pre.koAsset}，目标 ${pre.partitionName}${pre.slot}"
+                )
+            )
+
             // ── 1. 选定唯一的目标分区 ──────────────────────────────
             val slot = InstallIo.currentSlot()
             val hasInitBoot = InstallIo.exists("/dev/block/by-name/init_boot$slot")

@@ -1,5 +1,10 @@
 package com.huijui.sunext.edition.feature.onboarding
 
+import com.huijui.sunext.edition.core.root.InstallPreflight
+import com.huijui.sunext.edition.core.ui.component.GlassCard
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 
 import android.app.Activity
@@ -61,7 +66,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 enum class PageType {
-    INTRO, CONFIG_MODE, CONFIG_ACCENT, CONFIG_MATERIAL, CONFIG_LANGUAGE, TIPS, FINAL
+    INTRO, PREFLIGHT, CONFIG_MODE, CONFIG_ACCENT, CONFIG_MATERIAL, CONFIG_LANGUAGE, TIPS, FINAL
 }
 
 data class OnboardingPageData(
@@ -75,37 +80,24 @@ data class OnboardingPageData(
 )
 
 private val onboardingPages = listOf(
-    OnboardingPageData(PageType.CONFIG_LANGUAGE, Icons.Default.Translate, Color(0xFFA855F7), "STEP 1 / 3",
+    OnboardingPageData(PageType.CONFIG_LANGUAGE, Icons.Default.Translate, Color(0xFFA855F7), "STEP 1 / 4",
         "对话风格", "正常模式 还是 杂鱼模式？", "随时可以在设置里改"),
     OnboardingPageData(PageType.INTRO, Icons.Default.Security, Color(0xFFF59E0B), "WELCOME",
         "欢迎回家，机友", "从今天起，你的设备真正属于你",
-        "HuiJuiSU Next 不只是一个 Root 管理器，它是一个有温度、有生命的控制台。接下来 13 步，带你认识它、配置它、拥有它。"),
+        "HuiJuiSU Next 是一个有温度的控制台：自研内核模块、模块热挂载、精细授权、环境伪装。接下来 8 步，带你把它调成你顺手的样子。"),
     OnboardingPageData(PageType.INTRO, Icons.Default.Memory, Color(0xFFEA8A00), "PURE KERNEL",
         "纯血内核，自己写的那种", "脱离 KSU / Magisk，一行行堆出来的 HUI.ko",
-        "自研 C 内核模块 + Hsud 守护进程 + 一键热接管。没有套皮，没有借用，每一行都是自己干的。"),
-    OnboardingPageData(PageType.INTRO, Icons.Default.Folder, Color(0xFF3B82F6), "HOT MOUNT",
-        "模块热挂载，零重启", "刷完就能用，不用再等那一分钟",
-        "本地 ZIP 直接热挂载，配合 HUI 内核接管，全程零重启体验。"),
-    OnboardingPageData(PageType.INTRO, Icons.Default.AdminPanelSettings, Color(0xFF6366F1), "SUPERUSER",
-        "每个应用，你说得算", "精细到单个应用的 Root 权限",
-        "读取真实应用图标，开关一拨，授权即刻生效。谁该有、谁不该有，你心里有数。"),
-    OnboardingPageData(PageType.INTRO, Icons.Default.Build, Color(0xFFA855F7), "PATCHER",
-        "镜像修补，一键生成", "init_boot / boot 重打包，电脑刷入",
-        "A13+ 强制走 init_boot，解包、替换、注入 rc、重打包全自动。防呆拦截已在底层生效。"),
-    OnboardingPageData(PageType.INTRO, Icons.Default.Fingerprint, Color(0xFFEC4899), "DETECTOR",
-        "环境检测，硬核到底", "KSU / Magisk / APatch / 越狱，一个都跑不掉",
-        "RootEnvironmentDetector + RootEngineVerifier 双保险，检查专属进程、属性、/dev/huijui 设备节点。"),
-    OnboardingPageData(PageType.CONFIG_ACCENT, Icons.Default.Palette, Color(0xFFEF4444), "STEP 2 / 3",
+        "自研 C 内核模块 + Hsud 守护进程 + 一键热接管。没有套皮，没有借用。"),
+    OnboardingPageData(PageType.PREFLIGHT, Icons.Default.Fingerprint, Color(0xFFEC4899), "ENV CHECK",
+        "先给你做个体检", "系统版本、内核版本、模块与目标分区，一次查清"),
+    OnboardingPageData(PageType.CONFIG_ACCENT, Icons.Default.Palette, Color(0xFFEF4444), "STEP 2 / 4",
         "挑一个主题色", "四种性格，你的偏好", "可在设置里随时更换"),
-    OnboardingPageData(PageType.CONFIG_MATERIAL, Icons.Default.Layers, Color(0xFF3B82F6), "STEP 3 / 3",
-        "材质风格", "卡片长什么样，你说了算", "毛玻璃 / 实心 / 无材质三档"),
-    OnboardingPageData(PageType.INTRO, Icons.Default.AdminPanelSettings, Color(0xFFF59E0B), "FIRST RUN",
-        "首次进入，请放行 Root", "只有授权后才能解锁全部功能",
-        "如果没授权，底部「超管」入口会变灰。点击能量球刷新状态时，系统弹窗直接允许即可。"),
-    OnboardingPageData(PageType.TIPS, Icons.Default.TipsAndUpdates, Color(0xFF0EA5B7), "PRO TIPS",
+    OnboardingPageData(PageType.CONFIG_MATERIAL, Icons.Default.Layers, Color(0xFF3B82F6), "STEP 3 / 4",
+        "材质风格", "卡片长什么样，你说了算", "液态玻璃 / 柔光玻璃 / 毛玻璃 / 实心 / 无材质，五档"),
+    OnboardingPageData(PageType.TIPS, Icons.Default.TipsAndUpdates, Color(0xFF0EA5B7), "STEP 4 / 4",
         "几个小技巧", "老司机都这么用"),
     OnboardingPageData(PageType.FINAL, Icons.Default.Celebration, Color(0xFF16A34A), "READY",
-        "准备好了吗？", "接下来，交给 HUI", "所有配置已保存，点击右下角进入你的纯血控制台。")
+        "准备好了吗？", "接下来，交给 HUI", "所有配置已保存，点右下角进入你的纯血控制台。")
 )
 
 // ==========================================
@@ -292,6 +284,7 @@ private fun OnboardingPage(
     Box(modifier = pageModifier, contentAlignment = Alignment.Center) {
         when (data.type) {
             PageType.INTRO -> IntroContent(pageOffset, data, adaptiveInfo)
+            PageType.PREFLIGHT -> PreflightContent(data)
             PageType.CONFIG_MODE -> ModeConfigContent(data, adaptiveInfo)
             PageType.CONFIG_ACCENT -> AccentConfigContent(data, adaptiveInfo)
             PageType.CONFIG_MATERIAL -> MaterialConfigContent(data, adaptiveInfo)
@@ -305,6 +298,109 @@ private fun OnboardingPage(
 // ==========================================
 // 📖 图文介绍页（折叠屏左右分栏）
 // ==========================================
+/**
+ * 环境体检页。
+ *
+ * 刷机前最该做的一件事就是「先看清楚现场」：Android 版本、内核 release、
+ * 是否落在 8 档 KMI 之内、内置模块 vermagic 是否匹配、目标分区到底在哪。
+ * 这些以前散落在几个页面，用户要自己拼；现在开屏就摆出来。
+ */
+@Composable
+private fun PreflightContent(data: OnboardingPageData) {
+    val context = LocalContext.current
+    var result by remember { mutableStateOf<InstallPreflight.Result?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var failed by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        runCatching {
+            withContext(Dispatchers.IO) { InstallPreflight.run(context) }
+        }.onSuccess { result = it }.onFailure { failed = it.message }
+        loading = false
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ConfigHeader(data)
+        Spacer(Modifier.height(20.dp))
+
+        if (loading) {
+            HuiSkeletonList(rows = 5)
+            return@Column
+        }
+
+        val r = result
+        if (r == null) {
+            ZakoText(
+                "体检没能完成：${failed ?: "未知原因"}",
+                color = Color(0xFFEF4444),
+                fontSize = 13.sp
+            )
+            return@Column
+        }
+
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                PreflightRow("系统版本", "Android ${r.androidRelease} (API ${r.apiLevel})", true)
+                PreflightRow("内核版本", r.kernelRelease, true)
+                PreflightRow(
+                    "KMI 匹配",
+                    r.kmiBranch ?: "不在支持的 8 档之内",
+                    r.kmiBranch != null
+                )
+                PreflightRow("内置模块", r.koAsset ?: "缺失", r.koAsset != null)
+                PreflightRow(
+                    "vermagic",
+                    (r.koVermagic ?: "未知") + if (r.koCompatible) " · 匹配" else " · 不匹配",
+                    r.koCompatible
+                )
+                PreflightRow(
+                    "目标分区",
+                    (r.partitionName ?: "未找到") + r.slot,
+                    r.partitionName != null
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        val ok = r.canProceed
+        ZakoText(
+            if (ok) "✅ 检测通过，可以刷入"
+            else "⚠️ 暂时不能刷入：${r.blocking}",
+            color = if (ok) Color(0xFF16A34A) else Color(0xFFEF4444),
+            fontSize = 13.sp,
+            lineHeight = 19.sp
+        )
+        ZakoText(
+            "检测结果随时可在「工具箱 → 核心接管」重新查看",
+            color = Color.White.copy(alpha = 0.35f),
+            fontSize = 11.sp
+        )
+    }
+}
+
+@Composable
+private fun PreflightRow(label: String, value: String, ok: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        ZakoText(label, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+        Spacer(Modifier.width(12.dp))
+        ZakoText(
+            value,
+            color = if (ok) Color(0xFF81C784) else Color(0xFFEF4444),
+            fontSize = 12.sp,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.End
+        )
+    }
+}
+
 @Composable
 private fun IntroContent(
     pageOffset: Float,
