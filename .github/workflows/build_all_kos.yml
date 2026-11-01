@@ -6,7 +6,7 @@ on:
     branches: [ "main" ]
 
 permissions:
-  contents: write # 必须加上这个，否则无法自动发布 Release
+  contents: write
 
 jobs:
   build:
@@ -20,21 +20,25 @@ jobs:
         lfs: true
         
     - name: Install Dependencies
-      run: sudo apt-get update && sudo apt-get install -y repo git build-essential bc bison flex libssl-dev libelf-dev clang lld llvm
+      run: |
+        sudo apt-get update
+        # 🚀 核心修复：加上 gcc 和 binutils 交叉编译工具链
+        sudo apt-get install -y repo git build-essential bc bison flex libssl-dev libelf-dev clang lld llvm gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
       
     - name: Fetch Kernel Source
       run: |
         git clone https://android.googlesource.com/kernel/common -b ${{ matrix.branch }} --depth=1 common
         cd common
-        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-        make ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+        # 这里去掉了 LLVM=1，有些老版本内核用 LLVM=1 可能会找错汇编器，直接用 gcc 交叉编译更稳
+        make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
+        make ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
         
     - name: Compile KO
       run: |
         cd kernel/src
         make clean
-        make -C ../../common M=$PWD ARCH=arm64 LLVM=1 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_EXTRA_SYMBOLS=../../common/vmlinux.symvers modules
-        llvm-strip --strip-debug temp_root.ko || true
+        make -C ../../common M=$PWD ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- KBUILD_EXTRA_SYMBOLS=../../common/vmlinux.symvers modules
+        llvm-strip --strip-debug temp_root.ko || aarch64-linux-gnu-strip --strip-debug temp_root.ko
         mv temp_root.ko HuiJuiPhantom_${{ matrix.branch }}_arm64.ko
         
     - name: Upload to Release
