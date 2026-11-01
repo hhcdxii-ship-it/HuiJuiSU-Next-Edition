@@ -10,8 +10,14 @@ import java.util.*
 object CrashHandler : Thread.UncaughtExceptionHandler {
     private lateinit var appContext: Context
     private var defaultHandler: Thread.UncaughtExceptionHandler? = null
+    private var installed = false
 
     fun init(context: Context) {
+        // 必须幂等：Application 和 Activity 都会调，第二次进来时
+        // Thread.getDefaultUncaughtExceptionHandler() 拿到的就是 CrashHandler 自己，
+        // 一旦发生异常就会无限递归。
+        if (installed) return
+        installed = true
         appContext = context.applicationContext
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(this)

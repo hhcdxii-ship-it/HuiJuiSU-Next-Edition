@@ -27,7 +27,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.huijui.sunext.edition.core.root.HsudInstaller
 import com.huijui.sunext.edition.core.root.DirectInstaller
 import com.huijui.sunext.edition.core.root.OtaInstaller
 import com.huijui.sunext.edition.core.root.AdbUsbController
