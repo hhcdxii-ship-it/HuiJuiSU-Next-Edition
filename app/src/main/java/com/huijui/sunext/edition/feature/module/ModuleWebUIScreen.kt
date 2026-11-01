@@ -46,8 +46,13 @@ fun ModuleWebUIScreen(
                     settings.domStorageEnabled = true
                     settings.allowFileAccess = true
                     settings.allowContentAccess = true
+                    // 模块 WebUI 用 file:// 加载，必须允许它读自己目录里的 js/img
                     settings.allowFileAccessFromFileURLs = true
-                    settings.allowUniversalAccessFromFileURLs = true
+                    // ⚠️ 但**绝不能**允许 file:// 页面跨源访问网络：
+                    //    allowUniversalAccessFromFileURLs = true 意味着任意模块的 HTML
+                    //    都能 fetch('https://…') 把本地内容外传 —— 对 Root 管理器来说
+                    //    等于把一个 zip 包放进了 /data 的门口。
+                    settings.allowUniversalAccessFromFileURLs = false
                     webViewClient = WebViewClient()
                     loadUrl("file://$htmlPath")
                     webView = this
