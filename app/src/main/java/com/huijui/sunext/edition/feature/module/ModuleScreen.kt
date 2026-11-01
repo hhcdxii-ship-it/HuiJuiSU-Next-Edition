@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.huijui.sunext.edition.core.root.*
+import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
 import com.huijui.sunext.edition.core.ui.component.GlassCard
 import com.huijui.sunext.edition.core.ui.language.ZakoText
 import com.huijui.sunext.edition.core.ui.language.zakoString
@@ -158,7 +159,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
 
             if (currentTab == ModuleTab.LOCAL) {
                 if (isLoadingLocal) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
+                    HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp))
                 } else if (installedModules.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ZakoText(localError ?: "一个模块都没有", color = Color(0xFFEF4444), fontSize = 14.sp) }
                 } else {
@@ -190,7 +191,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
             } else {
                 // 在线仓库
                 if (isLoadingRemote) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AppSettings.accentColor.color) }
+                    HuiSkeletonList(modifier = Modifier.fillMaxSize().padding(top = 8.dp), rows = 5)
                 } else if (remoteError != null) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {

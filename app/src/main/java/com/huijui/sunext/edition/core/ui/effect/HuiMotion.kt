@@ -10,10 +10,18 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -358,6 +366,49 @@ fun HuiAuroraBackground(
         blob(w * (0.3f + 0.1f * t), h * (0.25f + 0.08f * (1 - t)), w * 0.55f, accent)
         blob(w * (0.75f - 0.12f * t), h * (0.55f + 0.1f * t), w * 0.45f, Color(0xFF4FC3F7))
         blob(w * (0.5f + 0.08f * (1 - t)), h * (0.85f - 0.08f * t), w * 0.5f, Color(0xFF8B5CF6))
+    }
+}
+
+/**
+ * 骨架列表：加载态用结构化的占位行，而不是一个孤零零的转圈。
+ * 用户能立刻看出「这里将出现一个列表、每行有图标和两行文字」，
+ * 感知等待时间明显短于纯 spinner。
+ */
+@Composable
+fun HuiSkeletonList(
+    modifier: Modifier = Modifier,
+    rows: Int = 6,
+    horizontalPadding: Dp = 20.dp
+) {
+    Column(
+        modifier = modifier.padding(horizontal = horizontalPadding),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        repeat(rows) { i ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.06f))
+                        .huiShimmer()
+                )
+                Spacer(Modifier.size(12.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    HuiSkeletonBar(
+                        modifier = Modifier.fillMaxWidth(if (i % 2 == 0) 0.62f else 0.48f),
+                        height = 12.dp
+                    )
+                    HuiSkeletonBar(modifier = Modifier.fillMaxWidth(0.32f), height = 9.dp)
+                }
+            }
+        }
     }
 }
 
