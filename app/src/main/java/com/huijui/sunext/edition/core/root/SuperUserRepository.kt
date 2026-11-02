@@ -58,8 +58,21 @@ object SuperUserRepository {
         val self = context.packageName
 
         val entries = ArrayList<RootAppEntry>(256)
+
+        // 多级回退：某些 ROM 上带 GET_META_DATA 的查询会抛异常或返回极少条目，
+        // 之前只调一次、失败就 getOrDefault(emptyList())，于是「超级用户页开了但
+        // 一个应用都看不到」。这里逐级降级，最后用 LAUNCHER 意图兜底。
         val installed = runCatching { pm.getInstalledApplications(PackageManager.GET_META_DATA) }
-            .getOrDefault(emptyList())
+            .getOrNull()
+            ?.takeIf { it.isNotEmpty() }
+            ?: runCatching { pm.getInstalledApplications(0) }.getOrNull()?.takeIf { it.isNotEmpty() }
+            ?: runCatching {
+                pm.queryIntentActivities(
+                    android.content.Intent(android.content.Intent.ACTION_MAIN)
+                        .addCategory(android.content.Intent.CATEGORY_LAUNCHER),
+                    0
+                ).mapNotNull { it.activityInfo?.applicationInfo }
+            }.getOrDefault(emptyList())
 
         for (info in installed) {
             val pkg = info.packageName ?: continue

@@ -161,15 +161,20 @@ object RootStatusRepository {
         val huiSocketUp = engine.huiSocketUp || engine.mode == "HUI"
         val huiInstalled = manager == RootManager.HUIJUI || manager == RootManager.HUIJUI_ULTRA
 
+        // 说明：foreign 现在只用于描述文案，判定逻辑改为「正向确认」
         val foreign = manager != RootManager.HUIJUI &&
             manager != RootManager.HUIJUI_ULTRA &&
             manager != RootManager.UNKNOWN &&
             manager != RootManager.NONE
 
         return when {
-            // socket 有响应，且没识别出别的管理器 → 纯血
-            huiSocketUp && !foreign -> HuiEngine.HUI_NATIVE
-            // socket 有响应，但同时识别出别的管理器 → 叠加共存
+            // ⚠️ 纯血必须**正向确认**是 HUI 的安装（manager == HUIJUI*）。
+            //    之前的写法是「socket 有响应 && 没认出来别的管理器」就算纯血，
+            //    于是只要管理器探测失败（返回 NONE/UNKNOWN），哪怕用户实际用的是
+            //    Magisk/KSU，也会被显示成「工作中 (HUI)」——这是用户反馈的
+            //    「用别的管理器授权却直达 HUI」的直接原因。
+            huiSocketUp && huiInstalled -> HuiEngine.HUI_NATIVE
+            // socket 有响应，但没确认是 HUI 自己 → 一律算叠加/兼容
             huiSocketUp -> HuiEngine.HUI_ALONGSIDE
             // 没有 socket，但有 HUI 安装痕迹 → 残留
             huiInstalled -> HuiEngine.HUI_STALE
