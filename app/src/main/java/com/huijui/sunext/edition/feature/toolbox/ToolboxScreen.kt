@@ -191,6 +191,8 @@ fun ToolboxScreen(
     }
 
     val isWorking = status.isWorking
+    // 纯血 HUI 才用 HUI 自己的刷入流程；借用其他管理器的 Root 走底层重载
+    val pureHui = (status as? HuiRootStatus.Working)?.engine == HuiEngine.HUI_NATIVE
     val accent = AppSettings.accentColor.color
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -216,16 +218,19 @@ fun ToolboxScreen(
                 HeroStatusCard(
                     status = status,
                     grantedCount = AppSettings.grantedApps.size,
-                    onClick = { if (isWorking) onNavigateToFlash() else onNavigateToOverride() }
+                    // 只有**纯血 HUI** 才走「刷入镜像」（那页是给 HUI 内核用的）。
+                    // 借用 Magisk/KSU 的 Root 时应该走「底层重载」，那一页才有
+                    // 直接安装与 OTA 槽位这两个入口。
+                    onClick = { if (pureHui) onNavigateToFlash() else onNavigateToOverride() }
                 )
             }
 
             item {
                 QuickActionCard(
                     icon = Icons.Default.SystemUpdate,
-                    title = if (isWorking) "刷入镜像" else "底层重载",
+                    title = if (pureHui) "刷入镜像" else "底层重载",
                     tint = accent,
-                    onClick = if (isWorking) onNavigateToFlash else onNavigateToOverride
+                    onClick = if (pureHui) onNavigateToFlash else onNavigateToOverride
                 )
             }
             item {
@@ -398,6 +403,8 @@ private fun HeroStatusCard(
     )
     val title = statusTitle(status)
     val isWorking = status.isWorking
+    // 纯血 HUI 才用 HUI 自己的刷入流程；借用其他管理器的 Root 走底层重载
+    val pureHui = (status as? HuiRootStatus.Working)?.engine == HuiEngine.HUI_NATIVE
 
     val transition = rememberPausableInfiniteTransition("heroPulse")
     val pulse by transition.animateFloat(

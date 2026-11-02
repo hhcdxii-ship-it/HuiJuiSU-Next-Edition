@@ -18,8 +18,17 @@ object RootEngineVerifier {
         val isWorking: Boolean,
         val mode: String, // "HUI", "COMPAT", "NONE", "LOCKED"
         val message: String,
-        /** HUI 自己的 socket 是否真的回了包 —— 这是「纯血在跑」的唯一硬证据 */
+        /** HUI 自己的 socket 是否真的回了包 */
         val huiSocketUp: Boolean = false,
+        /**
+         * HUI 的内核模块是否真的加载了（/proc/modules 里有 huijui）。
+         *
+         * 为什么需要这个：守护进程 huijuisud 可能是**上一次安装遗留**还在跑，
+         * socket 照样能回 uid=0，但内核模块根本没加载。此时若只看 socket，
+         * 就会把一台「其实由 Magisk 提供 Root」的机器判成纯血 HUI。
+         * 模块加载才是「HUI 真的在提供 Root」的硬证据。
+         */
+        val huiModuleLoaded: Boolean = false,
         /** su 是否可用（不代表是 HUI 提供的） */
         val suAvailable: Boolean = false
     )
@@ -40,13 +49,17 @@ object RootEngineVerifier {
             )
         }
 
-        // 1. 纯血 HUI：守护进程 socket 能直接回 uid=0
+        // 1. HUI 守护进程 socket 能回 uid=0
         if (checkHuiSocket()) {
+            val moduleLoaded = isHuiModuleLoaded()
             return@withContext EngineStatus(
                 isWorking = true,
-                mode = "HUI",
-                message = "✅ 纯血引擎运行中",
+                // 只有模块也加载了才算纯血；否则守护进程只是遗留，真正的 Root 另有其人
+                mode = if (moduleLoaded) "HUI" else "COMPAT",
+                message = if (moduleLoaded) "✅ 纯血引擎运行中"
+                else "⚠️ HUI 守护进程在跑，但内核模块未加载（Root 可能来自其他管理器）",
                 huiSocketUp = true,
+                huiModuleLoaded = moduleLoaded,
                 suAvailable = true
             )
         }
@@ -120,6 +133,18 @@ object RootEngineVerifier {
      * 守护进程只要 accepts 但不回包（崩溃重启中 / 半开连接），这里就永久阻塞，
      * 而它又被包在 withContext(IO) 里、外层没有任何超时 —— 整个 Root 检测链路卡死。
      */
+    /** /proc/modules 里有没有 huijui / huijui_phantom。 */
+    private suspend fun isHuiModuleLoaded(): Boolean = runCatching {
+        val modules = java.io.File("/proc/modules")
+        if (modules.canRead()) {
+            modules.readText().contains("huijui", ignoreCase = true)
+        } else {
+            // 普通应用读不到 /proc/modules，退回用 su 查一次
+            HuijuiShell.exec("cat /proc/modules 2>/dev/null | grep -i huijui")
+                .out.joinToString("").contains("huijui", ignoreCase = true)
+        }
+    }.getOrDefault(false)
+
     private fun checkHuiSocket(): Boolean {
         var socket: LocalSocket? = null
         return try {
