@@ -313,7 +313,7 @@ fun SettingsScreen(
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_zako),
+                        painter = painterResource(id = R.drawable.ic_brand),
                         contentDescription = "Logo",
                         modifier = Modifier.size(52.dp).clip(CircleShape)
                     )

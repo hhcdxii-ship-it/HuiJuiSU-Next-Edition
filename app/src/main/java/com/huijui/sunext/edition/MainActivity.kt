@@ -1,5 +1,7 @@
 package com.huijui.sunext.edition
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
 import com.huijui.sunext.edition.core.ui.language.zakoString
 
 import android.os.Bundle
@@ -335,6 +337,17 @@ fun MainApp() {
  *
  * 另外：背景材质跟随主题（HuiTheme.glass），按下有缩放与触感反馈。
  */
+/**
+ * 底部导航（液态气泡胶囊版）。
+ *
+ * 之前的滑块是一个固定尺寸的圆角矩形，从 A 平移到 B —— 硬邦邦的，没有"液体"感。
+ * 现在改成真正的气泡胶囊：
+ *   · 胶囊在**移动过程中会被拉长、压扁**（stretch 由当前位置与目标位置的距离驱动），
+ *     停下时回弹成饱满的胶囊 —— 这就是水滴在表面张力下被拉扯再收拢的观感
+ *   · 胶囊底下有一层同色的径向光晕，让它像浮在玻璃上而不是贴在上面
+ *   · 顶部一道白色高光，和液态玻璃卡片呼应
+ *   · 选中项才显示文字，其余只留图标，视觉更干净
+ */
 @Composable
 fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modifier: Modifier = Modifier) {
     val navItems = remember {
@@ -351,54 +364,83 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
     val haptic = LocalHapticFeedback.current
 
     val selectedIndex = navItems.indexOfFirst { it.route == currentRoute }.let { if (it < 0) 0 else it }
-    val indicator by animateFloatAsState(
+
+    // 位置用较软的弹簧，让气泡"甩"过去而不是瞬移
+    val bubblePos by animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
-        label = "navIndicator"
+        animationSpec = spring(dampingRatio = 0.58f, stiffness = 260f),
+        label = "bubblePos"
     )
+    // 拉伸量 = 当前位置离目标的距离；移动中拉长，到位后归零
+    val stretch = kotlin.math.abs(selectedIndex.toFloat() - bubblePos).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 22.dp)
+            .padding(horizontal = 18.dp, vertical = 18.dp)
             .navigationBarsPadding()
-            .height(72.dp)
-            .clip(RoundedCornerShape(36.dp))
+            .height(74.dp)
+            .clip(RoundedCornerShape(37.dp))
             .background(glass.fillTop.copy(alpha = 0.10f))
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.10f),
+                        Color.White.copy(alpha = 0.11f),
                         Color.Transparent,
                         Color.Black.copy(alpha = 0.10f)
                     )
                 )
             )
-            .border(1.dp, glass.border.copy(alpha = 0.55f), RoundedCornerShape(36.dp))
+            .border(1.dp, glass.border.copy(alpha = 0.55f), RoundedCornerShape(37.dp))
     ) {
-        // 唯一的一枚滑动指示器
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cell = size.width / navItems.size
-            val cx = (indicator + 0.5f) * cell
-            val pillW = cell * 0.64f
-            val pillH = 30.dp.toPx()
+            val cx = (bubblePos + 0.5f) * cell
+
+            val baseW = cell * 0.66f
+            val baseH = 34.dp.toPx()
+
+            // 移动中：横向拉长、纵向压扁（体积近似守恒的水感）
+            val pillW = baseW * (1f + 0.60f * stretch)
+            val pillH = baseH * (1f - 0.22f * stretch)
+            val topLeft = Offset(cx - pillW / 2f, (size.height - pillH) / 2f)
+
+            // 1) 气泡下方的径向光晕
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(accent.copy(alpha = 0.22f), Color.Transparent),
+                    center = Offset(cx, size.height / 2f),
+                    radius = pillW * 0.85f
+                ),
+                radius = pillW * 0.85f,
+                center = Offset(cx, size.height / 2f)
+            )
+
+            // 2) 气泡本体
             drawRoundRect(
                 brush = Brush.horizontalGradient(
-                    listOf(accent.copy(alpha = 0.28f), accent.copy(alpha = 0.10f))
+                    listOf(
+                        accent.copy(alpha = 0.34f),
+                        accent.copy(alpha = 0.16f),
+                        accent.copy(alpha = 0.30f)
+                    ),
+                    startX = cx - pillW / 2f,
+                    endX = cx + pillW / 2f
                 ),
-                topLeft = Offset(cx - pillW / 2f, (size.height - pillH) / 2f),
+                topLeft = topLeft,
                 size = Size(pillW, pillH),
                 cornerRadius = CornerRadius(pillH / 2f)
             )
-            // 胶囊顶部一道细高光，跟液态玻璃卡片呼应
+
+            // 3) 顶部高光，模拟光线在液面上的反射
             drawRoundRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
-                    startY = (size.height - pillH) / 2f,
-                    endY = (size.height - pillH) / 2f + pillH / 2f
+                    colors = listOf(Color.White.copy(alpha = 0.30f), Color.Transparent),
+                    startY = topLeft.y,
+                    endY = topLeft.y + pillH * 0.55f
                 ),
-                topLeft = Offset(cx - pillW / 2f, (size.height - pillH) / 2f),
-                size = Size(pillW, pillH / 2f),
+                topLeft = topLeft,
+                size = Size(pillW, pillH * 0.55f),
                 cornerRadius = CornerRadius(pillH / 2f)
             )
         }
@@ -411,17 +453,17 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
                 val interactionSource = remember { MutableInteractionSource() }
                 val isPressed by interactionSource.collectIsPressedAsState()
                 val iconScale by animateFloatAsState(
-                    targetValue = if (isPressed && !isRestricted) 0.85f else if (isSelected) 1.06f else 1f,
-                    animationSpec = spring(dampingRatio = 0.55f, stiffness = 420f),
+                    targetValue = if (isPressed && !isRestricted) 0.86f else if (isSelected) 1.10f else 1f,
+                    animationSpec = spring(dampingRatio = 0.5f, stiffness = 420f),
                     label = "navScale_${'$'}{item.route}"
                 )
                 val contentColor by animateColorAsState(
                     targetValue = when {
                         isRestricted -> Color.White.copy(alpha = 0.22f)
-                        isSelected -> accent
-                        else -> Color.White.copy(alpha = 0.62f)
+                        isSelected -> Color.White
+                        else -> Color.White.copy(alpha = 0.55f)
                     },
-                    animationSpec = tween(220),
+                    animationSpec = tween(200),
                     label = "navColor_${'$'}{item.route}"
                 )
 
@@ -439,21 +481,30 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.animateContentSize()
+                    ) {
                         Icon(
                             item.icon,
                             contentDescription = item.title,
                             tint = contentColor,
-                            modifier = Modifier.size(21.dp).scale(iconScale)
+                            modifier = Modifier.size(22.dp).scale(iconScale)
                         )
-                        Spacer(modifier = Modifier.height(3.dp))
-                        ZakoText(
-                            item.title,
-                            color = contentColor,
-                            fontSize = 9.5.sp,
-                            fontWeight = if (isSelected && !isRestricted) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1
-                        )
+                        // 只有选中项才展开文字，未选中的只留图标
+                        AnimatedVisibility(visible = isSelected && !isRestricted) {
+                            Row {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                ZakoText(
+                                    item.title,
+                                    color = contentColor,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                            }
+                        }
                     }
                 }
             }

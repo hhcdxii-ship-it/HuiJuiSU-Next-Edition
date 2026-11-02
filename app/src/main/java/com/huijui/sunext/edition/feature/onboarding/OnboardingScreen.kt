@@ -1,5 +1,8 @@
 package com.huijui.sunext.edition.feature.onboarding
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import com.huijui.sunext.edition.core.root.InstallPreflight
 import com.huijui.sunext.edition.core.ui.component.GlassCard
 import com.huijui.sunext.edition.core.ui.effect.HuiSkeletonList
@@ -526,6 +529,16 @@ private fun ConfigHeader(data: OnboardingPageData) {
     val deepAccent = lerp(data.accent, Color(0xFF1A1A1A), 0.35f)
     val midAccent = lerp(data.accent, Color(0xFF1A1A1A), 0.15f)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // 品牌 logo：之前引导页完全没有 logo，只有一个小图标
+        Image(
+            painter = painterResource(id = com.huijui.sunext.edition.R.drawable.ic_brand),
+            contentDescription = null,
+            modifier = Modifier
+                .size(84.dp)
+                .clip(CircleShape)
+                .border(1.5.dp, data.accent.copy(alpha = 0.35f), CircleShape)
+        )
+        Spacer(modifier = Modifier.height(14.dp))
         ZakoText("· ${data.tag} ·", color = midAccent, fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold, letterSpacing = 4.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(12.dp))

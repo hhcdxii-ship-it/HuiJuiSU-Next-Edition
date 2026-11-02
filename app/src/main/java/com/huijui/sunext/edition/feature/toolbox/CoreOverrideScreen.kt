@@ -75,7 +75,9 @@ fun CoreOverrideScreen(onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 20.dp),
+            // 底部有 56dp 的悬浮按钮 + 24dp 外边距，列表底部必须留出等高的空间，
+            // 否则最后几张卡片会被按钮压住 —— 之前 bottom 只给了 20dp，就是"卡片重叠"的来源
+            contentPadding = PaddingValues(top = 12.dp, bottom = 130.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
