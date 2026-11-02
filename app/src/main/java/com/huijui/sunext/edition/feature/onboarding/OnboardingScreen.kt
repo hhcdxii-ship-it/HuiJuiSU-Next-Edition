@@ -243,6 +243,9 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             HorizontalPager(
                 userScrollEnabled = true,
                 state = pagerState,
+                // 预渲染左右各两页：翻页时目标页的内容已经排好版，
+                // 不会出现"先滑出空白、再突然填充"的顿挫感
+                beyondViewportPageCount = 2,
                 modifier = Modifier.weight(1f),
             ) { page ->
                 val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -1176,16 +1179,44 @@ private fun ColorDot(color: Color, name: String, selected: Boolean, accent: Colo
 @Composable
 private fun CapsuleIndicator(count: Int, currentPage: Int, accent: Color) {
     val deepAccent = lerp(accent, Color(0xFF1A1A1A), 0.2f)
-    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-        repeat(count) { index ->
-            val isSelected = index == currentPage
-            val width by animateDpAsState(if (isSelected) 20.dp else 5.dp,
-                spring(dampingRatio = 0.6f, stiffness = 500f), label = "dot_width_$index")
-            val color by animateColorAsState(
-                if (isSelected) deepAccent else Color.Black.copy(alpha = 0.15f),
-                tween(300), label = "dot_color_$index")
-            Box(modifier = Modifier.width(width).height(5.dp).clip(CircleShape).background(color))
+
+    // 12 个圆点挤在一起既看不清也不好动，改成一根会"长出去"的进度胶囊：
+    // 填充宽度随 currentPage 弹簧推进，翻页时是连续生长而不是跳格子。
+    val target = if (count <= 1) 0f else currentPage.toFloat() / (count - 1)
+    val progress by animateFloatAsState(
+        targetValue = target,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 240f),
+        label = "progress"
+    )
+    // 末页之前也保持一小段底宽，避免刚进来时进度条"消失"
+    val fillFraction = 0.14f + 0.86f * progress
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .width(96.dp)
+                .height(6.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.10f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(fillFraction)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.horizontalGradient(listOf(deepAccent, accent))
+                    )
+            )
         }
+        Spacer(modifier = Modifier.width(10.dp))
+        // 页数用等宽字体，数字跳动时不会左右晃
+        ZakoText(
+            "${currentPage + 1}/$count",
+            color = deepAccent.copy(alpha = 0.75f),
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 
