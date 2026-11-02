@@ -1,5 +1,8 @@
 package com.huijui.sunext.edition
 
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.AnimatedVisibility
 import com.huijui.sunext.edition.core.ui.language.zakoString
@@ -365,15 +368,20 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
 
     val selectedIndex = navItems.indexOfFirst { it.route == currentRoute }.let { if (it < 0) 0 else it }
 
-    // 位置用较软的弹簧，让气泡"甩"过去而不是瞬移
+    // 手指在导航条上横向拖动时，胶囊跟着走、滑到哪个就选哪个。
+    // -1 表示当前没有拖拽，用选中的下标。
+    var draggingIndex by remember { mutableIntStateOf(-1) }
+    val targetIndex = if (draggingIndex >= 0) draggingIndex else selectedIndex
+
+    // 位置用较软的弹簧，让气泡"甩"过去而不是瞬移；拖拽时直接跟到手指下方
     val bubblePos by animateFloatAsState(
-        targetValue = selectedIndex.toFloat(),
+        targetValue = targetIndex.toFloat(),
         animationSpec = spring(dampingRatio = 0.58f, stiffness = 260f),
         label = "bubblePos"
     )
     // 尾部位置：用更软的弹簧跟随头部，二者产生时间差 —— 这个差值就是"拖尾"
     val trailPos by animateFloatAsState(
-        targetValue = selectedIndex.toFloat(),
+        targetValue = targetIndex.toFloat(),
         animationSpec = spring(dampingRatio = 0.82f, stiffness = 120f),
         label = "bubbleTrail"
     )
@@ -396,6 +404,30 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
                 )
             )
             .border(1.dp, glass.border.copy(alpha = 0.55f), RoundedCornerShape(37.dp))
+            .pointerInput(navItems.size) {
+                fun indexAt(x: Float): Int =
+                    (x / size.width * navItems.size).toInt().coerceIn(0, navItems.lastIndex)
+
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        draggingIndex = indexAt(offset.x)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    },
+                    onHorizontalDrag = { change, _ ->
+                        val idx = indexAt(change.position.x)
+                        if (idx != draggingIndex) {
+                            draggingIndex = idx
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        if (draggingIndex >= 0) onNavigate(navItems[draggingIndex].route)
+                        draggingIndex = -1
+                    },
+                    onDragCancel = { draggingIndex = -1 }
+                )
+            }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cell = size.width / navItems.size
