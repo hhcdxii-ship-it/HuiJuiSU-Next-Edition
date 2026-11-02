@@ -1,5 +1,8 @@
 package com.huijui.sunext.edition.feature.settings
 
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Code
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -106,7 +109,7 @@ fun AboutScreen(onBack: () -> Unit) {
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 AboutLink(
-                    emoji = "🐙",
+                    icon = Icons.Default.Code,
                     title = "GitHub 源码",
                     subtitle = "github.com/hhcdxii-ship-it/HuiJuiSU-Next-Edition",
                     accent = accent
@@ -115,7 +118,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 AboutDivider()
 
                 AboutLink(
-                    emoji = "💚",
+                    icon = Icons.Default.Person,
                     title = "酷安主页",
                     subtitle = "coolapk.com/u/43549687",
                     accent = accent
@@ -124,7 +127,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 AboutDivider()
 
                 AboutLink(
-                    emoji = "📦",
+                    icon = Icons.Default.CloudDownload,
                     title = "内核模块下载",
                     subtitle = "GitHub Releases · 8 个 KMI 的 .ko",
                     accent = accent
@@ -171,7 +174,7 @@ private fun AboutDivider() {
 
 @Composable
 private fun AboutLink(
-    emoji: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     accent: Color,
@@ -192,7 +195,7 @@ private fun AboutLink(
                 .background(accent.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center
         ) {
-            ZakoText(emoji, fontSize = 18.sp)
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(19.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
