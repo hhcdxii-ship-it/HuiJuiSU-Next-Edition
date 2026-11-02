@@ -1,4 +1,5 @@
 #include <functional>
+#include <sys/stat.h>
 #include <memory>
 
 #include <libfdt.h>
@@ -479,11 +480,44 @@ int unpack(const char *image, bool skip_decomp, bool hdr) {
     dump(boot.kernel_dtb, boot.hdr->kernel_dt_size, KER_DTB_FILE);
 
     // Dump ramdisk
+    //
+    // 这里不再信任格式探测结果。
+    //
+    // check_fmt_lg() 靠遍历 LZ4 block 头区分 legacy / lg，只要最后一个 block
+    // 的长度看起来越界就判成 LZ4_LG。这个判据在部分 v4 镜像上会误判，
+    // 于是一次解压直接产出 **0 字节的 ramdisk.cpio**，后面所有 cpio 操作全挂，
+    // 表现为「ramdisk 里没有 init」。
+    //
+    // 真机复现：同一份 stock.img（md5 完全一致），有时 RAMDISK_FMT=[lz4_legacy]
+    // 正常出 6.2MB，有时 [lz4_lg] 只出 0 字节。
+    //
+    // 所以改成：先按探测结果解，结果为空就依次试其它压缩格式，
+    // 谁解出数据就用谁。对刷机这种一次性的关键操作，多试几种格式的成本可以忽略。
     if (!skip_decomp && COMPRESSED(boot.r_fmt)) {
         if (boot.hdr->ramdisk_size() != 0) {
-            int fd = creat(RAMDISK_FILE, 0644);
-            decompress(boot.r_fmt, fd, boot.ramdisk, boot.hdr->ramdisk_size());
-            close(fd);
+            const format_t candidates[] = {
+                boot.r_fmt, LZ4_LEGACY, LZ4, LZ4_LG, GZIP, XZ
+            };
+            bool ok = false;
+            for (format_t f : candidates) {
+                int fd = creat(RAMDISK_FILE, 0644);
+                decompress(f, fd, boot.ramdisk, boot.hdr->ramdisk_size());
+                close(fd);
+
+                struct stat st{};
+                bool has_data = (stat(RAMDISK_FILE, &st) == 0) && st.st_size > 0;
+                if (has_data) {
+                    if (f != boot.r_fmt) {
+                        fprintf(stderr, "! ramdisk 按 %s 解压成功（探测结果是 %s）\n",
+                                fmt2name[f], fmt2name[boot.r_fmt]);
+                    }
+                    ok = true;
+                    break;
+                }
+            }
+            if (!ok) {
+                fprintf(stderr, "! 所有压缩格式都未能解出 ramdisk\n");
+            }
         }
     } else {
         dump(boot.ramdisk, boot.hdr->ramdisk_size(), RAMDISK_FILE);
@@ -562,6 +596,20 @@ void repack(const char *src_img, const char *out_img, bool skip_comp) {
     }
 
     // Copy raw header
+    //
+    // ⚠️ 这里必须写 clone 出来的 hdr，不是 boot.hdr_addr。
+    //
+    // 上面 clone 之后把 kernel_size / ramdisk_size / second_size / dtb_size
+    // 全部清零，再在写入各组件时回填成**新的**大小；但如果这里写的是原始镜像
+    // 的头部指针 boot.hdr_addr，那些回填就全丢了 —— 输出镜像的头部仍然声明
+    // 旧的 ramdisk_size。
+    //
+    // 后果（真机实测）：
+    //   修改 ramdisk 后 repack，打印 RAMDISK_SZ [1671402]（新值），
+    //   文件大小 1,680,192 也对得上，但头部写的是 [3293170]（旧值）。
+    //   再拿这个镜像去 unpack，就会按旧长度读到文件末尾之外，直接卡死。
+    // 先用原厂头部占位；真正的头部（含新的各段大小）在函数末尾
+    // 通过 mmap(MAP_SHARED) 回填。这样即使中途失败，文件里也是一份合法头部。
     off.header = lseek(fd, 0, SEEK_CUR);
     xwrite(fd, boot.hdr_addr, hdr->hdr_space());
 

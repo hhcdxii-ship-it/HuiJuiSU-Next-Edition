@@ -176,14 +176,37 @@ object DirectInstaller {
 
             val patched = "$REMOTE_DIR/patched.img"
             val patchedSize = InstallIo.size(patched)
-            if (patchedSize <= 0L || patchedSize > partSize) {
-                emit(InstallState.Error("❌ 容量校验失败：修补后 ${InstallIo.mb(patchedSize)}MB / 分区 ${InstallIo.mb(partSize)}MB"))
+            if (patchedSize <= 0L) {
+                emit(InstallState.Error("❌ 修补产物为空"))
+                return@flow
+            }
+
+            // ── 5.5 重组完整分区镜像（关键）────────────────────────
+            // repack 只产出「头+kernel+ramdisk」这一段，注入模块后会涨到 3.6MB 以上；
+            // 而原厂镜像在 3,297,280 处还有 VBmeta、末尾还有 AVB 页脚。
+            // 直接把 patched 写进去会覆盖 vbmeta —— 真机上已经因此写坏过一次分区。
+            // 这里先把它和原厂 vbmeta/页脚拼成一份完整的 8MB，再写。
+            emit(InstallState.Progress("[-] 重组分区镜像（搬移 vbmeta / 重写 AVB 页脚）…"))
+            val localPatched = File(workDir, "patched_local.img")
+            val finalImg = File(workDir, "final_boot.img")
+            InstallIo.run("cp '$patched' '${localPatched.absolutePath}' && sync")
+
+            val asm = BootImageAssembler.assemble(stockImg, localPatched, finalImg)
+            if (!asm.ok) {
+                emit(InstallState.Error("❌ 镜像重组失败：${asm.message}"))
+                return@flow
+            }
+            emit(InstallState.Progress("[-] ${asm.message}"))
+
+            val finalSize = finalImg.length()
+            if (finalSize <= 0L || finalSize > partSize) {
+                emit(InstallState.Error("❌ 容量校验失败：${InstallIo.mb(finalSize)}MB / 分区 ${InstallIo.mb(partSize)}MB"))
                 return@flow
             }
 
             // ── 6. 写入唯一的那个分区 ──────────────────────────────
-            emit(InstallState.Progress("[-] 正在写入 $targetDevice（${InstallIo.mb(patchedSize)}MB）…"))
-            val write = InstallIo.writeImage(patched, targetDevice)
+            emit(InstallState.Progress("[-] 正在写入 $targetDevice（${InstallIo.mb(finalSize)}MB）…"))
+            val write = InstallIo.writeImage(finalImg.absolutePath, targetDevice)
             if (!write.ok) {
                 emit(InstallState.Error("❌ 写入失败：${write.output}\n\n🛡️ 原厂镜像备份在：$backupPath"))
                 return@flow

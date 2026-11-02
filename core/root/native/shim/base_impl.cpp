@@ -74,8 +74,22 @@ mmap_data::mmap_data(const char *name, bool rw) {
     struct stat st;
     if (fstat(fd, &st) == 0) {
         sz = (size_t)st.st_size;
+        // ⚠️ 以「读写」方式映射时必须用 MAP_SHARED。
+        //
+        // 原来这里固定用 MAP_PRIVATE —— 那样的映射是**写时复制**的私有副本，
+        // 往里写的任何东西都只留在内存里，进程退出/close 之后就没了，文件一个字节都不会变。
+        //
+        // 直接后果（真机实测）：repack 在最后一步用
+        //     memcpy(out.buf + off.header, hdr->raw_hdr(), hdr->hdr_size());
+        // 回填「更新后的头部」（新的 ramdisk_size 等），但因为是私有映射，
+        // 文件里仍然是创建时写入的原厂头部。于是：
+        //     文件大小 1,680,192（与新 ramdisk 吻合）
+        //     头部声明 3,293,170（还是旧值）
+        // 拿这个镜像去 unpack，就会按旧长度读过文件末尾，直接卡死。
+        //
+        // 顺带也让校验和、vbmeta 页脚的修改一并失效。
         buf = (uint8_t *)xmmap(nullptr, sz, rw ? (PROT_READ|PROT_WRITE) : PROT_READ,
-                               MAP_PRIVATE, fd, 0);
+                               rw ? MAP_SHARED : MAP_PRIVATE, fd, 0);
     }
     close(fd);
 }
