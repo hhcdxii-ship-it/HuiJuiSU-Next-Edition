@@ -1,5 +1,12 @@
 package com.huijui.sunext.edition.feature.onboarding
 
+import androidx.compose.foundation.layout.height
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.key
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
@@ -70,7 +77,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 enum class PageType {
-    INTRO, PREFLIGHT, CONFIG_MODE, CONFIG_ACCENT, CONFIG_MATERIAL, CONFIG_LANGUAGE, TIPS, FINAL
+    INTRO, PREFLIGHT, INTERACTIVE, CONFIG_MODE, CONFIG_ACCENT, CONFIG_MATERIAL, CONFIG_LANGUAGE, TIPS, FINAL
 }
 
 data class OnboardingPageData(
@@ -84,21 +91,32 @@ data class OnboardingPageData(
 )
 
 private val onboardingPages = listOf(
-    OnboardingPageData(PageType.CONFIG_LANGUAGE, Icons.Default.Translate, Color(0xFFA855F7), "STEP 1 / 4",
+    OnboardingPageData(PageType.CONFIG_LANGUAGE, Icons.Default.Translate, Color(0xFFA855F7), "STEP 1 / 5",
         "对话风格", "正常模式 还是 杂鱼模式？", "随时可以在设置里改"),
     OnboardingPageData(PageType.INTRO, Icons.Default.Security, Color(0xFFF59E0B), "WELCOME",
         "欢迎回家，机友", "从今天起，你的设备真正属于你",
-        "HuiJuiSU Next 是一个有温度的控制台：自研内核模块、模块热挂载、精细授权、环境伪装。接下来 8 步，带你把它调成你顺手的样子。"),
+        "HuiJuiSU Next 是一个有温度的控制台：自研内核模块、模块热挂载、精细授权、环境伪装。接下来 12 步，带你把它调成你顺手的样子。"),
     OnboardingPageData(PageType.INTRO, Icons.Default.Memory, Color(0xFFEA8A00), "PURE KERNEL",
         "纯血内核，自己写的那种", "脱离 KSU / Magisk，一行行堆出来的 HUI.ko",
         "自研 C 内核模块 + Hsud 守护进程 + 一键热接管。没有套皮，没有借用。"),
+    OnboardingPageData(PageType.INTRO, Icons.Default.Folder, Color(0xFF3B82F6), "HOT MOUNT",
+        "模块热挂载，零重启", "刷完就能用，不用再等那一分钟",
+        "本地 ZIP 直接热挂载，配合 HUI 内核接管，全程零重启体验。"),
+    OnboardingPageData(PageType.INTRO, Icons.Default.AdminPanelSettings, Color(0xFF6366F1), "SUPERUSER",
+        "每个应用，你说了算", "精细到单个应用的 Root 权限",
+        "读取真实应用图标，开关一拨，授权即刻生效。谁该有、谁不该有，你心里有数。"),
     OnboardingPageData(PageType.PREFLIGHT, Icons.Default.Fingerprint, Color(0xFFEC4899), "ENV CHECK",
         "先给你做个体检", "系统版本、内核版本、模块与目标分区，一次查清"),
-    OnboardingPageData(PageType.CONFIG_ACCENT, Icons.Default.Palette, Color(0xFFEF4444), "STEP 2 / 4",
+    OnboardingPageData(PageType.INTERACTIVE, Icons.Default.TouchApp, Color(0xFF06B6D4), "TOUCH",
+        "来，戳一下试试", "这套界面是活的，不是截图"),
+    OnboardingPageData(PageType.CONFIG_ACCENT, Icons.Default.Palette, Color(0xFFEF4444), "STEP 2 / 5",
         "挑一个主题色", "四种性格，你的偏好", "可在设置里随时更换"),
-    OnboardingPageData(PageType.CONFIG_MATERIAL, Icons.Default.Layers, Color(0xFF3B82F6), "STEP 3 / 4",
+    OnboardingPageData(PageType.CONFIG_MATERIAL, Icons.Default.Layers, Color(0xFF3B82F6), "STEP 3 / 5",
         "材质风格", "卡片长什么样，你说了算", "液态玻璃 / 柔光玻璃 / 毛玻璃 / 实心 / 无材质，五档"),
-    OnboardingPageData(PageType.TIPS, Icons.Default.TipsAndUpdates, Color(0xFF0EA5B7), "STEP 4 / 4",
+    OnboardingPageData(PageType.INTRO, Icons.Default.VerifiedUser, Color(0xFF0EA5B7), "GUARDIAN · STEP 4/5",
+        "守护与自救", "Root 掉线会提醒你，作弊会自爆环境",
+        "系统守护盯着开发者选项别被重置；作弊哨兵只在「外挂 + 竞技游戏 + 真的在用 Root」同时成立时才动手，只销毁 HUI 自己的环境，绝不碰你的数据。"),
+    OnboardingPageData(PageType.TIPS, Icons.Default.TipsAndUpdates, Color(0xFF0EA5B7), "STEP 5 / 5",
         "几个小技巧", "老司机都这么用"),
     OnboardingPageData(PageType.FINAL, Icons.Default.Celebration, Color(0xFF16A34A), "READY",
         "准备好了吗？", "接下来，交给 HUI", "所有配置已保存，点右下角进入你的纯血控制台。")
@@ -301,6 +319,7 @@ private fun OnboardingPage(
         when (data.type) {
             PageType.INTRO -> IntroContent(pageOffset, data, adaptiveInfo)
             PageType.PREFLIGHT -> PreflightContent(data)
+            PageType.INTERACTIVE -> InteractiveContent(data)
             PageType.CONFIG_MODE -> ModeConfigContent(data, adaptiveInfo)
             PageType.CONFIG_ACCENT -> AccentConfigContent(data, adaptiveInfo)
             PageType.CONFIG_MATERIAL -> MaterialConfigContent(data, adaptiveInfo)
@@ -321,6 +340,88 @@ private fun OnboardingPage(
  * 是否落在 8 档 KMI 之内、内置模块 vermagic 是否匹配、目标分区到底在哪。
  * 这些以前散落在几个页面，用户要自己拼；现在开屏就摆出来。
  */
+/**
+ * 互动页：戳哪儿哪儿冒涟漪。
+ *
+ * 引导页最怕"像看 PPT"。这一页就是让用户上手戳两下 ——
+ * 每戳一次生成一个从点位扩散、淡出的圆环，计数随之增加，
+ * 文案也跟着变（戳得越多越被嫌弃）。纯 Canvas/DrawScope 实现，没有额外依赖。
+ */
+@Composable
+private fun InteractiveContent(data: OnboardingPageData) {
+    var ripples by remember { mutableStateOf(listOf<Pair<Long, Offset>>()) }
+    var count by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ConfigHeader(data)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    Brush.radialGradient(
+                        listOf(data.accent.copy(alpha = 0.20f), Color.White.copy(alpha = 0.05f))
+                    )
+                )
+                .border(1.dp, data.accent.copy(alpha = 0.30f), RoundedCornerShape(28.dp))
+                .pointerInput(Unit) {
+                    detectTapGestures { pos ->
+                        count += 1
+                        ripples = ripples + (System.nanoTime() to pos)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            ripples.forEach { (id, pos) ->
+                key(id) {
+                    val p = remember { Animatable(0f) }
+                    LaunchedEffect(Unit) {
+                        p.animateTo(1f, tween(760, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                        ripples = ripples.filterNot { it.first == id }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset((pos.x - 30f).roundToInt(), (pos.y - 30f).roundToInt()) }
+                            .size(60.dp)
+                            .graphicsLayer {
+                                val sc = 0.25f + p.value * 2.1f
+                                scaleX = sc
+                                scaleY = sc
+                                alpha = (1f - p.value).coerceIn(0f, 1f)
+                            }
+                            .border(2.dp, data.accent, CircleShape)
+                    )
+                }
+            }
+
+            ZakoText(
+                when {
+                    count == 0 -> "戳我呀，杂鱼♡"
+                    count < 5 -> "戳了 $count 下…还想戳？"
+                    count < 15 -> "$count 下了，手不酸吗"
+                    else -> "$count 下…你是不是有点闲"
+                },
+                color = data.accent.copy(alpha = 0.9f),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+        ZakoText(
+            "界面里所有东西都会响应你：按钮按下会缩、卡片会流动、导航气泡会甩过去",
+            color = Color(0xFF7A7A7A), fontSize = 12.sp, textAlign = TextAlign.Center
+        )
+    }
+}
+
 @Composable
 private fun PreflightContent(data: OnboardingPageData) {
     val context = LocalContext.current
