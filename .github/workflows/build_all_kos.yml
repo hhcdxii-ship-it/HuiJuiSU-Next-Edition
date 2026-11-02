@@ -18,15 +18,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        branch:
-          - android12-5.10
-          - android13-5.10
-          - android13-5.15
-          - android14-5.15
-          - android14-6.1
-          - android15-6.6
-          - android16-6.12
-          - android17-6.18
+        include:
+          # 5.10 / 5.15 的 GKI 只认 clang 12~14 那一代。
+          # 用 runner 自带的 clang 18 会在 arch/arm64/kernel/asm-offsets.s 阶段炸：
+          #   error: register 'sp' unsuitable for global register variables
+          #   error: value '1025' out of range for constraint 'I'
+          - branch: android12-5.10
+            tools: "CC=clang-14 LD=ld.lld-14 AR=llvm-ar-14 NM=llvm-nm-14 OBJCOPY=llvm-objcopy-14 OBJDUMP=llvm-objdump-14 READELF=llvm-readelf-14 STRIP=llvm-strip-14 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu-"
+          - branch: android13-5.10
+            tools: "CC=clang-14 LD=ld.lld-14 AR=llvm-ar-14 NM=llvm-nm-14 OBJCOPY=llvm-objcopy-14 OBJDUMP=llvm-objdump-14 READELF=llvm-readelf-14 STRIP=llvm-strip-14 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu-"
+          - branch: android13-5.15
+            tools: "CC=clang-14 LD=ld.lld-14 AR=llvm-ar-14 NM=llvm-nm-14 OBJCOPY=llvm-objcopy-14 OBJDUMP=llvm-objdump-14 READELF=llvm-readelf-14 STRIP=llvm-strip-14 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu-"
+          - branch: android14-5.15
+            tools: "CC=clang-14 LD=ld.lld-14 AR=llvm-ar-14 NM=llvm-nm-14 OBJCOPY=llvm-objcopy-14 OBJDUMP=llvm-objdump-14 READELF=llvm-readelf-14 STRIP=llvm-strip-14 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu-"
+          - branch: android14-6.1
+            tools: "LLVM=1"
+          - branch: android15-6.6
+            tools: "LLVM=1"
+          - branch: android16-6.12
+            tools: "LLVM=1"
+          - branch: android17-6.18
+            tools: "LLVM=1"
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,6 +52,7 @@ jobs:
           #   "BTF: .tmp_vmlinux.btf: pahole (pahole) is not available"
           sudo apt-get install -y repo git build-essential bc bison flex \
             libssl-dev libelf-dev libdw-dev dwarves clang lld llvm \
+            clang-14 lld-14 llvm-14 \
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       # GitHub 标准 runner 的根分区只有 ~14GB，而 GKI 全量编 vmlinux 需要 30GB+。
@@ -66,7 +80,7 @@ jobs:
       - name: Configure Kernel
         working-directory: common
         run: |
-          make ARCH=arm64 LLVM=1 gki_defconfig
+          make ARCH=arm64 ${{ matrix.tools }} gki_defconfig
 
       # ⚠️ 关键步骤，之前缺失：
       #    modules_prepare 只生成头文件和脚本，**不生成 Module.symvers**。
@@ -80,7 +94,7 @@ jobs:
           # 不要把输出直接喂给 tail —— make 的报错往往出现在成千上万行
           # HDRINST/CC 之前，被 tail 截掉后就只剩"exit code 2"没法定位。
           # 这里写全量日志，失败时只挑错误行和最后几十行打印。
-          if ! make ARCH=arm64 LLVM=1 -j$(nproc) vmlinux > build_vmlinux.log 2>&1; then
+          if ! make ARCH=arm64 ${{ matrix.tools }} -j$(nproc) vmlinux > build_vmlinux.log 2>&1; then
             echo "===== 错误行 ====="
             grep -nE 'error:|Error [0-9]|\*\*\*|not available|No such file' build_vmlinux.log | tail -40 || true
             echo "===== 最后 40 行 ====="
@@ -104,7 +118,7 @@ jobs:
       - name: Prepare module infrastructure
         working-directory: common
         run: |
-          make ARCH=arm64 LLVM=1 modules_prepare > prepare.log 2>&1 || {
+          make ARCH=arm64 ${{ matrix.tools }} modules_prepare > prepare.log 2>&1 || {
             echo "===== modules_prepare 失败 ====="
             grep -nE 'error:|Error [0-9]|\*\*\*' prepare.log | tail -20 || true
             tail -20 prepare.log
@@ -129,7 +143,7 @@ jobs:
           # KBUILD_MODPOST_WARN=1：GKI 会裁剪未使用的导出符号，我们模块里可能有
           # 少量符号在新分支上已不再导出。硬失败会导致整轮拿不到产物；
           # 这里保留警告，真正的 CRC 由上一步的 Module.symvers 保证。
-          make -C ../../common M="$PWD" ARCH=arm64 LLVM=1 \
+          make -C ../../common M="$PWD" ARCH=arm64 ${{ matrix.tools }} \
                KBUILD_MODPOST_WARN=1 modules 2>&1 | tail -80
 
           llvm-strip --strip-debug huijui_phantom.ko temp_root.ko \
