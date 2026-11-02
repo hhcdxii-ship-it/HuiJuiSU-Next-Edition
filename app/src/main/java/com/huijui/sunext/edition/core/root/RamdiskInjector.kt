@@ -112,7 +112,14 @@ object RamdiskInjector {
 
         appendLine("# 3) 校验：cpio 命令是「静默忽略」式的，不校验等于没做")
         appendLine("\$HS cpio ramdisk.cpio \"exists init.real\"   || { echo 'FAIL: init.real 未生成'; exit 14; }")
-        appendLine("\$HS cpio ramdisk.cpio \"exists huijuiinit\"  || { echo 'FAIL: huijuiinit 未注入'; exit 15; }")
+        // ⚠️ 这里必须校验 `init`，不是 `huijuiinit`。
+        //    `add 0755 init huijuiinit` 的语义是「把文件 huijuiinit 添加为条目 init」，
+        //    注入成功后 cpio 里存在的是 **init**（劫持壳），huijuiinit 这个名字从来没进过 ramdisk。
+        //    之前写成 exists huijuiinit，导致每一步都成功、却在校验处必失败（exit 15），
+        //    直接安装永远走不到写盘。真机复现确认过：
+        //      Add entry [init] (0755)  -> EXIT=0
+        //      exists huijuiinit        -> FAIL huijuiinit
+        appendLine("\$HS cpio ramdisk.cpio \"exists init\"        || { echo 'FAIL: 劫持壳 init 未注入'; exit 15; }")
         appendLine("\$HS cpio ramdisk.cpio \"exists force_insmod\" || { echo 'FAIL: force_insmod 未注入'; exit 16; }")
         appendLine("\$HS cpio ramdisk.cpio \"exists $KO_ENTRY_NAME\" || { echo 'FAIL: 内核模块未注入'; exit 17; }")
         appendLine("")
