@@ -139,7 +139,38 @@ object DirectInstaller {
 
             val patchOut = InstallIo.run("sh $REMOTE_DIR/direct_patch.sh", 5 * 60_000L)
             if (!patchOut.output.contains("PATCH_OK")) {
-                emit(InstallState.Error("❌ 引擎修补失败：\n${patchOut.output.takeLast(600)}"))
+                // ── 镜像修补失败时的回退 ──
+                // 有些机型上 hsud_cli 会在解析 VBMETA / ramdisk 阶段直接崩溃
+                // （例如 bionic 因指针标记截断而 abort），这类失败与镜像本身无关，
+                // 换设备才能修。但 HUI 还有一条**完全不需要镜像修补**的路：
+                // 直接把 .ko 放到 /data/local/tmp 再 insmod 热加载。
+                emit(InstallState.Progress("⚠️ 镜像修补失败，尝试改走 LKM 热加载…"))
+
+                val lkmOk = runCatching {
+                    HuijuiGodLoader.loadLkmDirectly(context)
+                }.getOrDefault(false)
+
+                if (lkmOk) {
+                    val verify = runCatching { RootEngineVerifier.verifyDetailed() }.getOrNull()
+                    emit(
+                        InstallState.Success(
+                            "✅ 镜像修补未成功，但 LKM 已热加载\n\n" +
+                                "当前状态：${if (verify?.isActive == true) "引擎已接管" else "模块已载入，重启后应生效"}\n" +
+                                "注意：本次**没有写入任何分区**，原厂镜像完全未改动。"
+                        )
+                    )
+                } else {
+                    emit(
+                        InstallState.Error(
+                            "❌ 两种方式都失败了\n\n" +
+                                "· 镜像修补：\n${patchOut.output.takeLast(500)}\n\n" +
+                                "· LKM 热加载：未能载入模块\n\n" +
+                                "若是「Pointer tag ... truncated / Aborted」，那是 hsud_cli 在你设备上\n" +
+                                "的运行时崩溃（指针标记机制导致），不是镜像格式问题，\n" +
+                                "需要等工具链适配。分区未被写入。"
+                        )
+                    )
+                }
                 return@flow
             }
 

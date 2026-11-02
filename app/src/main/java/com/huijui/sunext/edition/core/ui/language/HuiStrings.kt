@@ -268,6 +268,16 @@ object HuiStrings {
         val hanCount = text.count { it.code in 0x4E00..0x9FFF }
         if (hanCount < 2) return original
 
+        // ⚠️ 技术性错误信息绝不加语气。
+        //    之前刷机失败时会显示「镜像格式不支持呢，就这些，记好了。」——
+        //    用户正在看报错，结果被塞了一句调侃，既干扰判断也很欠揍。
+        val technical = listOf(
+            "失败", "错误", "异常", "不支持", "无法", "中止",
+            "FAIL", "FAILED", "error", "Error", "Aborted", "Segmentation",
+            "Abort", "crash", "panic", "Exception"
+        )
+        if (technical.any { text.contains(it) }) return original
+
         // 用字符串自身的哈希做**确定性**选择：
         // 随机数会导致每次重组都变一个说法，界面跟着闪；哈希保证同一条文案永远同一句。
         val h = text.hashCode() and 0x7fffffff
