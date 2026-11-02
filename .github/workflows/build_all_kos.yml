@@ -76,15 +76,25 @@ jobs:
         working-directory: common
         run: |
           set -o pipefail
-          if ! make ARCH=arm64 LLVM=1 -j$(($(nproc) / 2)) vmlinux 2>&1 | tail -120; then
-            echo "::error::vmlinux 构建失败，下面是资源状况"
+          make ARCH=arm64 LLVM=1 -j$(nproc) vmlinux 2>&1 | tail -150
+
+          ls -l Module.symvers vmlinux.symvers 2>/dev/null || true
+
+          # ⚠️ 关键：新版内核 `make vmlinux` 产出的是 vmlinux.symvers，
+          #    而外部模块的 modpost 只认 Module.symvers。
+          #    上一版我在这里硬性要求 Module.symvers 存在，结果 8 个分支全部
+          #    卡在这一步 —— 其实 vmlinux 已经编好了，只是文件名不同。
+          if [ ! -s Module.symvers ] && [ -s vmlinux.symvers ]; then
+            cp vmlinux.symvers Module.symvers
+            echo "已把 vmlinux.symvers 复制为 Module.symvers"
+          fi
+
+          test -s Module.symvers || {
+            echo "::error::没有生成 Module.symvers（vmlinux 可能没真正编完）"
             df -h / || true
             free -h || true
             exit 1
-          fi
-          ls -l vmlinux Module.symvers 2>/dev/null || true
-          # 没有 Module.symvers 就没有 CRC，编出来的模块必然加载失败
-          test -s Module.symvers || { echo "::error::没有生成 Module.symvers"; exit 1; }
+          }
           echo "Module.symvers 行数: $(wc -l < Module.symvers)"
 
       - name: Compile KO
