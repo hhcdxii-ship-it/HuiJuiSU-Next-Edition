@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # 8 个 job 同时全量编 GKI 会互相抢资源，长耗时的分支（5.15 / 13-5.10）
+      # 多次在 27 分钟左右被 runner 回收。限制并行度能明显降低被回收的概率。
+      max-parallel: 4
       matrix:
         include:
           # 5.10 / 5.15 的 GKI 只认 clang 12~14 那一代。
@@ -86,7 +89,14 @@ jobs:
           #   "FAILED: load BTF from .tmp_vmlinux1.BTF.1: No such file or directory"
           #   （发行版的 dwarves 版本和内核期望的不匹配）
           # BTF 只用于内省，不影响模块加载，CI 里直接关掉更稳也更快。
-          ./scripts/config --file .config -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES || true
+          # 关掉全部调试信息：我们只需要 Module.symvers 和模块本身，
+          # 调试信息占 GKI 编译时间与磁盘的绝大部分。5.15 / 13-5.10 连续多轮
+          # 跑到 ~27 分钟就被 runner 回收（exit 143），压缩构建体积是直接对策。
+          ./scripts/config --file .config \
+            -d DEBUG_INFO -d DEBUG_INFO_DWARF4 -d DEBUG_INFO_DWARF5 \
+            -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES \
+            -d DEBUG_INFO_REDUCED -d GDB_SCRIPTS || true
+          ./scripts/config --file .config -e DEBUG_INFO_NONE || true
           make ARCH=arm64 ${{ matrix.tools }} olddefconfig >/dev/null 2>&1 || true
           grep -E '^CONFIG_DEBUG_INFO_BTF' .config || echo "DEBUG_INFO_BTF 已关闭"
 
