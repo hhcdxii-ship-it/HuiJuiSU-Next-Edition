@@ -112,7 +112,18 @@ struct mmap_data : public byte_data {
     mmap_data(const mmap_data&) = delete;
     mmap_data(mmap_data &&o) { swap(o); }
     mmap_data(const char *name, bool rw = false);
-    ~mmap_data() { if (buf) if (buf) free(buf); }
+    // ⚠️ buf 来自 mmap()，必须用 munmap 释放。
+    //
+    // 这里原本写的是 free(buf) —— 对 mmap 内存调用 free() 是未定义行为。
+    // 在普通设备上碰巧不炸，但在开了 tagged_addr / PAC 的 Android 16/17 上，
+    // bionic 的 free() 会先校验指针标记，标记对不上就直接 abort：
+    //   "Pointer tag for 0x... was truncated" -> SIGABRT (exit 134)
+    // 表现为 hsud_cli unpack 在打印完 VBMETA 后崩溃，刷入流程整条断掉。
+    //
+    // 现场回溯（真机取证）：
+    //   #01 free+112 <- #02 unpack()+952 <- #03 main
+    //   addr2line 定位到 mmap_data::~mmap_data() shim/base.hpp:115
+    ~mmap_data() { if (buf) munmap(buf, sz); }
     mmap_data& operator=(mmap_data &&other) { swap(other); return *this; }
 };
 
