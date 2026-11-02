@@ -62,7 +62,8 @@ fun SettingsScreen(
     onNavigateToLanguage: () -> Unit = {},
     onResetComplete: () -> Unit = {},
     onNavigateToKernelModules: () -> Unit = {},
-    onNavigateToEffects: () -> Unit = {}
+    onNavigateToEffects: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -312,7 +313,7 @@ fun SettingsScreen(
         // ── 关于 ────────────────────────────────────────────────────
         item { SectionLabel("关于", modifier = Modifier.padding(top = HuiSpace.m)) }
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { showAbout = true }) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onNavigateToAbout) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_brand),

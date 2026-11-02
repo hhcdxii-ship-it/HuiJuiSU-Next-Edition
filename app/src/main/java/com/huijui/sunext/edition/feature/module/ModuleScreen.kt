@@ -1,5 +1,7 @@
 package com.huijui.sunext.edition.feature.module
 
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material3.TextButton
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -78,6 +80,8 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
 
     // 待安装的 ZIP：交给 ModuleInstallDialog 处理（它自带流式进度与失败原因）
     var installRequest by remember { mutableStateOf<Pair<String, Uri>?>(null) }
+    // 点击模块卡后打开的详情
+    var detailModule by remember { mutableStateOf<InstalledModule?>(null) }
 
     suspend fun loadLocalModules() {
         isLoadingLocal = true; localError = null
@@ -134,6 +138,65 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
         }
     }
 
+    // ── 模块详情弹窗 ──
+    detailModule?.let { m ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { detailModule = null },
+            title = { ZakoText(m.name, color = Color.White, fontSize = 16.sp) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ZakoText("版本  v${m.version}", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                    ZakoText("作者  ${m.author}", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                    ZakoText("ID    ${m.id}", color = Color.White.copy(alpha = 0.35f), fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                    if (m.description.isNotBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        ZakoText(m.description, color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp, lineHeight = 18.sp)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    ZakoText(
+                        when {
+                            m.removePending -> "状态：等待卸载（重启后生效）"
+                            m.isEnabled -> "状态：已启用"
+                            else -> "状态：已停用"
+                        },
+                        color = if (m.isEnabled) Color(0xFF81C784) else Color(0xFFFFC107),
+                        fontSize = 12.sp
+                    )
+                    if (m.updateAvailable) {
+                        ZakoText("有新版本可以更新", color = Color(0xFF00E5FF), fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    detailModule = null
+                    scope.launch {
+                        if (ModuleManager.toggleModule(m.id, !m.isEnabled)) loadLocalModules()
+                        else Toast.makeText(context, zakoString("操作失败：纯血模式锁"), Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    ZakoText(if (m.isEnabled) "停用" else "启用", color = AppSettings.accentColor.color, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        detailModule = null
+                        scope.launch {
+                            if (ModuleManager.uninstallModule(m.id)) loadLocalModules()
+                        }
+                    }) {
+                        ZakoText("卸载", color = Color(0xFFEF4444))
+                    }
+                    TextButton(onClick = { detailModule = null }) {
+                        ZakoText("关闭", color = Color.White.copy(alpha = 0.6f))
+                    }
+                }
+            },
+            containerColor = Color(0xFF1C1C21)
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // 真正的安装入口
         installRequest?.let { (name, u) ->
@@ -186,6 +249,7 @@ fun ModuleScreen(onNavigateToWebUI: (name: String, path: String) -> Unit) {
                     LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(installedModules, key = { it.id }) { module ->
                             LocalModuleCard(module,
+                                onOpen = { detailModule = module },
                                 onToggle = { enable -> 
                                     scope.launch { 
                                         if (ModuleManager.toggleModule(module.id, enable)) {
@@ -316,12 +380,15 @@ fun ModuleDetailDialog(module: ModuleRepoProvider.RemoteModule, onDismiss: () ->
 }
 
 @Composable
-private fun LocalModuleCard(module: InstalledModule, onToggle: (Boolean) -> Unit, onUninstall: () -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+private fun LocalModuleCard(module: InstalledModule, onToggle: (Boolean) -> Unit, onUninstall: () -> Unit,
+    onOpen: () -> Unit) {
+    // 整张卡可点击 -> 打开详情弹窗（之前只有开关和卸载按钮能点，卡片本身没反应）
+    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onOpen) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF64B5F6).copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Extension, null, tint = Color(0xFF64B5F6), modifier = Modifier.size(20.dp))
+                // 模块图标改成中性灰，避免每个页面都是蓝紫色调、彼此抢焦点
+                Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Extension, null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {

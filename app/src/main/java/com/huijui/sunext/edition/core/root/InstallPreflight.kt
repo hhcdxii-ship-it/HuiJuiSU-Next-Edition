@@ -33,6 +33,8 @@ object InstallPreflight {
         val partitionName: String?,
         val partitionDevice: String?,
         val slot: String,
+        /** 当前是否已拿到 Root —— 没有的话分区项只能显示"未验证" */
+        val hasRoot: Boolean = false,
         /** 非 null = 不能继续，内容即为原因 */
         val blocking: String?
     ) {
@@ -44,7 +46,13 @@ object InstallPreflight {
             appendLine("KMI: " + (kmiBranch ?: "不支持"))
             appendLine("模块: " + (koAsset ?: "缺失"))
             appendLine("vermagic: " + (koVermagic ?: "未知") + if (koCompatible) "（匹配）" else "（不匹配）")
-            appendLine("目标分区: " + (partitionName ?: "未找到") + slot)
+            appendLine(
+                "目标分区: " + when {
+                    partitionName != null -> partitionName + slot
+                    !hasRoot -> "未验证（需要 Root 授权）"
+                    else -> "未找到"
+                }
+            )
             appendLine("设备节点: " + (partitionDevice ?: "未找到"))
         }
     }
@@ -61,6 +69,12 @@ object InstallPreflight {
         val androidRelease = Build.VERSION.RELEASE ?: "?"
         val api = Build.VERSION.SDK_INT
         val release = KernelVersionMatcher.currentKernelRelease()
+
+        // /dev/block/by-name 需要 Root 才能读。
+        // 引导页阶段用户往往还没授权，此时所有分区探测都会返回"不存在"，
+        // 于是被误判成「找不到 boot 分区」——这是体检误报的根源。
+        // 没 Root 时分区只能报「未验证」，绝不能据此阻止流程。
+        val hasRoot = runCatching { HuijuiShell.isRooted() }.getOrDefault(false)
 
         val kmi = KernelVersionMatcher.matchKmi(release, "arm64")
         val branch = kmi?.branch
@@ -96,19 +110,23 @@ object InstallPreflight {
         // ⚠️ 不能只认 /dev/block/by-name：不少机型（尤其高通/联发科老平台）的分区
         //    链接在 /dev/block/platform/<控制器>/by-name 下面，写死单一路径会
         //    误报「找不到 init_boot_a 分区」，把一个能正常刷的机器判死。
-        val byNameDir = resolveByNameDir()
+        val byNameDir = if (hasRoot) resolveByNameDir() else ""
         fun cand(name: String): List<String> = buildList {
             if (byNameDir.isNotBlank()) add("$byNameDir/$name")
             add("/dev/block/by-name/$name")
         }
 
-        val hasInitBoot = cand("init_boot$slot").any { InstallIo.exists(it) } ||
-            cand("init_boot").any { InstallIo.exists(it) }
+        val hasInitBoot = hasRoot && (
+            cand("init_boot$slot").any { InstallIo.exists(it) } ||
+                cand("init_boot").any { InstallIo.exists(it) }
+            )
         val partitionName = if (hasInitBoot) "init_boot" else "boot"
 
-        // 先试带槽位、再试不带槽位；槽位为空时不要拼出 "boot" + "" 之外的东西
-        val devicePath = (cand(partitionName + slot) + cand(partitionName)).firstOrNull {
-            InstallIo.exists(it)
+        // 先试带槽位、再试不带槽位
+        val devicePath = if (!hasRoot) {
+            null
+        } else {
+            (cand(partitionName + slot) + cand(partitionName)).firstOrNull { InstallIo.exists(it) }
         }
 
         // vendor_boot 提醒：部分 GKI 2.0 机型的 ramdisk 在 vendor_boot 里，
@@ -116,9 +134,10 @@ object InstallPreflight {
         val hasVendorBoot = InstallIo.exists("/dev/block/by-name/vendor_boot$slot")
 
         val blocking = koBlocking ?: when {
-            devicePath == null ->
+            // 有 Root 却真的找不到分区 -> 这才是硬错误
+            hasRoot && devicePath == null ->
                 "找不到 $partitionName 的设备节点（已尝试 by-name 与 platform/by-name，槽位=\"$slot\"）。" +
-                    "可能是分区名不同，或当前没有 Root 权限读取分区表"
+                    "可能是分区名不同"
             api >= 33 && !hasInitBoot && hasVendorBoot ->
                 "系统为 Android $androidRelease，但没有 init_boot 分区而存在 vendor_boot。" +
                     "这类 GKI 2.0 机型的 ramdisk 位于 vendor_boot，刷 boot 不会生效，已中止以免刷坏。"
@@ -139,6 +158,7 @@ object InstallPreflight {
             partitionName = if (devicePath != null) partitionName else null,
             partitionDevice = devicePath,
             slot = slot,
+            hasRoot = hasRoot,
             blocking = blocking
         )
     }

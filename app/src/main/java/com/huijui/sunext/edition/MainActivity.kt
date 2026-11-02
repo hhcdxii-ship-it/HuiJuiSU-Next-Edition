@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition
 
+import com.huijui.sunext.edition.feature.settings.AboutScreen
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -288,12 +289,14 @@ fun MainApp() {
                     composable("language_settings") {
                         LanguageSettingsScreen(onBack = { navController.popBackStack() })
                     }
+                    composable("about") { AboutScreen(onBack = { navController.popBackStack() }) }
                     composable("settings") {
                         SettingsScreen(
                             onNavigateToTheme = { navController.navigate("themesettings") },
                             onNavigateToLanguage = { navController.navigate("language_settings") },
                             onNavigateToKernelModules = { navController.navigate("kernel_modules") },
                             onNavigateToEffects = { navController.navigate("effects_gallery") },
+                            onNavigateToAbout = { navController.navigate("about") },
                             onResetComplete = {
                                 navController.navigate("onboarding") {
                                     popUpTo(navController.graph.id) { inclusive = true }
