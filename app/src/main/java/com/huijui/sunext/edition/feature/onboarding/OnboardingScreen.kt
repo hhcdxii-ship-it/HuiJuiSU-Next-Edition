@@ -1,5 +1,6 @@
 package com.huijui.sunext.edition.feature.onboarding
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.Image
@@ -540,6 +541,18 @@ private fun IntroContent(
 private fun ConfigHeader(data: OnboardingPageData) {
     val deepAccent = lerp(data.accent, Color(0xFF1A1A1A), 0.35f)
     val midAccent = lerp(data.accent, Color(0xFF1A1A1A), 0.15f)
+
+    // 电影式错峰入场：每翻一页，标题层会依次"升起"。
+    // 单个进度值 enter 从 0 弹性到 1，各元素用不同的映射区间错开，
+    // 形成 logo → 标签 → 标题 → 副标题 → 描述的依次浮现。
+    val enter = remember { Animatable(0f) }
+    LaunchedEffect(data.tag) {
+        enter.snapTo(0f)
+        enter.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = 220f))
+    }
+    fun stage(from: Float, to: Float): Float =
+        ((enter.value - from) / (to - from)).coerceIn(0f, 1f)
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // 品牌 logo：之前引导页完全没有 logo，只有一个小图标
         Image(
@@ -549,19 +562,47 @@ private fun ConfigHeader(data: OnboardingPageData) {
                 .size(84.dp)
                 .clip(CircleShape)
                 .border(1.5.dp, data.accent.copy(alpha = 0.35f), CircleShape)
+                .graphicsLayer {
+                    val p0 = stage(0f, 0.55f)
+                    alpha = p0
+                    val sc = 0.82f + 0.18f * p0
+                    scaleX = sc
+                    scaleY = sc
+                    translationY = (1f - p0) * 26.dp.toPx()
+                }
         )
         Spacer(modifier = Modifier.height(14.dp))
         ZakoText("· ${data.tag} ·", color = midAccent, fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold, letterSpacing = 4.sp, fontFamily = FontFamily.Monospace)
+            fontWeight = FontWeight.SemiBold, letterSpacing = 4.sp, fontFamily = FontFamily.Monospace,
+            modifier = Modifier.graphicsLayer {
+                val p = stage(0.15f, 0.65f)
+                alpha = p
+                translationY = (1f - p) * 18.dp.toPx()
+            })
         Spacer(modifier = Modifier.height(12.dp))
         ZakoText(data.title, color = Color(0xFF1A1A1A), fontSize = 26.sp,
-            fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 34.sp)
+            fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 34.sp,
+            modifier = Modifier.graphicsLayer {
+                val p = stage(0.30f, 0.85f)
+                alpha = p
+                translationY = (1f - p) * 24.dp.toPx()
+            })
         Spacer(modifier = Modifier.height(8.dp))
         ZakoText(data.subtitle, color = deepAccent, fontSize = 14.sp,
-            fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+            fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
+            modifier = Modifier.graphicsLayer {
+                val p = stage(0.45f, 1f)
+                alpha = p
+                translationY = (1f - p) * 20.dp.toPx()
+            })
         if (data.desc.isNotEmpty()) {
             Spacer(modifier = Modifier.height(10.dp))
-            ZakoText(data.desc, color = Color(0xFF7A7A7A), fontSize = 12.sp, textAlign = TextAlign.Center)
+            ZakoText(data.desc, color = Color(0xFF7A7A7A), fontSize = 12.sp, textAlign = TextAlign.Center,
+                modifier = Modifier.graphicsLayer {
+                    val p = stage(0.60f, 1f)
+                    alpha = p
+                    translationY = (1f - p) * 16.dp.toPx()
+                })
         }
     }
 }
