@@ -371,8 +371,12 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
         animationSpec = spring(dampingRatio = 0.58f, stiffness = 260f),
         label = "bubblePos"
     )
-    // 拉伸量 = 当前位置离目标的距离；移动中拉长，到位后归零
-    val stretch = kotlin.math.abs(selectedIndex.toFloat() - bubblePos).coerceIn(0f, 1f)
+    // 尾部位置：用更软的弹簧跟随头部，二者产生时间差 —— 这个差值就是"拖尾"
+    val trailPos by animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 120f),
+        label = "bubbleTrail"
+    )
 
     Box(
         modifier = modifier
@@ -395,53 +399,68 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cell = size.width / navItems.size
-            val cx = (bubblePos + 0.5f) * cell
+            val headX = (bubblePos + 0.5f) * cell
+            val tailX = (trailPos + 0.5f) * cell
+            val cy = size.height / 2f
+            val baseR = cell * 0.30f
 
-            val baseW = cell * 0.66f
-            val baseH = 34.dp.toPx()
+            // ── 液滴拖尾 ──
+            // 之前是"一个硬边圆角矩形横向拉长"，边缘生硬、没有液体的黏连感。
+            // 现在用一串半径递减、位置在头尾之间插值的软圆：
+            //   · 头部（当前位置）最大最亮
+            //   · 尾部（延迟位置）更小更淡
+            //   · 中间 6 个过渡点把两者黏起来
+            // 每个圆都用径向渐变（中心实、边缘透明），所以边界是柔的，
+            // 叠在一起就成了"一坨液体被拉扯"的形状，而不是一个拉伸的方块。
+            val steps = 6
+            for (i in 0..steps) {
+                val t = i.toFloat() / steps          // 0 = 头, 1 = 尾
+                val x = headX + (tailX - headX) * t
+                // 中段略微加粗，模拟液体被拉长时中间变细两侧鼓起的表面张力
+                val bulge = 1f + 0.18f * kotlin.math.sin(t * Math.PI).toFloat()
+                val r = baseR * (1f - 0.34f * t) * bulge
+                val a = (0.30f * (1f - 0.75f * t)).coerceIn(0.02f, 0.30f)
 
-            // 移动中：横向拉长、纵向压扁（体积近似守恒的水感）
-            val pillW = baseW * (1f + 0.60f * stretch)
-            val pillH = baseH * (1f - 0.22f * stretch)
-            val topLeft = Offset(cx - pillW / 2f, (size.height - pillH) / 2f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            accent.copy(alpha = a),
+                            accent.copy(alpha = a * 0.55f),
+                            Color.Transparent
+                        ),
+                        center = Offset(x, cy),
+                        radius = r
+                    ),
+                    radius = r,
+                    center = Offset(x, cy)
+                )
+            }
 
-            // 1) 气泡下方的径向光晕
+            // ── 液体内部的实心核心 ──
+            // 拖尾是半透明液体，核心给它一点"密度"，否则整体太虚。
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(accent.copy(alpha = 0.22f), Color.Transparent),
-                    center = Offset(cx, size.height / 2f),
-                    radius = pillW * 0.85f
-                ),
-                radius = pillW * 0.85f,
-                center = Offset(cx, size.height / 2f)
-            )
-
-            // 2) 气泡本体
-            drawRoundRect(
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        accent.copy(alpha = 0.34f),
-                        accent.copy(alpha = 0.16f),
-                        accent.copy(alpha = 0.30f)
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.22f),
+                        accent.copy(alpha = 0.26f),
+                        Color.Transparent
                     ),
-                    startX = cx - pillW / 2f,
-                    endX = cx + pillW / 2f
+                    center = Offset(headX, cy - baseR * 0.15f),
+                    radius = baseR * 0.95f
                 ),
-                topLeft = topLeft,
-                size = Size(pillW, pillH),
-                cornerRadius = CornerRadius(pillH / 2f)
+                radius = baseR * 0.95f,
+                center = Offset(headX, cy - baseR * 0.15f)
             )
 
-            // 3) 顶部高光，模拟光线在液面上的反射
-            drawRoundRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color.White.copy(alpha = 0.30f), Color.Transparent),
-                    startY = topLeft.y,
-                    endY = topLeft.y + pillH * 0.55f
+            // ── 顶部高光点：液面反光 ──
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.38f), Color.Transparent),
+                    center = Offset(headX - baseR * 0.25f, cy - baseR * 0.40f),
+                    radius = baseR * 0.45f
                 ),
-                topLeft = topLeft,
-                size = Size(pillW, pillH * 0.55f),
-                cornerRadius = CornerRadius(pillH / 2f)
+                radius = baseR * 0.45f,
+                center = Offset(headX - baseR * 0.25f, cy - baseR * 0.40f)
             )
         }
 

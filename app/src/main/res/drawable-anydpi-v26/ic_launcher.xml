@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  自适应图标。
+  自适应图标（API 26+）。
 
-  drawable/ 里早就有 ic_hui_background.xml 和 ic_hui_foreground.xml 两个矢量图，
-  但从来没有一个 adaptive-icon 去引用它们 —— 等于画好了没用上，
-  在部分启动器上图标会被裁成方块或加一圈奇怪的白边。
+  之前前景用的是 ic_hui_foreground 这个抽象矢量图，跟品牌 logo 完全不是一回事，
+  所以启动器上看到的图标"一直没变"。现在前景直接是 logo 位图：
+  内容缩到 108dp 画布的 72dp 安全区内，圆形/方形遮罩都不会切到主体。
 -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_hui_background" />
-    <foreground android:drawable="@drawable/ic_hui_foreground" />
-    <!-- Android 13+ 主题图标：系统会把这一层染色成壁纸主色 -->
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
     <monochrome android:drawable="@drawable/ic_hui_foreground" />
 </adaptive-icon>
