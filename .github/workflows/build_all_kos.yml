@@ -77,24 +77,42 @@ jobs:
       - name: Build vmlinux (generates Module.symvers)
         working-directory: common
         run: |
-          set -o pipefail
-          make ARCH=arm64 LLVM=1 -j$(nproc) vmlinux 2>&1 | tail -150
+          # 不要把输出直接喂给 tail —— make 的报错往往出现在成千上万行
+          # HDRINST/CC 之前，被 tail 截掉后就只剩"exit code 2"没法定位。
+          # 这里写全量日志，失败时只挑错误行和最后几十行打印。
+          if ! make ARCH=arm64 LLVM=1 -j$(nproc) vmlinux > build_vmlinux.log 2>&1; then
+            echo "===== 错误行 ====="
+            grep -nE 'error:|Error [0-9]|\*\*\*|not available|No such file' build_vmlinux.log | tail -40 || true
+            echo "===== 最后 40 行 ====="
+            tail -40 build_vmlinux.log
+            echo "===== 资源 ====="
+            df -h / || true
+            free -h || true
+            exit 1
+          fi
+          echo "vmlinux 构建完成，输出行数: $(wc -l < build_vmlinux.log)"
 
           ls -l Module.symvers vmlinux.symvers 2>/dev/null || true
-
-          # ⚠️ 关键：新版内核 `make vmlinux` 产出的是 vmlinux.symvers，
-          #    而外部模块的 modpost 只认 Module.symvers。
-          #    上一版我在这里硬性要求 Module.symvers 存在，结果 8 个分支全部
-          #    卡在这一步 —— 其实 vmlinux 已经编好了，只是文件名不同。
           if [ ! -s Module.symvers ] && [ -s vmlinux.symvers ]; then
             cp vmlinux.symvers Module.symvers
             echo "已把 vmlinux.symvers 复制为 Module.symvers"
           fi
 
+      # 生成 scripts/module.lds、include/generated 等外部模块必需的基础设施。
+      # 只编 vmlinux 不会产出 scripts/module.lds，模块链接时会报
+      # "No rule to make target 'scripts/module.lds'"。
+      - name: Prepare module infrastructure
+        working-directory: common
+        run: |
+          make ARCH=arm64 LLVM=1 modules_prepare > prepare.log 2>&1 || {
+            echo "===== modules_prepare 失败 ====="
+            grep -nE 'error:|Error [0-9]|\*\*\*' prepare.log | tail -20 || true
+            tail -20 prepare.log
+            exit 1
+          }
+          test -f scripts/module.lds && echo "scripts/module.lds OK"
           test -s Module.symvers || {
-            echo "::error::没有生成 Module.symvers（vmlinux 可能没真正编完）"
-            df -h / || true
-            free -h || true
+            echo "::error::没有 Module.symvers"
             exit 1
           }
           echo "Module.symvers 行数: $(wc -l < Module.symvers)"
