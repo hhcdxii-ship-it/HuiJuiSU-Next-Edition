@@ -88,6 +88,8 @@ private fun VideoWallpaper() {
             volume = 0f // 背景视频必须静音
             addListener(object : Player.Listener {
                 override fun onPlayerError(error: PlaybackException) {
+                    // 只标记失败、不销毁 player —— 回到前台会重新 prepare 重试。
+                    // 之前这里一失败就永久兜底，是"切后台回来壁纸消失"的直接原因。
                     Log.e("SmartBackground", "背景视频播放失败: ${error.message}", error)
                     failed = true
                 }
@@ -99,7 +101,21 @@ private fun VideoWallpaper() {
     DisposableEffect(lifecycleOwner, exoPlayer) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = true
+                Lifecycle.Event.ON_START -> {
+                    // 切后台时 SurfaceView 的 surface 会被销毁，ExoPlayer 可能抛
+                    // "surface released" 之类的错误，把 failed 置成 true。
+                    // 旧逻辑里 failed 是**粘滞**的：一旦为 true 就永远走 StaticFallback，
+                    // 于是"切出去再回来，动态壁纸就没了"，而且再也回不来。
+                    // 现在回到前台先清掉失败标记并重新 prepare，相当于自动重试。
+                    if (failed) {
+                        failed = false
+                        runCatching { exoPlayer.prepare() }
+                    }
+                    if (exoPlayer.playbackState == Player.STATE_IDLE) {
+                        runCatching { exoPlayer.prepare() }
+                    }
+                    exoPlayer.playWhenReady = true
+                }
                 Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
                 else -> {}
             }

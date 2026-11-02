@@ -253,7 +253,7 @@ object HuiStrings {
     fun zakoize(original: String): String {
         val text = original.trim()
         if (text.isEmpty()) return original
-        if (text.length > 14) return original
+        // 纯 ASCII（数字、包名、路径、英文）不处理，加了语气反而怪
         if (text.all { it.code < 128 }) return original
         val hanCount = text.count { it.code in 0x4E00..0x9FFF }
         if (hanCount < 2) return original
@@ -264,16 +264,25 @@ object HuiStrings {
         val tails = listOf("哦～", "啦～", "呢♡", "的说", "嘛", "，懂？")
         val tail = tails[h % tails.size]
 
-        return when {
+        // 之前这里有个 `if (text.length > 14) return original` —— 长句直接原样返回，
+        // 于是描述、提示、说明这类长文案在杂鱼模式下完全没有变化，用户看到的
+        // 就是"只覆盖了一部分"。现在长句也处理：把语气加在句尾，不动原文内容。
+        val isLong = text.length > 14
+
+        val core = when {
             text.endsWith("。") -> text.dropLast(1) + tail + "。"
             text.endsWith("！") -> text.dropLast(1) + tail + "！"
-            text.endsWith("？") -> text + tails[(h + 1) % tails.size]
+            text.endsWith("？") -> text.trimEnd('？') + tails[(h + 1) % tails.size] + "？"
             text.endsWith("成功") -> text + "，本小姐出手当然成"
             text.endsWith("失败") -> text + "，杂鱼真笨"
             text.endsWith("中") -> text + "呢…"
             text.endsWith("错误") -> text + "，自己看着办"
             else -> text + tail
         }
+
+        // 长句额外补一句收尾，让整段读起来是"本小姐在说话"而不是原文照搬
+        return if (isLong) "$core ${listOf("就这些，记好了。", "听懂了吗，杂鱼。", "别让本小姐重复第二遍。")[h % 3]}"
+        else core
     }
 
     /** 语言选择页的实时预览行。 */
