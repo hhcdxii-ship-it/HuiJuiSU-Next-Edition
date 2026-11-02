@@ -109,15 +109,33 @@ fun GlassCard(
             .then(if (fill != null) Modifier.background(fill) else Modifier)
             .then(
                 if (style != MaterialStyle.NONE) {
-                    Modifier.border(
-                        width = when (style) {
-                            MaterialStyle.LIQUID_GLASS -> 1.2.dp
-                            MaterialStyle.SOFT_GLASS -> 0.8.dp
-                            else -> 1.dp
-                        },
-                        color = if (isPressed) glass.border.copy(alpha = 0.42f) else glass.border,
-                        shape = cornerRadius
-                    )
+                    val bw = when (style) {
+                        MaterialStyle.LIQUID_GLASS -> 1.3.dp
+                        MaterialStyle.SOFT_GLASS -> 0.8.dp
+                        else -> 1.dp
+                    }
+                    if (style == MaterialStyle.LIQUID_GLASS) {
+                        // 液态玻璃用**渐变描边**而不是纯色：上缘亮、下缘暗，
+                        // 模拟光线从上方打进来时液体边缘的明暗过渡。
+                        // 纯色描边会让卡片看起来像贴了一层塑料膜。
+                        Modifier.border(
+                            width = bw,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = if (isPressed) 0.50f else 0.42f),
+                                    Color.White.copy(alpha = 0.16f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            ),
+                            shape = cornerRadius
+                        )
+                    } else {
+                        Modifier.border(
+                            width = bw,
+                            color = if (isPressed) glass.border.copy(alpha = 0.42f) else glass.border,
+                            shape = cornerRadius
+                        )
+                    }
                 } else Modifier
             )
             .then(
@@ -133,10 +151,37 @@ fun GlassCard(
                 } else Modifier
             )
     ) {
-        // 液态玻璃：一道持续流动的高光带，模拟液体表面的张力弧。
-        // 用 shimmer 而不是新写动画，保证它同样受「关闭动画」开关控制。
+        // 液态玻璃的层次（从上到下）：
+        //   1. 顶部内高光 —— 光线在上边缘的强烈反射
+        //   2. 流动高光带 —— 液体表面缓慢移动的张力弧
+        //   3. 底部内阴影 —— 让卡片有厚度，而不是一张纸
         if (style == MaterialStyle.LIQUID_GLASS) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = 40f
+                        )
+                    )
+            )
             Box(modifier = Modifier.matchParentSize().huiShimmer(Color.White))
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.10f)),
+                            startY = 0f,
+                            endY = Float.POSITIVE_INFINITY
+                        )
+                    )
+            )
         }
 
         // 左上角斜向反光：真实玻璃最有辨识度的一笔，成本只有一个 draw call。

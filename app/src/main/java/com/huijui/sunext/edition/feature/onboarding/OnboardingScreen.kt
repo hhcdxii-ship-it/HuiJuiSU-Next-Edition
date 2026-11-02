@@ -276,13 +276,25 @@ private fun OnboardingPage(
     val isConfig = data.type == PageType.CONFIG_MODE || data.type == PageType.CONFIG_ACCENT
             || data.type == PageType.CONFIG_MATERIAL || data.type == PageType.CONFIG_LANGUAGE
 
-    val pageModifier = if (isConfig) {
-        Modifier.fillMaxSize()
-    } else {
-        val scale = (1f - absOffset * 0.25f).coerceIn(0.7f, 1f)
-        val alpha = (1f - absOffset * 0.9f).coerceIn(0f, 1f)
-        Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha; scaleX = scale; scaleY = scale }
-    }
+    // OS4 那种"内容有纵深、跟着手指走"的观感，靠四件事叠出来：
+    //   1. 方向位移 —— 往右翻就从右侧滑入，往左翻从左侧滑入（pageOffset 带符号）
+    //   2. 缩放     —— 离开的页缩小，产生纵深
+    //   3. 淡出     —— 越远越淡
+    //   4. 垂直位移 —— 页面上浮一点点，像被推走
+    // 之前配置页（语言/主题色/材质）完全没有过渡，翻过去就是硬切，最影响手感。
+    val pageModifier = Modifier
+        .fillMaxSize()
+        .graphicsLayer {
+            val s = (1f - absOffset * 0.16f).coerceIn(0.84f, 1f)
+            alpha = (1f - absOffset * 0.85f).coerceIn(0f, 1f)
+            scaleX = s
+            scaleY = s
+            translationX = pageOffset * 72.dp.toPx() * (if (isConfig) 0.8f else 1f)
+            translationY = absOffset * 26.dp.toPx()
+            // 轻微旋转：右侧进来的页微微正转，左侧进来的反转 —— 很轻，但手感完全不同
+            rotationY = -pageOffset * 4f
+            cameraDistance = 24f * density
+        }
 
     Box(modifier = pageModifier, contentAlignment = Alignment.Center) {
         when (data.type) {

@@ -65,7 +65,8 @@ object AppSettings {
     var materialStyle by mutableStateOf(MaterialStyle.GLASS)
     var animationStyle by mutableStateOf(AnimationStyle.SPRING)
     var wallpaperType by mutableStateOf(WallpaperType.VIDEO)
-    var wallpaperScaleMode by mutableStateOf(WallpaperScaleMode.FIT) // 🚀 默认使用 FIT 防大头照
+    // 默认 ZOOM（裁切铺满）—— 之前是 FIT，会留黑边，不像壁纸像一张贴在黑底上的图
+    var wallpaperScaleMode by mutableStateOf(WallpaperScaleMode.ZOOM)
 
     var cardCornerRadius by mutableStateOf(24f)
     var accentColor by mutableStateOf(AccentColor.GREEN)
@@ -112,7 +113,21 @@ object AppSettings {
         materialStyle = try { MaterialStyle.valueOf(prefs.getString("material_style", MaterialStyle.GLASS.name) ?: MaterialStyle.GLASS.name) } catch (_: Exception) { MaterialStyle.GLASS }
         animationStyle = try { AnimationStyle.valueOf(prefs.getString("animation_style", AnimationStyle.SPRING.name) ?: AnimationStyle.SPRING.name) } catch (_: Exception) { AnimationStyle.SPRING }
         wallpaperType = try { WallpaperType.valueOf(prefs.getString("wallpaper_type", WallpaperType.VIDEO.name) ?: WallpaperType.VIDEO.name) } catch (_: Exception) { WallpaperType.VIDEO }
-        wallpaperScaleMode = try { WallpaperScaleMode.valueOf(prefs.getString("wallpaper_scale_mode", WallpaperScaleMode.FIT.name) ?: WallpaperScaleMode.FIT.name) } catch (_: Exception) { WallpaperScaleMode.FIT }
+        wallpaperScaleMode = try {
+            WallpaperScaleMode.valueOf(
+                prefs.getString("wallpaper_scale_mode", WallpaperScaleMode.ZOOM.name)
+                    ?: WallpaperScaleMode.ZOOM.name
+            )
+        } catch (_: Exception) { WallpaperScaleMode.ZOOM }
+
+        // 一次性迁移：老版本默认是 FIT，壁纸会留黑边。已经装过的用户在升级后
+        // 也该看到铺满的效果，否则"改为全屏"这个预期落不到他们身上。
+        if (!prefs.getBoolean("wallpaper_fullscreen_migrated", false)) {
+            if (wallpaperScaleMode == WallpaperScaleMode.FIT) {
+                wallpaperScaleMode = WallpaperScaleMode.ZOOM
+            }
+            prefs.edit().putBoolean("wallpaper_fullscreen_migrated", true).apply()
+        }
         accentColor = try { AccentColor.valueOf(prefs.getString("accent_color", AccentColor.GREEN.name) ?: AccentColor.GREEN.name) } catch (_: Exception) { AccentColor.GREEN }
 
         cardCornerRadius = prefs.getFloat("card_corner_radius", 24f)
