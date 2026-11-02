@@ -49,6 +49,14 @@ object InstallPreflight {
         }
     }
 
+    /** 找到 by-name 目录的真实位置；找不到返回空串。 */
+    private suspend fun resolveByNameDir(): String = runCatching {
+        val direct = HuijuiShell.exec("test -d /dev/block/by-name && echo yes")
+        if (direct.out.joinToString("").contains("yes")) return "/dev/block/by-name"
+        HuijuiShell.exec("ls -d /dev/block/platform/*/by-name 2>/dev/null | head -n 1")
+            .out.firstOrNull()?.trim().orEmpty()
+    }.getOrDefault("")
+
     suspend fun run(context: Context): Result = withContext(Dispatchers.IO) {
         val androidRelease = Build.VERSION.RELEASE ?: "?"
         val api = Build.VERSION.SDK_INT
@@ -84,12 +92,24 @@ object InstallPreflight {
         // ── 分区 ──
         // Android 13 起 ramdisk 从 boot 移到 init_boot（GKI 2.0）。
         // 有 init_boot 就只动 init_boot，绝不碰 boot；没有才回退 boot。
-        val hasInitBoot = InstallIo.exists("/dev/block/by-name/init_boot$slot")
+        //
+        // ⚠️ 不能只认 /dev/block/by-name：不少机型（尤其高通/联发科老平台）的分区
+        //    链接在 /dev/block/platform/<控制器>/by-name 下面，写死单一路径会
+        //    误报「找不到 init_boot_a 分区」，把一个能正常刷的机器判死。
+        val byNameDir = resolveByNameDir()
+        fun cand(name: String): List<String> = buildList {
+            if (byNameDir.isNotBlank()) add("$byNameDir/$name")
+            add("/dev/block/by-name/$name")
+        }
+
+        val hasInitBoot = cand("init_boot$slot").any { InstallIo.exists(it) } ||
+            cand("init_boot").any { InstallIo.exists(it) }
         val partitionName = if (hasInitBoot) "init_boot" else "boot"
-        val devicePath = listOf(
-            "/dev/block/by-name/$partitionName$slot",
-            "/dev/block/by-name/$partitionName"
-        ).firstOrNull { InstallIo.exists(it) }
+
+        // 先试带槽位、再试不带槽位；槽位为空时不要拼出 "boot" + "" 之外的东西
+        val devicePath = (cand(partitionName + slot) + cand(partitionName)).firstOrNull {
+            InstallIo.exists(it)
+        }
 
         // vendor_boot 提醒：部分 GKI 2.0 机型的 ramdisk 在 vendor_boot 里，
         // 这种机型刷 boot/init_boot 不会生效。
@@ -97,7 +117,8 @@ object InstallPreflight {
 
         val blocking = koBlocking ?: when {
             devicePath == null ->
-                "找不到 $partitionName 的设备节点，可能分区名不同或没有 Root 权限"
+                "找不到 $partitionName 的设备节点（已尝试 by-name 与 platform/by-name，槽位=\"$slot\"）。" +
+                    "可能是分区名不同，或当前没有 Root 权限读取分区表"
             api >= 33 && !hasInitBoot && hasVendorBoot ->
                 "系统为 Android $androidRelease，但没有 init_boot 分区而存在 vendor_boot。" +
                     "这类 GKI 2.0 机型的 ramdisk 位于 vendor_boot，刷 boot 不会生效，已中止以免刷坏。"

@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
@@ -68,6 +69,7 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     // 崩溃日志：CrashHandler 一直在往 filesDir 写，但从来没有入口能看到
     var crashLog by remember { mutableStateOf<String?>(null) }
+    var showAbout by remember { mutableStateOf(false) }
     var isResetting by remember { mutableStateOf(false) }
     val accent = AppSettings.accentColor.color
 
@@ -310,7 +312,7 @@ fun SettingsScreen(
         // ── 关于 ────────────────────────────────────────────────────
         item { SectionLabel("关于", modifier = Modifier.padding(top = HuiSpace.m)) }
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), onClick = { showAbout = true }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_brand),
@@ -339,6 +341,60 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (showAbout) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_brand),
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp).clip(CircleShape)
+                    )
+                    Spacer(Modifier.width(HuiSpace.m))
+                    Column {
+                        ZakoText("HuiJuiSU NEXT", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        ZakoText(
+                            "v${BuildConfig.VERSION_NAME} · 纯血 LKM",
+                            color = Color.White.huiTertiary, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AboutLink(
+                        emoji = "🐙",
+                        title = "GitHub 源码",
+                        subtitle = "github.com/hhcdxii-ship-it/HuiJuiSU-Next-Edition"
+                    ) {
+                        openUrl(context, "https://github.com/hhcdxii-ship-it/HuiJuiSU-Next-Edition")
+                    }
+                    AboutLink(
+                        emoji = "💚",
+                        title = "酷安主页",
+                        subtitle = "coolapk.com/u/43549687"
+                    ) {
+                        openUrl(context, "https://www.coolapk.com/u/43549687")
+                    }
+                    AboutLink(
+                        emoji = "📦",
+                        title = "内核模块下载",
+                        subtitle = "GitHub Releases · 8 个 KMI 的 .ko"
+                    ) {
+                        openUrl(context, "https://github.com/hhcdxii-ship-it/HuiJuiSU-Next-Edition/releases")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAbout = false }) {
+                    ZakoText("关闭", color = Color.White.huiSecondary)
+                }
+            },
+            containerColor = Color(0xFF1C1C21)
+        )
     }
 
     crashLog?.let { log ->
@@ -448,6 +504,39 @@ private fun ToggleRow(
                 uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
             )
         )
+    }
+}
+
+@Composable
+private fun AboutLink(emoji: String, title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ZakoText(emoji, fontSize = 18.sp)
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            ZakoText(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            ZakoText(subtitle, color = Color.White.copy(alpha = 0.45f), fontSize = 10.sp, maxLines = 1)
+        }
+        ZakoText("›", color = Color.White.copy(alpha = 0.35f), fontSize = 16.sp)
+    }
+}
+
+/** 打开外部链接；没有浏览器时给个提示而不是崩。 */
+private fun openUrl(context: android.content.Context, url: String) {
+    runCatching {
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }.onFailure {
+        android.widget.Toast.makeText(context, "没有可用的浏览器", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 

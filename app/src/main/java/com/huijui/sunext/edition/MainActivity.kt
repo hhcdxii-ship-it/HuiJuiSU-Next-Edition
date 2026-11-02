@@ -415,14 +415,22 @@ fun ModernBottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit, modi
                     },
                     onHorizontalDrag = { change, _ ->
                         val idx = indexAt(change.position.x)
-                        if (idx != draggingIndex) {
+                        val restricted = navItems[idx].route == "superuser" && !AppSettings.hasRoot
+                        if (idx != draggingIndex && !restricted) {
                             draggingIndex = idx
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                         change.consume()
                     },
                     onDragEnd = {
-                        if (draggingIndex >= 0) onNavigate(navItems[draggingIndex].route)
+                        // ⚠️ 拖拽路径必须和点击路径一样受权限约束：
+                        //    没 Root 时「超管」是禁用的，但之前横滑过去仍然能进去，
+                        //    等于绕过了限制。
+                        if (draggingIndex >= 0) {
+                            val item = navItems[draggingIndex]
+                            val restricted = item.route == "superuser" && !AppSettings.hasRoot
+                            if (!restricted) onNavigate(item.route)
+                        }
                         draggingIndex = -1
                     },
                     onDragCancel = { draggingIndex = -1 }

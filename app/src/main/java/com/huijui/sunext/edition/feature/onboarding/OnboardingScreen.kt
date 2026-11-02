@@ -398,8 +398,12 @@ private fun InteractiveContent(data: OnboardingPageData) {
                         p.animateTo(1f, tween(760, easing = androidx.compose.animation.core.FastOutSlowInEasing))
                         ripples = ripples.filterNot { it.first == id }
                     }
+                    // ⚠️ 外层 Box 用了 contentAlignment = Center，子元素默认从中心开始摆，
+                    //    直接 offset 会让涟漪偏离手指。显式 align(TopStart) 后，
+                    //    offset 才是相对画布左上角的绝对坐标。
                     Box(
                         modifier = Modifier
+                            .align(Alignment.TopStart)
                             .offset { IntOffset((pos.x - 30f).roundToInt(), (pos.y - 30f).roundToInt()) }
                             .size(60.dp)
                             .graphicsLayer {
