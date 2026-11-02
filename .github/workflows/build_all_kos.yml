@@ -35,8 +35,10 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
+          # dwarves 提供 pahole —— 没有它 vmlinux 会在 BTF 阶段失败：
+          #   "BTF: .tmp_vmlinux.btf: pahole (pahole) is not available"
           sudo apt-get install -y repo git build-essential bc bison flex \
-            libssl-dev libelf-dev libdw-dev clang lld llvm \
+            libssl-dev libelf-dev libdw-dev dwarves clang lld llvm \
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       # GitHub 标准 runner 的根分区只有 ~14GB，而 GKI 全量编 vmlinux 需要 30GB+。
@@ -100,7 +102,12 @@ jobs:
       - name: Compile KO
         working-directory: kernel/src
         run: |
-          rm -f *.o *.ko *.mod *.mod.c .*.cmd
+          # 彻底清掉上次/仓库里残留的 kbuild 中间产物。
+          # 只删 *.o *.ko 不够：modules.order、.modules.order.cmd、Module.symvers
+          # 残留会让 modfinal 报 "No rule to make target temp_root.ko"。
+          make -C ../../common M="$PWD" clean >/dev/null 2>&1 || true
+          rm -f *.o *.ko *.mod *.mod.c *.symvers .*.cmd
+          rm -f modules.order .modules.order.cmd .module-common.o
           # KBUILD_MODPOST_WARN=1：GKI 会裁剪未使用的导出符号，我们模块里可能有
           # 少量符号在新分支上已不再导出。硬失败会导致整轮拿不到产物；
           # 这里保留警告，真正的 CRC 由上一步的 Module.symvers 保证。
