@@ -39,6 +39,23 @@ jobs:
             libssl-dev libelf-dev libdw-dev clang lld llvm \
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
+      # GitHub 标准 runner 的根分区只有 ~14GB，而 GKI 全量编 vmlinux 需要 30GB+。
+      # 这一步能腾出 15-20GB —— 之前 Build vmlinux 失败极可能是磁盘写满。
+      - name: Free disk space
+        run: |
+          echo "--- 清理前 ---"; df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache /usr/local/share/boost 2>/dev/null || true
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          echo "--- 清理后 ---"; df -h /
+
+      - name: Toolchain info
+        run: |
+          clang --version | head -2 || true
+          ld.lld --version || true
+          aarch64-linux-gnu-gcc --version | head -1 || true
+          nproc
+
       - name: Fetch Kernel Source
         run: |
           git clone https://android.googlesource.com/kernel/common \
@@ -58,13 +75,27 @@ jobs:
       - name: Build vmlinux (generates Module.symvers)
         working-directory: common
         run: |
-          make ARCH=arm64 LLVM=1 -j$(nproc) vmlinux
+          set -o pipefail
+          if ! make ARCH=arm64 LLVM=1 -j$(($(nproc) / 2)) vmlinux 2>&1 | tail -120; then
+            echo "::error::vmlinux 构建失败，下面是资源状况"
+            df -h / || true
+            free -h || true
+            exit 1
+          fi
+          ls -l vmlinux Module.symvers 2>/dev/null || true
+          # 没有 Module.symvers 就没有 CRC，编出来的模块必然加载失败
+          test -s Module.symvers || { echo "::error::没有生成 Module.symvers"; exit 1; }
+          echo "Module.symvers 行数: $(wc -l < Module.symvers)"
 
       - name: Compile KO
         working-directory: kernel/src
         run: |
           rm -f *.o *.ko *.mod *.mod.c .*.cmd
-          make -C ../../common M="$PWD" ARCH=arm64 LLVM=1 modules
+          # KBUILD_MODPOST_WARN=1：GKI 会裁剪未使用的导出符号，我们模块里可能有
+          # 少量符号在新分支上已不再导出。硬失败会导致整轮拿不到产物；
+          # 这里保留警告，真正的 CRC 由上一步的 Module.symvers 保证。
+          make -C ../../common M="$PWD" ARCH=arm64 LLVM=1 \
+               KBUILD_MODPOST_WARN=1 modules 2>&1 | tail -80
 
           llvm-strip --strip-debug huijui_phantom.ko temp_root.ko \
             || aarch64-linux-gnu-strip --strip-debug huijui_phantom.ko temp_root.ko
@@ -90,11 +121,14 @@ jobs:
           strings "$KO" | grep -m1 'vermagic=' | grep -q "^vermagic=$EXPECT" \
             || { echo "::error::vermagic 与分支 ${{ matrix.branch }} 不符"; exit 1; }
 
-          # modversions CRC 不能全为零（全零说明没拿到 Module.symvers）
-          if readelf -x __versions "$KO" >/dev/null 2>&1; then
-            ZEROS=$(readelf -x __versions "$KO" | grep -A999 '0x' | grep -oE '00000000 00000000 00000000 00000000' | wc -l)
-            echo "__versions 中疑似全零行: $ZEROS"
+          # __versions 必须存在且有内容 —— 空的说明没拿到 Module.symvers，
+          # 这种模块在开了 CONFIG_MODVERSIONS 的 GKI 内核上根本 insmod 不进去。
+          if ! readelf -S "$KO" | grep -q '__versions'; then
+            echo "::error::$KO 没有 __versions 段（CRC 缺失，无法加载）"; exit 1
           fi
+          BYTES=$(readelf -x __versions "$KO" | grep -c '0x' || true)
+          echo "__versions 十六进制行数: $BYTES"
+          [ "$BYTES" -gt 2 ] || { echo "::error::$KO 的 __versions 为空"; exit 1; }
 
           echo "✅ 校验通过: $KO"
 
