@@ -96,14 +96,36 @@ object InstallIo {
             )
         }
 
-        // dd 的退出码必须**紧跟 dd** 取，否则拿到的是后面命令的状态
-        val write = run(
-            "dd if='$imagePath' of='$device' bs=4096 conv=fsync 2>&1; echo __RC=${'$'}?; sync",
-            WRITE_TIMEOUT
+        // 写之前先确认分区不是只读 —— 有些机型/ROM 会把 boot 分区 mark 成 ro，
+        // 这时 dd 会以 EROFS 失败，但报错信息里看不出是"只读"。
+        val ro = run("blockdev --getro '$device' 2>/dev/null").output.trim()
+        if (ro == "1") {
+            return@withContext Result(
+                false,
+                "分区处于只读状态（$device）。部分 ROM 会用 dm-verity / 只读标记保护启动分区，" +
+                    "需要对 vbmeta 关闭校验后才能写入。"
+            )
+        }
+
+        // 三种写法依次尝试。
+        // 某些内核/ROM 上 `dd conv=fsync` 对块设备会失败（EINVAL/ENOSPC），
+        // 而 `cat > 设备` 或 `dd bs=1M` 却能写进去。与其一次失败就报错，
+        // 不如把三条路都走一遍，并把每条的真实输出留下来。
+        val attempts = listOf(
+            "dd if='$imagePath' of='$device' bs=4096 conv=fsync 2>&1; echo __RC=${'$'}?",
+            "cat '$imagePath' > '$device' 2>&1; echo __RC=${'$'}?",
+            "dd if='$imagePath' of='$device' bs=1M 2>&1; echo __RC=${'$'}?"
         )
-        val rc = Regex("""__RC=(\d+)""").find(write.output)?.groupValues?.get(1)?.toIntOrNull() ?: -1
-        if (rc != 0) {
-            return@withContext Result(false, "写入失败(dd rc=$rc)：${write.output.takeLast(400)}")
+        val logs = StringBuilder()
+        var written = false
+        for ((i, cmd) in attempts.withIndex()) {
+            val out = run("$cmd; sync", WRITE_TIMEOUT)
+            val rc = Regex("""__RC=(\d+)""").find(out.output)?.groupValues?.get(1)?.toIntOrNull() ?: -1
+            logs.append("第${i + 1}种 (rc=$rc): ").append(out.output.trim().takeLast(200)).append('\n')
+            if (rc == 0) { written = true; break }
+        }
+        if (!written) {
+            return@withContext Result(false, "写入失败，三种方式都未能完成：\n$logs")
         }
 
         val srcHash = md5File(imagePath)
