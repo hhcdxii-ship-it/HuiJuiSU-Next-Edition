@@ -157,6 +157,20 @@ fun ToolboxScreen(
         }
     }
 
+    // ── 从后台/系统 su 弹窗回来时立刻重新探测 ──────────────────────
+    //    用户点了「允许」之后，界面必须马上反映出来，而不是等 5 秒轮询。
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val resumeScope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                resumeScope.launch { RootStatusRepository.refresh(force = true) }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // ── 幽灵模式：只在「确实没 Root」且还没问过的时候探一次环境 ────────
     LaunchedEffect(status) {
         if (status is HuiRootStatus.NotRooted && !ghostChecked) {
@@ -626,7 +640,8 @@ private fun statusTitle(status: HuiRootStatus): String = when (status) {
         HuiEngine.HUI_NATIVE -> "工作中 (HUI)"
         HuiEngine.HUI_ALONGSIDE -> "工作中 (HUI · ${managerLabel(status.manager)})"
         HuiEngine.HUI_STALE -> "引擎未响应"
-        HuiEngine.BORROWED -> "兼容模式 (${managerLabel(status.manager)})"
+        // 用户的表述更直观：把管理器名字放在前面，"Magisk 兼容模式"
+        HuiEngine.BORROWED -> "${managerLabel(status.manager)} 兼容模式"
     }
 }
 

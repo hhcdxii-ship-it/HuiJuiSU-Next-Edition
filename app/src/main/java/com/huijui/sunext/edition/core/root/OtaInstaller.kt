@@ -60,6 +60,16 @@ object OtaInstaller {
             }
 
             // ── 1. 槽位 ────────────────────────────────────────────
+            // 前置检测：内核 KMI / 内置模块 / vermagic 全部对得上才允许动 OTA 槽位。
+            // 直装路径已经接了，OTA 之前没接 —— 同样是往分区里写东西，一样会写坏。
+            emit(OtaState.Progress("[-] 检测系统与内核版本…"))
+            val pre = InstallPreflight.run(context)
+            if (!pre.canProceed) {
+                emit(OtaState.Error("❌ 前置检测未通过：${pre.blocking}"))
+                return@flow
+            }
+            emit(OtaState.Progress("[-] 检测通过：${pre.kmiBranch}，模块 ${pre.koAsset}"))
+
             val currentSlot = InstallIo.currentSlot()
             if (currentSlot != "_a" && currentSlot != "_b") {
                 emit(OtaState.Error("❌ 当前设备不是 A/B 分区架构（slot_suffix=\"$currentSlot\"），无法使用 OTA 槽位更新"))
