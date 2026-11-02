@@ -1,5 +1,12 @@
-# 强制关闭 KCFI，防止内核校验不通过直接重启
+# 关闭 KCFI，防止内核校验不通过直接重启。
+#
+# ⚠️ -fno-sanitize=kcfi 是 clang 16+ 才支持的参数。
+#    5.10/5.15 的 GKI 必须用 clang-14 编译，而 clang-14 遇到这个参数会直接报
+#    "unsupported argument 'kcfi' to option 'fno-sanitize='" 并中止。
+#    用 kbuild 的 cc-option 探测一下，编译器支持才加。
+ifneq ($(call cc-option,-fno-sanitize=kcfi,),)
 ccflags-y += -fno-sanitize=kcfi
+endif
 
 # 忽略警告
 ccflags-y += -Wno-error

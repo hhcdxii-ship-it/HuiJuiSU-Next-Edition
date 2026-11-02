@@ -82,6 +82,14 @@ jobs:
         run: |
           make ARCH=arm64 ${{ matrix.tools }} gki_defconfig
 
+          # 关掉 BTF：6.12 上 pahole 会报
+          #   "FAILED: load BTF from .tmp_vmlinux1.BTF.1: No such file or directory"
+          #   （发行版的 dwarves 版本和内核期望的不匹配）
+          # BTF 只用于内省，不影响模块加载，CI 里直接关掉更稳也更快。
+          ./scripts/config --file .config -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES || true
+          make ARCH=arm64 ${{ matrix.tools }} olddefconfig >/dev/null 2>&1 || true
+          grep -E '^CONFIG_DEBUG_INFO_BTF' .config || echo "DEBUG_INFO_BTF 已关闭"
+
       # ⚠️ 关键步骤，之前缺失：
       #    modules_prepare 只生成头文件和脚本，**不生成 Module.symvers**。
       #    没有 vmlinux.symvers，modpost 无法解析导出符号的 CRC，
